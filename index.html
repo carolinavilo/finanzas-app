@@ -2625,14 +2625,14 @@ function renderDashboard(){
   // DEBUG overflow — remove after fix
   setTimeout(()=>{
     const vw=document.documentElement.clientWidth;
+    const sw=document.body.scrollWidth;
     const offenders=[];
     document.querySelectorAll('*').forEach(el=>{
-      const r=el.getBoundingClientRect();
-      if(r.right>vw+2){offenders.push((el.id?'#'+el.id:'')+(el.className&&typeof el.className==='string'?'.'+el.className.trim().split(' ')[0]:'')+' w='+Math.round(r.width)+' right='+Math.round(r.right));}
+      if(el.scrollWidth>vw+2){offenders.push((el.id?'#'+el.id:'.')+(el.className&&typeof el.className==='string'?el.className.trim().split(' ')[0]:'')+' scroll='+el.scrollWidth);}
     });
     const dbg=document.getElementById('dash-dbg');
-    if(dbg)dbg.innerHTML=offenders.length?'<b>Overflow:</b><br>'+offenders.slice(0,5).join('<br>'):'✅ Sin overflow (vw='+vw+')';
-  },800);
+    if(dbg)dbg.innerHTML='vw='+vw+' bodyScroll='+sw+(offenders.length?'<br><b>OVERFLOW:</b><br>'+offenders.slice(0,8).join('<br>'):'<br>✅ Sin overflow');
+  },2000);
 
   const gMes=S.gastos.filter(g=>g.fecha.startsWith(mes));
   const iMes=S.ingresos.filter(i=>i.fecha.startsWith(mes));
