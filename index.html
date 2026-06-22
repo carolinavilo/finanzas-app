@@ -1044,7 +1044,6 @@ async function afterLogin() {
   // Usar función SECURITY DEFINER para bypasear RLS
   let perfil = null;
   const { data: rpcData, error: rpcErr } = await sb.rpc('get_mi_perfil');
-  console.log('DEBUG RPC:', JSON.stringify(rpcData), 'ERR:', JSON.stringify(rpcErr), 'UID:', currentUser.id, 'EMAIL:', currentUser.email);
   // RPC puede devolver array (RETURNS TABLE) u objeto directo — manejar ambos casos
   perfil = Array.isArray(rpcData) ? (rpcData[0] || null) : (rpcData || null);
 
@@ -1279,7 +1278,7 @@ async function loadCristianGastos() {
     const displayName = u.nombre || u.email || 'Usuario';
     html += `<div style="margin-bottom:20px">
       <div style="font-size:13px;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:8px">
-        <span>👤 ${displayName}</span>
+        <span>👤 ${esc(displayName)}</span>
         <span class="badge" style="background:var(--accent-light);color:var(--accent)">${u.gastos.length} gastos</span>
         <span class="badge" style="background:rgba(248,113,113,.1);color:var(--accent4)">${$$(total)}</span>
       </div>
@@ -1287,8 +1286,8 @@ async function loadCristianGastos() {
         <thead><tr><th>Fecha</th><th>Descripción</th><th>Categoría</th><th style="text-align:right">Monto</th></tr></thead>
         <tbody>${u.gastos.map(g=>`<tr>
           <td style="color:var(--text2);font-size:12px">${ff(g.fecha)}</td>
-          <td>${g.descripcion}</td>
-          <td><span class="badge b-purple">${g.categoria||'Otros'}</span></td>
+          <td>${esc(g.descripcion)}</td>
+          <td><span class="badge b-purple">${esc(g.categoria||'Otros')}</span></td>
           <td style="text-align:right;font-weight:600;color:var(--accent4)">${$$(g.monto)}</td>
         </tr>`).join('')}</tbody>
       </table></div>
@@ -1319,6 +1318,7 @@ function load(){
 }
 function save(){localStorage.setItem('fz_v3',JSON.stringify(S));}
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,5);}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 
 // ====== FORMAT ======
 function $$(n){return'$'+Number(n||0).toLocaleString('es-AR',{minimumFractionDigits:0,maximumFractionDigits:0});}
@@ -1526,9 +1526,11 @@ function buildMesSel(selId,items,dateField='fecha'){
 
 // ====== INGRESOS ======
 function agregarIngreso(){
+  if(!currentUser)return;
   const desc=document.getElementById('i-desc').value.trim();
   const monto=+document.getElementById('i-monto').value;
-  if(!desc||!monto)return alert('Completá descripción y monto');
+  if(!desc)return alert('Ingresá una descripción');
+  if(!monto||monto<=0)return alert('El monto debe ser mayor a 0');
   S.ingresos.push({id:uid(),fecha:document.getElementById('i-fecha').value||today(),
     descripcion:desc,categoria:document.getElementById('i-cat-sel').value,
     monto,recurrente:document.getElementById('i-recurrente').checked,
@@ -1552,12 +1554,17 @@ function editIngreso(id){
 }
 
 function guardarEditIngreso(){
+  if(!currentUser)return;
   const id=document.getElementById('ei-id').value;
   const item=S.ingresos.find(i=>i.id===id);if(!item)return;
+  const desc=document.getElementById('ei-desc').value.trim();
+  const monto=+document.getElementById('ei-monto').value;
+  if(!desc)return alert('Ingresá una descripción');
+  if(!monto||monto<=0)return alert('El monto debe ser mayor a 0');
   item.fecha=document.getElementById('ei-fecha').value;
-  item.descripcion=document.getElementById('ei-desc').value.trim();
+  item.descripcion=desc;
   item.categoria=document.getElementById('ei-cat').value;
-  item.monto=+document.getElementById('ei-monto').value;
+  item.monto=monto;
   item.notas=document.getElementById('ei-notas').value.trim();
   item.recurrente=document.getElementById('ei-recurrente').checked;
   save();closeModal('modal-edit-ingreso');renderIngresos();refreshDashIfVisible();
@@ -1585,23 +1592,25 @@ function renderIngresos(){
   if(!items.length){tbody.innerHTML=`<tr><td colspan="7"><div class="empty"><div class="ei">🟢</div><p>Sin ingresos para los filtros seleccionados.</p></div></td></tr>`;return;}
   tbody.innerHTML=items.map(i=>`<tr class="ingreso-row">
     <td>${ff(i.fecha)}</td>
-    <td><strong>${i.descripcion}</strong></td>
-    <td><span class="badge b-green">${i.categoria}</span></td>
-    <td><span class="nota-preview">${i.notas||'—'}</span></td>
+    <td><strong>${esc(i.descripcion)}</strong></td>
+    <td><span class="badge b-green">${esc(i.categoria)}</span></td>
+    <td><span class="nota-preview">${esc(i.notas)||'—'}</span></td>
     <td>${i.recurrente?'<span class="badge b-blue">🔄 Sí</span>':'—'}</td>
     <td style="text-align:right;font-weight:700;color:var(--accent2)">${$$(i.monto)}</td>
     <td style="white-space:nowrap">
-      <button class="btn btn-ghost btn-xs" onclick="editIngreso('${i.id}')">✏️</button>
-      <button class="btn btn-danger btn-xs" onclick="eliminarIngreso('${i.id}')">✕</button>
+      <button class="btn btn-ghost btn-xs" onclick="editIngreso('${esc(i.id)}')">✏️</button>
+      <button class="btn btn-danger btn-xs" onclick="eliminarIngreso('${esc(i.id)}')">✕</button>
     </td>
   </tr>`).join('');
 }
 
 // ====== GASTOS ======
 function agregarGasto(){
+  if(!currentUser)return;
   const desc=document.getElementById('g-desc').value.trim();
   const monto=+document.getElementById('g-monto').value;
-  if(!desc||!monto)return alert('Completá descripción y monto');
+  if(!desc)return alert('Ingresá una descripción');
+  if(!monto||monto<=0)return alert('El monto debe ser mayor a 0');
   const tipo=document.getElementById('g-tipo').value;
   const nuevo={id:uid(),fecha:document.getElementById('g-fecha').value||today(),
     descripcion:desc,categoria:document.getElementById('g-cat').value,
@@ -1632,8 +1641,13 @@ function editGasto(id){
 }
 
 function guardarEditGasto(){
+  if(!currentUser)return;
   const id=document.getElementById('eg-id').value;
   const g=S.gastos.find(g=>g.id===id);if(!g)return;
+  const desc=document.getElementById('eg-desc').value.trim();
+  const monto=+document.getElementById('eg-monto').value;
+  if(!desc)return alert('Ingresá una descripción');
+  if(!monto||monto<=0)return alert('El monto debe ser mayor a 0');
   g.fecha=document.getElementById('eg-fecha').value;
   g.descripcion=document.getElementById('eg-desc').value.trim();
   g.categoria=document.getElementById('eg-cat').value;
@@ -1674,15 +1688,15 @@ function renderGastos(){
     const tar=g.tarjetaId?S.tarjetas.find(t=>t.id===g.tarjetaId):null;
     return`<tr>
       <td>${ff(g.fecha)}</td>
-      <td><strong>${g.descripcion}</strong></td>
-      <td><span class="badge b-purple">${g.categoria}</span></td>
-      <td><span class="badge b-gray">${tLabel[g.tipo]||g.tipo}${tar?` · ${tar.nombre}`:''}</span></td>
-      <td><span class="nota-preview">${g.notas||'—'}</span></td>
+      <td><strong>${esc(g.descripcion)}</strong></td>
+      <td><span class="badge b-purple">${esc(g.categoria)}</span></td>
+      <td><span class="badge b-gray">${esc(tLabel[g.tipo]||g.tipo)}${tar?` · ${esc(tar.nombre)}`:''}</span></td>
+      <td><span class="nota-preview">${esc(g.notas)||'—'}</span></td>
       <td>${g.recurrente?'<span class="badge b-blue">🔄</span>':'—'}</td>
       <td style="text-align:right;font-weight:700">${$$(g.monto)}</td>
       <td style="white-space:nowrap">
-        <button class="btn btn-ghost btn-xs" onclick="editGasto('${g.id}')">✏️</button>
-        <button class="btn btn-danger btn-xs" onclick="eliminarGasto('${g.id}')">✕</button>
+        <button class="btn btn-ghost btn-xs" onclick="editGasto('${esc(g.id)}')">✏️</button>
+        <button class="btn btn-danger btn-xs" onclick="eliminarGasto('${esc(g.id)}')">✕</button>
       </td>
     </tr>`;
   }).join('');
