@@ -234,10 +234,10 @@ input[type=checkbox]{width:auto;margin-right:5px}
   #sidebar{display:none}
   #mobile-header{display:flex}
   #bottom-nav{display:flex}
-  #main{margin-left:0;padding:72px 14px 90px;min-height:100vh;width:100%;overflow-x:clip}
+  #main{margin-left:0;padding:72px 20px 90px;min-height:100vh;width:100%;overflow-x:clip}
   .section{max-width:100%;overflow-x:clip}
   canvas{max-width:100%!important}
-  .cards-grid,.cards-grid-5{grid-template-columns:1fr 1fr;gap:10px}
+  .cards-grid,.cards-grid-5{grid-template-columns:1fr 1fr;gap:8px}
   .two-col,.three-col{grid-template-columns:1fr}
   .form-grid{grid-template-columns:1fr}
   .form-grid-2{grid-template-columns:1fr}
@@ -248,14 +248,18 @@ input[type=checkbox]{width:auto;margin-right:5px}
   .page-header{flex-direction:column;gap:10px}
   .page-header .btn{align-self:flex-start}
   .inv-card{flex-direction:column;align-items:flex-start}
-  .stat-card .value{font-size:17px}
-  .panel{padding:16px;border-radius:14px}
-  .panel .table-scroll{margin:0 -16px;padding:0 16px}
+  .stat-card{padding:14px}
+  .stat-card .value{font-size:15px}
+  .stat-card .label{font-size:10px}
+  .stat-card .sub{font-size:10px}
+  .stat-card .icon{font-size:18px;top:12px;right:12px}
+  .panel{padding:14px;border-radius:14px}
+  .panel .table-scroll{margin:0 -14px;padding:0 14px}
   table{min-width:480px}
   .filter-bar{gap:6px}
   .filter-bar input,.filter-bar select{font-size:13px}
-  .page-header-left h2{font-size:19px}
-  .chart-wrap{height:160px}
+  .page-header-left h2{font-size:18px}
+  .chart-wrap{height:150px}
   .tarjeta-card{border-radius:14px}
 }
 @media(min-width:769px){
@@ -454,7 +458,6 @@ input[type=checkbox]{width:auto;margin-right:5px}
 <!-- DASHBOARD -->
 <div id="section-dashboard" class="section active">
   <div class="page-header"><div class="page-header-left"><h2 id="dash-greeting">Dashboard</h2><p id="dash-sub"></p></div><div class="page-header-right" style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary" onclick="navMob('gastos');setTimeout(()=>{const el=document.getElementById('g-desc');if(el)el.focus();},200)">＋ Registrar gasto</button><button class="btn btn-primary" style="background:var(--accent2)" onclick="navMob('ingresos');setTimeout(()=>{const el=document.getElementById('i-desc');if(el)el.focus();},200)">＋ Registrar ingreso</button></div></div>
-  <div id="dash-dbg" style="background:#ffeb3b;color:#000;font-size:11px;padding:8px;border-radius:8px;margin-bottom:10px;word-break:break-all"></div>
   <div id="dash-alerts"></div>
   <div class="cards-grid-5" id="dash-cards"></div>
   <div class="two-col">
@@ -2613,17 +2616,6 @@ function renderDashboard(){
   const greetEl=document.getElementById('dash-greeting');
   if(greetEl) greetEl.textContent='Hola, '+(currentNombre.split(' ')[0]||currentNombre)+' 👋';
   document.getElementById('dash-sub').textContent=mesPretty(mes);
-  // DEBUG overflow — remove after fix
-  setTimeout(()=>{
-    const vw=document.documentElement.clientWidth;
-    const sw=document.body.scrollWidth;
-    const offenders=[];
-    document.querySelectorAll('*').forEach(el=>{
-      if(el.scrollWidth>vw+2){offenders.push((el.id?'#'+el.id:'.')+(el.className&&typeof el.className==='string'?el.className.trim().split(' ')[0]:'')+' scroll='+el.scrollWidth);}
-    });
-    const dbg=document.getElementById('dash-dbg');
-    if(dbg)dbg.innerHTML='vw='+vw+' bodyScroll='+sw+(offenders.length?'<br><b>OVERFLOW:</b><br>'+offenders.slice(0,8).join('<br>'):'<br>✅ Sin overflow');
-  },2000);
 
   const gMes=S.gastos.filter(g=>g.fecha.startsWith(mes));
   const iMes=S.ingresos.filter(i=>i.fecha.startsWith(mes));
