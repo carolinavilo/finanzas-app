@@ -812,7 +812,7 @@ input[type=checkbox]{width:auto;margin-right:5px}
       <div class="form-group" style="margin-bottom:8px">
         <label>Clave API Anthropic</label>
         <input type="password" id="ai-api-key-input" placeholder="sk-ant-..." style="width:100%"
-          onchange="localStorage.setItem('anthropic_api_key',this.value)" autocomplete="off"/>
+          onchange="localStorage.setItem('anthropic_api_key',this.value.trim())" autocomplete="off"/>
       </div>
     </div>
     <button class="btn btn-neutral" style="width:100%;margin-top:8px;padding:12px" onclick="closeSheet('sheet-settings')">Cerrar</button>
@@ -3356,7 +3356,12 @@ function toggleAIPanel() {
   const panel = document.getElementById('ai-panel');
   panel.style.display = aiPanelOpen ? 'flex' : 'none';
   if (aiPanelOpen && aiMessages.length === 0) {
-    appendAIMsg('bot', '¡Hola! Soy tu asistente financiero. Podés preguntarme sobre tu resumen del mes, cuotas pendientes, impuestos, o cualquier consulta financiera. ¿En qué te ayudo?');
+    const _initKey = localStorage.getItem('anthropic_api_key') || localStorage.getItem('ai_key') || '';
+    if (!_initKey) {
+      appendAIMsg('bot', '⚠️ API key no configurada. Andá a Ajustes → Asistente IA y pegá tu clave de Anthropic para empezar.');
+    } else {
+      appendAIMsg('bot', '¡Hola! Soy tu asistente financiero. Podés preguntarme sobre tu resumen del mes, cuotas pendientes, impuestos, o cualquier consulta financiera. ¿En qué te ayudo?');
+    }
   }
   if (aiPanelOpen) setTimeout(()=>document.getElementById('ai-input').focus(), 100);
 }
@@ -3369,6 +3374,38 @@ function appendAIMsg(role, text) {
   div.appendChild(msg);
   div.scrollTop = div.scrollHeight;
   return msg;
+}
+
+async function llamarClaudeAPI(prompt) {
+  const apiKey = localStorage.getItem('anthropic_api_key') || localStorage.getItem('ai_key');
+  if (!apiKey) {
+    return 'Error: no hay API key configurada. Andá a Ajustes y pegá tu API key de Anthropic.';
+  }
+  console.log('Usando key: ' + apiKey.slice(0, 8) + '...');
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1024,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    if (!response.ok) {
+      const err = await response.json();
+      return 'Error de API: ' + (err?.error?.message || response.status);
+    }
+    const data = await response.json();
+    return data.content[0].text;
+  } catch(e) {
+    return 'Error de red: ' + e.message;
+  }
 }
 
 async function sendAIMsg() {
@@ -3385,30 +3422,12 @@ async function sendAIMsg() {
   aiMessages.push({ role: 'user', content: text });
   const loading = appendAIMsg('bot', '...');
   loading.classList.add('loading');
-  try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 1500,
-        system: buildFinancialContext(),
-        messages: aiMessages.slice(-8)
-      })
-    });
-    const data = await res.json();
-    const reply = data?.content?.[0]?.text || 'Sin respuesta.';
-    loading.remove();
-    appendAIMsg('bot', reply);
+  const fullPrompt = buildFinancialContext() + '\n\nUsuario: ' + text;
+  const reply = await llamarClaudeAPI(fullPrompt);
+  loading.remove();
+  appendAIMsg('bot', reply);
+  if (!reply.startsWith('Error')) {
     aiMessages.push({ role: 'assistant', content: reply });
-  } catch(e) {
-    loading.remove();
-    appendAIMsg('bot', '❌ Error al conectar con la IA: ' + e.message);
   }
 }
 
