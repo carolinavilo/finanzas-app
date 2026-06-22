@@ -812,7 +812,7 @@ input[type=checkbox]{width:auto;margin-right:5px}
       <div class="form-group" style="margin-bottom:8px">
         <label>Clave API Anthropic</label>
         <input type="password" id="ai-api-key-input" placeholder="sk-ant-..." style="width:100%"
-          onchange="localStorage.setItem('ai_key',this.value)" autocomplete="off"/>
+          onchange="localStorage.setItem('anthropic_api_key',this.value)" autocomplete="off"/>
       </div>
     </div>
     <button class="btn btn-neutral" style="width:100%;margin-top:8px;padding:12px" onclick="closeSheet('sheet-settings')">Cerrar</button>
@@ -1289,7 +1289,7 @@ async function afterLogin() {
     const aiKeySection = document.getElementById('ai-key-section');
     if (aiKeySep) aiKeySep.style.display = '';
     if (aiKeySection) aiKeySection.style.display = '';
-    const savedKey = localStorage.getItem('ai_key') || '';
+    const savedKey = localStorage.getItem('anthropic_api_key') || localStorage.getItem('ai_key') || '';
     const keyInput = document.getElementById('ai-api-key-input');
     if (keyInput && savedKey) keyInput.value = savedKey;
   } else {
@@ -3376,9 +3376,9 @@ async function sendAIMsg() {
   const text = input.value.trim();
   if (!text) return;
   input.value = '';
-  const apiKey = localStorage.getItem('ai_key') || '';
+  const apiKey = localStorage.getItem('anthropic_api_key') || localStorage.getItem('ai_key') || '';
   if (!apiKey) {
-    appendAIMsg('bot', '⚠️ Configurá tu clave API de Anthropic en Ajustes → Asistente IA para usar esta función.');
+    appendAIMsg('bot', '⚠️ Configurá tu API key de Anthropic en Ajustes → Asistente IA para usar esta función.');
     return;
   }
   appendAIMsg('user', text);
@@ -3392,10 +3392,10 @@ async function sendAIMsg() {
         'content-type': 'application/json',
         'x-api-key': apiKey,
         'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-allow-browser': 'true'
+        'anthropic-dangerous-direct-browser-access': 'true'
       },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
+        model: 'claude-sonnet-4-6',
         max_tokens: 1500,
         system: buildFinancialContext(),
         messages: aiMessages.slice(-8)
