@@ -1029,7 +1029,12 @@ async function afterLogin() {
     perfil = rows?.[0] || null;
   }
 
-  userRole = perfil?.rol || 'usuario';
+  // Hardcode admin por email — respaldo confiable para 2 usuarios fijos
+  if (currentUser.email === 'carolina.vilo@hotmail.com') {
+    userRole = 'admin';
+  } else {
+    userRole = perfil?.rol || 'usuario';
+  }
   const nombre = perfil?.nombre || perfil?.email || currentUser.email;
 
   // Ocultar pantalla de login
