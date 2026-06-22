@@ -314,6 +314,9 @@ input[type=checkbox]{width:auto;margin-right:5px}
     </div>
     <button class="login-btn" id="login-btn" onclick="doLogin()">Entrar</button>
     <div class="login-error" id="login-error"></div>
+    <p style="text-align:center;margin-top:12px">
+      <a href="#" onclick="doForgotPassword(event)" style="font-size:13px;color:var(--accent);text-decoration:none">¿Olvidaste tu contraseña?</a>
+    </p>
   </div>
 
   <!-- PANTALLA CREAR CONTRASEÑA (para links de invitación) -->
@@ -2749,6 +2752,22 @@ async function init(){
 }
 
 init();
+
+// ── OLVIDÉ CONTRASEÑA ──
+async function doForgotPassword(e) {
+  e.preventDefault();
+  const email = document.getElementById('login-email').value.trim();
+  const errEl = document.getElementById('login-error');
+  if (!email) { errEl.textContent = 'Ingresá tu email primero'; return; }
+  errEl.style.color = 'var(--text2)';
+  errEl.textContent = 'Enviando...';
+  const { error } = await sb.auth.resetPasswordForEmail(email, {
+    redirectTo: 'https://miregistrofinanciero.vercel.app/'
+  });
+  if (error) { errEl.style.color = 'var(--accent4)'; errEl.textContent = error.message; return; }
+  errEl.style.color = 'var(--accent)';
+  errEl.textContent = 'Te enviamos un email para resetear tu contraseña';
+}
 
 // ── CAMBIAR CONTRASEÑA ──
 function openModalCambiarPass() {
