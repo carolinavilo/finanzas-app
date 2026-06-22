@@ -672,6 +672,7 @@ input[type=checkbox]{width:auto;margin-right:5px}
       </button>
       <button class="bs-action-btn" onclick="backupData()">💾 Exportar datos</button>
       <button class="bs-action-btn" onclick="document.getElementById('restore-input-mob').click()">📂 Importar</button>
+      <button class="bs-action-btn" onclick="openModalCambiarPass()">🔑 Cambiar contraseña</button>
       <input type="file" id="restore-input-mob" accept=".json" style="display:none" onchange="restoreData(event)"/>
     </div>
     <div class="bs-sep"></div>
@@ -691,6 +692,28 @@ input[type=checkbox]{width:auto;margin-right:5px}
 </div>
 
 <!-- MODAL TARJETA -->
+<!-- MODAL CAMBIAR CONTRASEÑA -->
+<div class="modal-overlay" id="modal-cambiar-pass" style="display:none" onclick="if(event.target===this)closeModalCambiarPass()">
+  <div class="modal" style="max-width:360px">
+    <div class="modal-header"><h3>🔑 Cambiar contraseña</h3><button class="modal-close" onclick="closeModalCambiarPass()">×</button></div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Nueva contraseña</label>
+        <input type="password" id="cp-nueva" placeholder="Mínimo 6 caracteres" onkeydown="if(event.key==='Enter')document.getElementById('cp-repetir').focus()"/>
+      </div>
+      <div class="form-group">
+        <label>Repetir contraseña</label>
+        <input type="password" id="cp-repetir" placeholder="Repetí la contraseña" onkeydown="if(event.key==='Enter')doChangePasword()"/>
+      </div>
+      <p id="cp-error" style="color:var(--accent4);font-size:13px;margin-top:4px"></p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-neutral" onclick="closeModalCambiarPass()">Cancelar</button>
+      <button class="btn btn-primary" id="cp-btn" onclick="doChangePasword()">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="modal-tarjeta">
   <div class="modal">
     <div class="modal-header"><h3 id="modal-tarjeta-title">Nueva Tarjeta</h3><button class="modal-close" onclick="closeModal('modal-tarjeta')">×</button></div>
@@ -2726,6 +2749,34 @@ async function init(){
 }
 
 init();
+
+// ── CAMBIAR CONTRASEÑA ──
+function openModalCambiarPass() {
+  closeSheet('sheet-settings');
+  document.getElementById('modal-cambiar-pass').style.display = 'flex';
+  document.getElementById('cp-nueva').value = '';
+  document.getElementById('cp-repetir').value = '';
+  document.getElementById('cp-error').textContent = '';
+  setTimeout(() => document.getElementById('cp-nueva').focus(), 100);
+}
+function closeModalCambiarPass() {
+  document.getElementById('modal-cambiar-pass').style.display = 'none';
+}
+async function doChangePasword() {
+  const nueva = document.getElementById('cp-nueva').value.trim();
+  const repetir = document.getElementById('cp-repetir').value.trim();
+  const errEl = document.getElementById('cp-error');
+  const btn = document.getElementById('cp-btn');
+  errEl.textContent = '';
+  if (nueva.length < 6) { errEl.textContent = 'Mínimo 6 caracteres'; return; }
+  if (nueva !== repetir) { errEl.textContent = 'Las contraseñas no coinciden'; return; }
+  btn.disabled = true; btn.textContent = 'Guardando...';
+  const { error } = await sb.auth.updateUser({ password: nueva });
+  btn.disabled = false; btn.textContent = 'Guardar';
+  if (error) { errEl.textContent = error.message; return; }
+  closeModalCambiarPass();
+  alert('Contraseña actualizada correctamente');
+}
 </script>
 </body>
 </html>
