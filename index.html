@@ -1016,20 +1016,26 @@ let userRole = null;
 let currentNombre = '';
 let _afterLoginDone = false;
 
-// Listener que renueva sesión en segundo plano sin cerrar la app
+// Listener principal de sesión — maneja todos los eventos de auth
 sb.auth.onAuthStateChange(async (event, session) => {
-  if (event === 'TOKEN_REFRESHED' && session) {
+  if ((event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session) {
     currentUser = session.user;
+    if (!_afterLoginDone) {
+      _afterLoginDone = true;
+      await afterLogin();
+    }
   } else if (event === 'SIGNED_OUT') {
     currentUser = null;
     userRole = null;
     _afterLoginDone = false;
     showLogin();
+  } else if (event === 'INITIAL_SESSION' && !session && !_afterLoginDone) {
+    showLogin();
   }
 });
 
 async function checkSession() {
-  // Detectar si viene de un link de invitación (tiene token en el hash)
+  // Solo maneja links de invitación/recuperación con token en el hash
   const hash = window.location.hash;
   const params = new URLSearchParams(hash.replace('#', ''));
   const type = params.get('type');
@@ -1039,22 +1045,7 @@ async function checkSession() {
     showSetPasswordScreen();
     return;
   }
-
-  // Primero intenta obtener sesión existente
-  let { data: { session } } = await sb.auth.getSession();
-
-  // Si no hay sesión, intenta refrescar el token (por si expiró pero el refresh token es válido)
-  if (!session) {
-    const { data: refreshData } = await sb.auth.refreshSession();
-    session = refreshData?.session || null;
-  }
-
-  if (session) {
-    currentUser = session.user;
-    await afterLogin();
-  } else {
-    showLogin();
-  }
+  // La sesión normal es manejada por onAuthStateChange INITIAL_SESSION
 }
 
 function showSetPasswordScreen() {
