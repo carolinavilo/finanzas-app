@@ -449,7 +449,7 @@ input[type=checkbox]{width:auto;margin-right:5px}
 
 <!-- DASHBOARD -->
 <div id="section-dashboard" class="section active">
-  <div class="page-header"><div class="page-header-left"><h2>Dashboard</h2><p id="dash-sub"></p></div></div>
+  <div class="page-header"><div class="page-header-left"><h2 id="dash-greeting">Dashboard</h2><p id="dash-sub"></p></div><div class="page-header-right"><button class="btn btn-primary" onclick="navMob('gastos');setTimeout(()=>{const el=document.getElementById('g-desc');if(el)el.focus();},200)">＋ Registrar gasto</button></div></div>
   <div id="dash-alerts"></div>
   <div class="cards-grid-5" id="dash-cards"></div>
   <div class="two-col">
@@ -1006,6 +1006,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {
 
 let currentUser = null;
 let userRole = null;
+let currentNombre = '';
 let _afterLoginDone = false;
 
 // Listener que renueva sesión en segundo plano sin cerrar la app
@@ -1145,6 +1146,7 @@ async function afterLogin() {
     userRole = perfil?.rol || 'usuario';
   }
   const nombre = perfil?.nombre || perfil?.email || currentUser.email;
+  currentNombre = nombre;
 
   // Ocultar pantalla de login
   document.getElementById('login-screen').classList.add('hidden');
@@ -1512,7 +1514,7 @@ function navMob(id){
   if(sidebarEl)sidebarEl.classList.add('active');
   syncBottomNav(id);
   renderSection(id);
-  window.scrollTo(0,0);
+  window.scrollTo({top:0,behavior:'smooth'});
 }
 function renderSection(id){
   ({dashboard:renderDashboard,ingresos:renderIngresos,gastos:renderGastos,
@@ -2585,6 +2587,8 @@ let chCat=null,chMes=null;
 function renderDashboard(){
   const mes=today().slice(0,7);
   const [y,m]=mes.split('-');
+  const greetEl=document.getElementById('dash-greeting');
+  if(greetEl) greetEl.textContent='Hola, '+(currentNombre.split(' ')[0]||currentNombre)+' 👋';
   document.getElementById('dash-sub').textContent=mesPretty(mes);
 
   const gMes=S.gastos.filter(g=>g.fecha.startsWith(mes));
