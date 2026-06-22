@@ -278,6 +278,25 @@ input[type=checkbox]{width:auto;margin-right:5px}
   #mob-add-fab{display:none}
   .mob-add-btn-shown #mob-add-fab{display:flex;position:fixed;right:18px;bottom:80px;width:56px;height:56px;border-radius:28px;background:var(--accent);color:#fff;align-items:center;justify-content:center;border:none;cursor:pointer;box-shadow:0 4px 20px rgba(0,0,0,.25);z-index:150;font-size:26px;-webkit-tap-highlight-color:transparent}
 }
+/* ── AI CHAT ── */
+#ai-fab{position:fixed;right:18px;bottom:80px;width:52px;height:52px;border-radius:26px;background:var(--accent);color:#fff;border:none;cursor:pointer;box-shadow:0 4px 18px rgba(0,0,0,.3);z-index:200;font-size:22px;display:none;align-items:center;justify-content:center;transition:.2s}
+#ai-fab:hover{transform:scale(1.08)}
+@media(min-width:769px){#ai-fab{bottom:24px}}
+#ai-panel{position:fixed;right:18px;bottom:80px;width:360px;max-height:520px;background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,.25);z-index:201;display:none;flex-direction:column;overflow:hidden}
+@media(max-width:768px){#ai-panel{right:0;left:0;bottom:64px;width:auto;max-height:70vh;border-radius:16px 16px 0 0}}
+#ai-panel-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--accent);color:#fff}
+#ai-messages{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px}
+.ai-msg{max-width:85%;padding:9px 12px;border-radius:12px;font-size:13px;line-height:1.5;white-space:pre-wrap}
+.ai-msg.user{align-self:flex-end;background:var(--accent);color:#fff;border-bottom-right-radius:3px}
+.ai-msg.bot{align-self:flex-start;background:var(--card2);color:var(--text);border-bottom-left-radius:3px}
+.ai-msg.bot.loading{opacity:.6}
+#ai-input-row{padding:10px 12px;border-top:1px solid var(--border);display:flex;gap:8px}
+#ai-input-row input{flex:1;padding:8px 12px;border-radius:20px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:13px}
+.ai-chip{padding:5px 10px;border-radius:14px;border:1px solid var(--accent-border);background:var(--accent-light);color:var(--accent);font-size:11px;cursor:pointer;white-space:nowrap}
+.ai-chip:hover{background:var(--accent);color:#fff}
+.color-row-pick{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.color-row-pick label{font-size:11px;color:var(--text2)}
+.color-row-pick input[type=color]{width:28px;height:28px;border-radius:6px;border:1px solid var(--border);cursor:pointer;padding:1px;background:none}
 /* ── LOGIN SCREEN ── */
 #login-screen{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;align-items:center;justify-content:center;transition:opacity .3s}
 #login-screen.hidden{opacity:0;pointer-events:none}
@@ -415,6 +434,12 @@ input[type=checkbox]{width:auto;margin-right:5px}
           onchange="setAccentCustom(this.value)"
           style="width:22px;height:22px;border-radius:50%;cursor:pointer;border:2px solid transparent;padding:1px;background:none;-webkit-appearance:none"/>
       </div>
+      <p class="nav-label" style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;margin:10px 0 8px;color:var(--text2)">Colores semánticos</p>
+      <div class="color-row-pick"><label>🟢 Ingresos / OK</label><input type="color" id="sb-color2" oninput="setSemanticColor(2,this.value)"/></div>
+      <div class="color-row-pick"><label>🟡 Advertencia</label><input type="color" id="sb-color3" oninput="setSemanticColor(3,this.value)"/></div>
+      <div class="color-row-pick"><label>🔴 Peligro / Gasto</label><input type="color" id="sb-color4" oninput="setSemanticColor(4,this.value)"/></div>
+      <div class="color-row-pick"><label>🔵 Info</label><input type="color" id="sb-color5" oninput="setSemanticColor(5,this.value)"/></div>
+      <button onclick="resetSemanticColors()" style="font-size:10px;color:var(--text2);background:none;border:none;cursor:pointer;padding:4px 0;text-decoration:underline">Restaurar colores por defecto</button>
     </div>
   </div>
 </div>
@@ -704,7 +729,51 @@ input[type=checkbox]{width:auto;margin-right:5px}
       <input type="color" value="#6c63ff" title="Personalizado" onchange="setAccentCustom(this.value)"
         style="width:22px;height:22px;border-radius:50%;cursor:pointer;border:2px solid transparent;padding:1px;background:none;-webkit-appearance:none"/>
     </div>
-    <button class="btn btn-neutral" style="width:100%;margin-top:16px;padding:12px" onclick="closeSheet('sheet-settings')">Cerrar</button>
+    <div class="bs-sep"></div>
+    <p style="font-size:11px;font-weight:600;margin-bottom:8px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px">Colores semánticos</p>
+    <div class="color-row-pick"><label>🟢 Ingresos / OK</label><input type="color" id="mob-color2" oninput="setSemanticColor(2,this.value)"/></div>
+    <div class="color-row-pick"><label>🟡 Advertencia</label><input type="color" id="mob-color3" oninput="setSemanticColor(3,this.value)"/></div>
+    <div class="color-row-pick"><label>🔴 Peligro / Gasto</label><input type="color" id="mob-color4" oninput="setSemanticColor(4,this.value)"/></div>
+    <div class="color-row-pick"><label>🔵 Info</label><input type="color" id="mob-color5" oninput="setSemanticColor(5,this.value)"/></div>
+    <button onclick="resetSemanticColors()" style="font-size:11px;color:var(--text2);background:none;border:none;cursor:pointer;padding:4px 0;text-decoration:underline;margin-bottom:8px">Restaurar colores por defecto</button>
+    <div class="bs-sep" id="ai-key-sep" style="display:none"></div>
+    <div id="ai-key-section" style="display:none">
+      <p style="font-size:11px;font-weight:600;margin-bottom:8px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px">🤖 Asistente IA</p>
+      <div class="form-group" style="margin-bottom:8px">
+        <label>Clave API Anthropic</label>
+        <input type="password" id="ai-api-key-input" placeholder="sk-ant-..." style="width:100%"
+          onchange="localStorage.setItem('ai_key',this.value)" autocomplete="off"/>
+      </div>
+    </div>
+    <button class="btn btn-neutral" style="width:100%;margin-top:8px;padding:12px" onclick="closeSheet('sheet-settings')">Cerrar</button>
+  </div>
+</div>
+
+<!-- BOTÓN FLOTANTE IA -->
+<button id="ai-fab" onclick="toggleAIPanel()" title="Asistente IA">🤖</button>
+
+<!-- PANEL CHAT IA -->
+<div id="ai-panel">
+  <div id="ai-panel-header">
+    <div style="display:flex;align-items:center;gap:8px">
+      <span style="font-size:18px">🤖</span>
+      <div>
+        <div style="font-weight:700;font-size:14px">Asistente IA</div>
+        <div style="font-size:10px;opacity:.8">Análisis financiero personal</div>
+      </div>
+    </div>
+    <button onclick="toggleAIPanel()" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;padding:4px">×</button>
+  </div>
+  <div style="padding:8px 12px;border-bottom:1px solid var(--border);display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch">
+    <button class="ai-chip" onclick="aiQuick('resumen')">📊 Resumen</button>
+    <button class="ai-chip" onclick="aiQuick('cuotas')">📅 Cuotas</button>
+    <button class="ai-chip" onclick="aiQuick('impuestos')">💸 Impuestos</button>
+    <button class="ai-chip" onclick="aiQuick('balance')">⚖️ Balance</button>
+  </div>
+  <div id="ai-messages"></div>
+  <div id="ai-input-row">
+    <input id="ai-input" placeholder="Preguntá algo..." onkeydown="if(event.key==='Enter')sendAIMsg()"/>
+    <button class="btn btn-primary" style="padding:8px 14px;border-radius:20px" onclick="sendAIMsg()">↑</button>
   </div>
 </div>
 
@@ -1119,6 +1188,16 @@ async function afterLogin() {
     // Cargar gastos de otros usuarios
     setTimeout(loadCristianGastos, 800);
     document.getElementById('admin-panel').style.display = 'block';
+    // Mostrar FAB IA y sección de API key (solo admin)
+    const aiFab = document.getElementById('ai-fab');
+    if (aiFab) aiFab.style.display = 'flex';
+    const aiKeySep = document.getElementById('ai-key-sep');
+    const aiKeySection = document.getElementById('ai-key-section');
+    if (aiKeySep) aiKeySep.style.display = '';
+    if (aiKeySection) aiKeySection.style.display = '';
+    const savedKey = localStorage.getItem('ai_key') || '';
+    const keyInput = document.getElementById('ai-api-key-input');
+    if (keyInput && savedKey) keyInput.value = savedKey;
   } else {
     // USUARIO: solo sección de gastos
     // Solo mostrar sidebar en desktop
@@ -1384,6 +1463,13 @@ function applyTheme(){
   const settingsIcon=document.getElementById('settings-theme-icon');
   if(settingsIcon)settingsIcon.textContent=isLight?'🌙':'☀️';
   applyAccent(S.config.colorTheme||'verde',S.config.customColor);
+  // Colores semánticos
+  [2,3,4,5].forEach(n=>{
+    const v=S.config['color'+n];
+    if(v) document.documentElement.style.setProperty('--accent'+n,v);
+    else document.documentElement.style.removeProperty('--accent'+n);
+  });
+  syncColorPickers();
 }
 function toggleTheme(){S.config.tema=S.config.tema==='dark'?'light':'dark';save();applyTheme();}
 
@@ -2835,6 +2921,160 @@ async function init(){
 }
 
 init();
+
+// ── COLORES SEMÁNTICOS ──
+const DEFAULT_COLORS = { c2:'#4ade80', c3:'#f59e0b', c4:'#f87171', c5:'#60a5fa' };
+function setSemanticColor(n, val) {
+  S.config['color'+n] = val;
+  save();
+  document.documentElement.style.setProperty('--accent'+n, val);
+  // Sync ambos pickers (sidebar y mobile)
+  ['sb-color'+n, 'mob-color'+n].forEach(id=>{const el=document.getElementById(id);if(el)el.value=val;});
+}
+function resetSemanticColors() {
+  [2,3,4,5].forEach(n=>{ delete S.config['color'+n]; document.documentElement.style.removeProperty('--accent'+n); });
+  save(); syncColorPickers();
+}
+function syncColorPickers() {
+  [2,3,4,5].forEach(n=>{
+    const val = S.config['color'+n] || DEFAULT_COLORS['c'+n];
+    ['sb-color'+n,'mob-color'+n].forEach(id=>{const el=document.getElementById(id);if(el)el.value=val;});
+  });
+}
+
+// ── IA: CONTEXTO FINANCIERO ──
+function buildFinancialContext() {
+  const mes = today().slice(0,7);
+  const mesNombre = mesPretty(mes);
+  const gastosMes = S.gastos.filter(g=>g.fecha.startsWith(mes));
+  const ingresosMes = S.ingresos.filter(i=>i.fecha.startsWith(mes));
+  const totalGastos = gastosMes.reduce((a,g)=>a+g.monto,0);
+  const totalIngresos = ingresosMes.reduce((a,i)=>a+i.monto,0);
+  const balance = totalIngresos - totalGastos;
+
+  const gastosCat = {};
+  gastosMes.forEach(g=>{ gastosCat[g.categoria]=(gastosCat[g.categoria]||0)+g.monto; });
+  const gastosCatStr = Object.entries(gastosCat).sort((a,b)=>b[1]-a[1])
+    .map(([c,m])=>`  - ${c}: $${m.toLocaleString('es-AR')}`).join('\n') || '  (sin gastos)';
+
+  const ingCat = {};
+  ingresosMes.forEach(i=>{ ingCat[i.categoria]=(ingCat[i.categoria]||0)+i.monto; });
+  const ingCatStr = Object.entries(ingCat).map(([c,m])=>`  - ${c}: $${m.toLocaleString('es-AR')}`).join('\n') || '  (sin ingresos)';
+
+  // Cuotas pendientes
+  const cuotasStr = (S.comprasCuotas||[]).map(c=>{
+    const pagadas = gastosMes.filter(g=>g.cuotaId===c.id).length;
+    const restantes = Math.max(0, c.cuotas - (c.cuotaActual||1) + 1);
+    const montoMes = Math.round(c.monto / c.cuotas);
+    const totalPend = restantes * montoMes;
+    return `  - ${c.descripcion}: ${restantes} cuotas restantes de $${montoMes.toLocaleString('es-AR')}/mes = $${totalPend.toLocaleString('es-AR')} total pendiente`;
+  }).join('\n') || '  (sin cuotas en curso)';
+
+  // Presupuesto
+  const presupStr = Object.entries(S.presupuesto||{}).filter(([,v])=>v>0).map(([cat,lim])=>{
+    const gast = gastosMes.filter(g=>g.categoria===cat).reduce((a,g)=>a+g.monto,0);
+    const pct = Math.round(gast/lim*100);
+    return `  - ${cat}: $${gast.toLocaleString('es-AR')} de $${lim.toLocaleString('es-AR')} (${pct}%)`;
+  }).join('\n') || '  (sin presupuestos configurados)';
+
+  return `Sos un asistente financiero personal inteligente. Respondé siempre en español, de forma concisa y útil.
+
+RESUMEN FINANCIERO — ${mesNombre}:
+
+INGRESOS: $${totalIngresos.toLocaleString('es-AR')}
+${ingCatStr}
+
+GASTOS: $${totalGastos.toLocaleString('es-AR')}
+${gastosCatStr}
+
+BALANCE: ${balance>=0?'+':''}$${balance.toLocaleString('es-AR')} ${balance>=0?'✅ superávit':'⚠️ déficit'}
+
+CUOTAS EN CURSO:
+${cuotasStr}
+
+PRESUPUESTO VS REAL:
+${presupStr}
+
+Cuando el usuario pida "cuotas restantes", mostrá una tabla clara con descripción, cuotas que quedan, monto mensual y total pendiente.
+Cuando pida "impuestos", sugerí rubros típicos de Argentina (IVA, IIBB, bienes personales, monotributo, etc.) y cómo registrarlos como gastos en la categoría correcta.
+Cuando pida "resumen", dá un análisis claro del balance del mes.`;
+}
+
+// ── IA: CHAT ──
+let aiMessages = [];
+let aiPanelOpen = false;
+
+function toggleAIPanel() {
+  aiPanelOpen = !aiPanelOpen;
+  const panel = document.getElementById('ai-panel');
+  panel.style.display = aiPanelOpen ? 'flex' : 'none';
+  if (aiPanelOpen && aiMessages.length === 0) {
+    appendAIMsg('bot', '¡Hola! Soy tu asistente financiero. Podés preguntarme sobre tu resumen del mes, cuotas pendientes, impuestos, o cualquier consulta financiera. ¿En qué te ayudo?');
+  }
+  if (aiPanelOpen) setTimeout(()=>document.getElementById('ai-input').focus(), 100);
+}
+
+function appendAIMsg(role, text) {
+  const div = document.getElementById('ai-messages');
+  const msg = document.createElement('div');
+  msg.className = 'ai-msg ' + role;
+  msg.textContent = text;
+  div.appendChild(msg);
+  div.scrollTop = div.scrollHeight;
+  return msg;
+}
+
+async function sendAIMsg() {
+  const input = document.getElementById('ai-input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  const apiKey = localStorage.getItem('ai_key') || '';
+  if (!apiKey) {
+    appendAIMsg('bot', '⚠️ Configurá tu clave API de Anthropic en Ajustes → Asistente IA para usar esta función.');
+    return;
+  }
+  appendAIMsg('user', text);
+  aiMessages.push({ role: 'user', content: text });
+  const loading = appendAIMsg('bot', '...');
+  loading.classList.add('loading');
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-allow-browser': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 1500,
+        system: buildFinancialContext(),
+        messages: aiMessages.slice(-8)
+      })
+    });
+    const data = await res.json();
+    const reply = data?.content?.[0]?.text || 'Sin respuesta.';
+    loading.remove();
+    appendAIMsg('bot', reply);
+    aiMessages.push({ role: 'assistant', content: reply });
+  } catch(e) {
+    loading.remove();
+    appendAIMsg('bot', '❌ Error al conectar con la IA: ' + e.message);
+  }
+}
+
+function aiQuick(tipo) {
+  const prompts = {
+    resumen: 'Dame un resumen detallado de mis finanzas de este mes.',
+    cuotas: 'Mostrá todas mis cuotas en curso con cuántas me quedan y el total pendiente a pagar.',
+    impuestos: 'Qué impuestos debería agregar como gastos en Argentina? Ayudame a registrarlos correctamente.',
+    balance: '¿Cómo está mi balance este mes? ¿Estoy ahorrando o gastando de más?'
+  };
+  document.getElementById('ai-input').value = prompts[tipo] || '';
+  sendAIMsg();
+}
 
 // ── OLVIDÉ CONTRASEÑA ──
 async function doForgotPassword(e) {
