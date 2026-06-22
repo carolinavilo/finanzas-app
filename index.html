@@ -449,7 +449,7 @@ input[type=checkbox]{width:auto;margin-right:5px}
 
 <!-- DASHBOARD -->
 <div id="section-dashboard" class="section active">
-  <div class="page-header"><div class="page-header-left"><h2 id="dash-greeting">Dashboard</h2><p id="dash-sub"></p></div><div class="page-header-right"><button class="btn btn-primary" onclick="navMob('gastos');setTimeout(()=>{const el=document.getElementById('g-desc');if(el)el.focus();},200)">＋ Registrar gasto</button></div></div>
+  <div class="page-header"><div class="page-header-left"><h2 id="dash-greeting">Dashboard</h2><p id="dash-sub"></p></div><div class="page-header-right" style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary" onclick="navMob('gastos');setTimeout(()=>{const el=document.getElementById('g-desc');if(el)el.focus();},200)">＋ Registrar gasto</button><button class="btn btn-primary" style="background:var(--accent2)" onclick="navMob('ingresos');setTimeout(()=>{const el=document.getElementById('i-desc');if(el)el.focus();},200)">＋ Registrar ingreso</button></div></div>
   <div id="dash-alerts"></div>
   <div class="cards-grid-5" id="dash-cards"></div>
   <div class="two-col">
