@@ -126,7 +126,8 @@ input[type=checkbox]{width:auto;margin-right:5px}
 .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
 .modal-header h3{font-size:16px;font-weight:700;letter-spacing:-.2px}
 .modal-close{background:none;border:none;color:var(--text2);cursor:pointer;font-size:20px;line-height:1}
-.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
+.modal-body{margin:0 -26px;padding:0 26px}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;position:sticky;bottom:-26px;background:var(--card);padding:14px 0 4px;border-top:1px solid var(--border)}
 
 /* ── SPIN ── */
 @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
@@ -833,20 +834,23 @@ input[type=checkbox]{width:auto;margin-right:5px}
 <div class="modal-overlay" id="modal-compra-cuotas">
   <div class="modal">
     <div class="modal-header"><h3 id="modal-cc-title">Nueva compra en cuotas</h3><button class="modal-close" onclick="closeModal('modal-compra-cuotas')">×</button></div>
-    <input type="hidden" id="cc-edit-id"/>
-    <input type="hidden" id="cc-tarjeta-id"/>
-    <div class="form-grid-2">
-      <div class="form-group"><label>Fecha de compra</label><input type="date" id="cc-fecha"/></div>
-      <div class="form-group" style="grid-column:1/-1"><label>Descripción</label><input id="cc-desc" placeholder="TV Samsung, Notebook, etc."/></div>
-      <div class="form-group"><label>Categoría</label><select id="cc-cat"></select></div>
-      <div class="form-group"><label>Monto total (ARS)</label><input id="cc-monto" type="number" placeholder="120000" oninput="calcMontoCuota()"/></div>
-      <div class="form-group"><label>Cantidad de cuotas</label><input id="cc-cuotas" type="number" placeholder="12" min="1" oninput="calcMontoCuota()"/></div>
-      <div class="form-group"><label>Monto por cuota (ARS)</label><input id="cc-monto-cuota" type="number" placeholder="Auto" readonly style="background:var(--bg2);cursor:not-allowed"/></div>
-      <div class="form-group"><label>Mes 1ª cuota en resumen</label><input type="month" id="cc-primer-mes"/></div>
-      <div class="form-group" style="grid-column:1/-1"><label>Notas</label><input id="cc-notas" placeholder="Opcional"/></div>
-    </div>
-    <div style="background:rgba(108,99,255,.07);border:1px solid rgba(108,99,255,.2);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--text2);margin-bottom:2px">
-      💡 Indicá el <strong>mes en que entra la primera cuota</strong> al resumen (ej: si compraste en enero y cierra en febrero, ponés 2025-02). Las cuotas siguientes se distribuyen automáticamente.
+    <div class="modal-body">
+      <input type="hidden" id="cc-edit-id"/>
+      <input type="hidden" id="cc-tarjeta-id"/>
+      <div class="form-grid-2">
+        <div class="form-group"><label>Fecha de compra</label><input type="date" id="cc-fecha"/></div>
+        <div class="form-group" style="grid-column:1/-1"><label>Descripción</label><input id="cc-desc" placeholder="TV Samsung, Notebook, etc."/></div>
+        <div class="form-group"><label>Categoría</label><select id="cc-cat"></select></div>
+        <div class="form-group"><label>Monto total (ARS)</label><input id="cc-monto" type="number" placeholder="120000" inputmode="decimal" oninput="calcMontoCuota()"/></div>
+        <div class="form-group"><label>N° de cuotas</label><input id="cc-cuotas" type="number" placeholder="12" min="1" inputmode="numeric" oninput="calcMontoCuota()"/></div>
+        <div class="form-group"><label>Monto por cuota</label><input id="cc-monto-cuota" type="number" readonly style="background:var(--bg2);cursor:not-allowed"/></div>
+        <div class="form-group"><label>Cuotas ya pagadas</label><input id="cc-pagadas" type="number" placeholder="0" value="0" min="0" inputmode="numeric"/></div>
+        <div class="form-group"><label>Mes 1ª cuota en resumen</label><input type="month" id="cc-primer-mes"/></div>
+        <div class="form-group" style="grid-column:1/-1"><label>Notas</label><input id="cc-notas" placeholder="Opcional"/></div>
+      </div>
+      <div style="background:rgba(108,99,255,.07);border:1px solid rgba(108,99,255,.2);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--text2);margin-top:12px">
+        💡 Si ya pagaste cuotas, indicalo en "Cuotas ya pagadas". El mes de 1ª cuota es cuando entra al resumen de la tarjeta.
+      </div>
     </div>
     <div class="modal-footer"><button class="btn btn-neutral" onclick="closeModal('modal-compra-cuotas')">Cancelar</button><button class="btn btn-primary" onclick="agregarCompraCuotas()">Guardar</button></div>
   </div>
@@ -1924,6 +1928,7 @@ function openCompraCuotas(tarjetaId){
   document.getElementById('cc-monto').value='';
   document.getElementById('cc-cuotas').value='12';
   document.getElementById('cc-monto-cuota').value='';
+  document.getElementById('cc-pagadas').value='0';
   document.getElementById('cc-primer-mes').value=today().slice(0,7);
   document.getElementById('cc-notas').value='';
   // populate cat select
@@ -1940,10 +1945,12 @@ function agregarCompraCuotas(){
   const primerMes=document.getElementById('cc-primer-mes').value;
   if(!desc||!monto||!cuotas||!primerMes)return alert('Completá todos los campos obligatorios');
   const editId=document.getElementById('cc-edit-id').value;
+  const pagadas=Math.min(+document.getElementById('cc-pagadas').value||0,cuotas);
   const data={
     tarjetaId,fecha:document.getElementById('cc-fecha').value||today(),
     descripcion:desc,categoria:document.getElementById('cc-cat').value,
     montoTotal:monto,cuotas,montoCuota:Math.round(monto/cuotas),
+    cuotasPagadas:pagadas,
     primerMes,notas:document.getElementById('cc-notas').value.trim()
   };
   if(editId){Object.assign(S.comprasCuotas.find(c=>c.id===editId),data);}
@@ -1963,6 +1970,7 @@ function editCompraCuotas(id){
   document.getElementById('cc-monto').value=c.montoTotal;
   document.getElementById('cc-cuotas').value=c.cuotas;
   document.getElementById('cc-monto-cuota').value=c.montoCuota;
+  document.getElementById('cc-pagadas').value=c.cuotasPagadas||0;
   document.getElementById('cc-primer-mes').value=c.primerMes;
   document.getElementById('cc-notas').value=c.notas||'';
   openModal('modal-compra-cuotas');
