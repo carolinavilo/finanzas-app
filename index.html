@@ -468,13 +468,20 @@ input[type=checkbox]{width:auto;margin-right:5px}
   <div class="panel">
     <div class="panel-title">Nuevo ingreso</div>
     <div class="form-row">
-      <div class="form-group"><label>Fecha</label><input type="date" id="i-fecha"/></div>
-      <div class="form-group" style="flex:2"><label>Descripción</label><input type="text" id="i-desc" placeholder="Ej: Sueldo, Freelance, Alquiler..."/></div>
+      <div class="form-group" style="flex:2"><label>Descripción</label><input type="text" id="i-desc" placeholder="Ej: Sueldo, Freelance, Alquiler..." autocomplete="off"/></div>
       <div class="form-group"><label>Categoría</label><select id="i-cat-sel"></select></div>
-      <div class="form-group"><label>Monto (ARS)</label><input type="number" id="i-monto" placeholder="0"/></div>
-      <div class="form-group"><label>¿Recurrente?</label><label style="display:flex;align-items:center;gap:5px;padding-top:8px"><input type="checkbox" id="i-recurrente"/>Mensual</label></div>
-      <div class="form-group"><label>Notas</label><input type="text" id="i-notas" placeholder="Opcional"/></div>
-      <div class="form-group" style="align-self:flex-end"><button class="btn btn-success" onclick="agregarIngreso()">+ Agregar</button></div>
+      <div class="form-group"><label>Monto (ARS)</label><input type="number" id="i-monto" inputmode="decimal" placeholder="0" onfocus="if(!+this.value)this.value=''" onblur="if(!this.value)this.value='0'"/></div>
+      <div class="form-group" style="align-self:flex-end;display:flex;flex-direction:column;gap:6px">
+        <button class="btn btn-success" style="width:100%" onclick="agregarIngreso()">+ Agregar</button>
+        <button class="btn btn-ghost" style="width:100%;font-size:12px" onclick="toggleExtras('ingreso-extras',this)">⚙️ Opciones</button>
+      </div>
+    </div>
+    <div id="ingreso-extras" style="display:none">
+      <div class="form-row" style="margin-top:4px">
+        <div class="form-group"><label>Fecha</label><input type="date" id="i-fecha"/></div>
+        <div class="form-group"><label>¿Recurrente?</label><label style="display:flex;align-items:center;gap:5px;padding-top:8px"><input type="checkbox" id="i-recurrente"/>Mensual</label></div>
+        <div class="form-group"><label>Notas</label><input type="text" id="i-notas" placeholder="Opcional"/></div>
+      </div>
     </div>
   </div>
   <div class="panel">
@@ -496,21 +503,28 @@ input[type=checkbox]{width:auto;margin-right:5px}
   <div class="panel">
     <div class="panel-title">Nuevo gasto</div>
     <div class="form-row">
-      <div class="form-group"><label>Fecha</label><input type="date" id="g-fecha"/></div>
-      <div class="form-group" style="flex:2"><label>Descripción</label><input type="text" id="g-desc" placeholder="Ej: Almuerzo, Nafta..."/></div>
+      <div class="form-group" style="flex:2"><label>Descripción</label><input type="text" id="g-desc" placeholder="Ej: Almuerzo, Nafta..." autocomplete="off"/></div>
       <div class="form-group"><label>Categoría</label><select id="g-cat"></select></div>
-      <div class="form-group"><label>Monto (ARS)</label><input type="number" id="g-monto" placeholder="0"/></div>
-      <div class="form-group"><label>Medio de pago</label>
-        <select id="g-tipo" onchange="toggleTarjetaSel()">
-          <option value="efectivo">💵 Efectivo</option>
-          <option value="debito">🏦 Débito</option>
-          <option value="tarjeta">💳 Tarjeta créd.</option>
-        </select>
+      <div class="form-group"><label>Monto (ARS)</label><input type="number" id="g-monto" inputmode="decimal" placeholder="0" onfocus="if(!+this.value)this.value=''" onblur="if(!this.value)this.value='0'"/></div>
+      <div class="form-group" style="align-self:flex-end;display:flex;flex-direction:column;gap:6px">
+        <button class="btn btn-primary" style="width:100%" onclick="agregarGasto()">+ Agregar</button>
+        <button class="btn btn-ghost" style="width:100%;font-size:12px" onclick="toggleExtras('gasto-extras',this)">⚙️ Opciones</button>
       </div>
-      <div class="form-group" id="g-tarjeta-group" style="display:none"><label>Tarjeta</label><select id="g-tarjeta"></select></div>
-      <div class="form-group"><label>Notas</label><input type="text" id="g-notas" placeholder="Opcional"/></div>
-      <div class="form-group"><label>¿Recurrente?</label><label style="display:flex;align-items:center;gap:5px;padding-top:8px"><input type="checkbox" id="g-recurrente"/>Mensual</label></div>
-      <div class="form-group" style="align-self:flex-end"><button class="btn btn-primary" onclick="agregarGasto()">+ Agregar</button></div>
+    </div>
+    <div id="gasto-extras" style="display:none">
+      <div class="form-row" style="margin-top:4px">
+        <div class="form-group"><label>Fecha</label><input type="date" id="g-fecha"/></div>
+        <div class="form-group"><label>Medio de pago</label>
+          <select id="g-tipo" onchange="toggleTarjetaSel()">
+            <option value="efectivo">💵 Efectivo</option>
+            <option value="debito">🏦 Débito</option>
+            <option value="tarjeta">💳 Tarjeta créd.</option>
+          </select>
+        </div>
+        <div class="form-group" id="g-tarjeta-group" style="display:none"><label>Tarjeta</label><select id="g-tarjeta"></select></div>
+        <div class="form-group"><label>Notas</label><input type="text" id="g-notas" placeholder="Opcional"/></div>
+        <div class="form-group"><label>¿Recurrente?</label><label style="display:flex;align-items:center;gap:5px;padding-top:8px"><input type="checkbox" id="g-recurrente"/>Mensual</label></div>
+      </div>
     </div>
   </div>
   <div class="panel">
@@ -1319,6 +1333,18 @@ function load(){
 function save(){localStorage.setItem('fz_v3',JSON.stringify(S));}
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,5);}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+function nextFechaDia(dia){
+  const hoy=new Date();
+  let d=new Date(hoy.getFullYear(),hoy.getMonth(),dia);
+  if(d<=hoy)d=new Date(hoy.getFullYear(),hoy.getMonth()+1,dia);
+  return`${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`;
+}
+function toggleExtras(id,btn){
+  const el=document.getElementById(id);
+  const visible=el.style.display!=='none';
+  el.style.display=visible?'none':'block';
+  btn.textContent=visible?'⚙️ Opciones':'✕ Cerrar opciones';
+}
 
 // ====== FORMAT ======
 function $$(n){return'$'+Number(n||0).toLocaleString('es-AR',{minimumFractionDigits:0,maximumFractionDigits:0});}
@@ -1909,7 +1935,7 @@ function renderTarjetas(){
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
         <div>
           <div style="font-size:16px;font-weight:700">${t.nombre}</div>
-          <div style="font-size:12px;color:var(--text2);margin-top:2px">Cierre: día ${t.cierre} · Venc: día ${t.vencimiento}</div>
+          <div style="font-size:12px;color:var(--text2);margin-top:2px">Próx. cierre: <strong>${nextFechaDia(t.cierre)}</strong> · Próx. venc: <strong>${nextFechaDia(t.vencimiento)}</strong></div>
         </div>
         <div style="display:flex;gap:6px">
           <button class="btn btn-ghost btn-sm" onclick="editTarjeta('${t.id}')">✏️ Editar</button>
