@@ -150,6 +150,31 @@ input[type=checkbox]{width:auto;margin-right:5px}
 /* ── SPECIFIC CARDS ── */
 .cuota-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:10px;box-shadow:var(--shadow)}
 .cuota-card.urgent{border-color:rgba(248,113,113,.4)}
+/* ── MES ACCORDION ── */
+.mes-card{background:var(--card);border:1px solid var(--border);border-radius:14px;margin-bottom:10px;overflow:hidden;box-shadow:var(--shadow)}
+.mes-card-header{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;cursor:pointer;gap:10px;-webkit-tap-highlight-color:transparent;user-select:none}
+.mes-card-header:active{background:var(--bg2)}
+.mes-card-title{font-weight:700;font-size:15px}
+.mes-card-meta{margin-top:4px}
+.mes-card-right{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.mes-card-total{font-weight:700;font-size:15px}
+.mes-card-chevron{font-size:11px;color:var(--text2)}
+.mes-card-body{padding:0 16px 14px;display:none}
+.mes-card-body.open{display:block}
+.mes-pagado .mes-card-header{opacity:.6}
+.tarjeta-grupo{margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+.tarjeta-grupo:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0}
+.tarjeta-grupo-title{font-size:12px;font-weight:700;color:var(--text2);letter-spacing:.3px;margin-bottom:8px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.cuota-item{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px;gap:8px}
+.cuota-item:last-child{border-bottom:none}
+.cuota-item-left{flex:1;min-width:0}
+.cuota-item-desc{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cuota-item-sub{font-size:11px;color:var(--text2)}
+.cuota-item-monto{font-weight:700;white-space:nowrap}
+.vence-badge{display:inline-block;padding:2px 7px;border-radius:6px;font-size:11px;font-weight:600}
+.vence-danger{background:rgba(248,113,113,.15);color:var(--accent4)}
+.vence-warn{background:rgba(245,158,11,.15);color:var(--accent3)}
+.vence-ok{background:rgba(74,222,128,.12);color:var(--accent2)}
 .inv-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;gap:12px;box-shadow:var(--shadow)}
 .tarjeta-card{background:var(--card);border:1px solid var(--border);border-top:3px solid var(--accent);border-radius:var(--radius-card);padding:20px;margin-bottom:14px;box-shadow:var(--shadow)}
 
@@ -626,8 +651,8 @@ input[type=checkbox]{width:auto;margin-right:5px}
 <!-- CUOTAS -->
 <div id="section-cuotas" class="section">
   <div class="page-header">
-    <div class="page-header-left"><h2>📅 Cuotas</h2><p>Seguimiento de pagos en cuotas</p></div>
-    <button class="btn btn-primary" onclick="openModal('modal-cuota')">+ Nueva cuota</button>
+    <div class="page-header-left"><h2>📅 Cuotas</h2><p>Vista mensual de tus compras en cuotas</p></div>
+    <button class="btn btn-primary" onclick="navMob('tarjetas')">+ Nueva compra</button>
   </div>
   <div id="cuotas-alerts"></div>
   <div id="cuotas-list"></div>
@@ -859,8 +884,35 @@ input[type=checkbox]{width:auto;margin-right:5px}
       <div class="form-group"><label>Límite (ARS)</label><input id="t-limite" type="number" placeholder="500000"/></div>
       <div class="form-group"><label>Día de cierre</label><input id="t-cierre" type="number" min="1" max="31" placeholder="5"/></div>
       <div class="form-group"><label>Día de vencimiento</label><input id="t-venc" type="number" min="1" max="31" placeholder="15"/></div>
+      <div class="form-group" style="grid-column:1/-1">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:400">
+          <input type="checkbox" id="t-venc-mes-sig" style="width:auto;flex-shrink:0"/>
+          Vencimiento cae en el mes siguiente al cierre
+        </label>
+      </div>
     </div>
     <div class="modal-footer"><button class="btn btn-neutral" onclick="closeModal('modal-tarjeta')">Cancelar</button><button class="btn btn-primary" onclick="guardarTarjeta()">Guardar</button></div>
+  </div>
+</div>
+
+<!-- MODAL FECHAS TARJETA (quick edit) -->
+<div class="modal-overlay" id="modal-tarjeta-fechas">
+  <div class="modal" style="max-width:340px">
+    <div class="modal-header"><h3 id="modal-tf-title">Fechas de tarjeta</h3><button class="modal-close" onclick="closeModal('modal-tarjeta-fechas')">×</button></div>
+    <input type="hidden" id="tf-id"/>
+    <div class="modal-body">
+      <div class="form-grid-2">
+        <div class="form-group"><label>Día de cierre</label><input id="tf-cierre" type="number" min="1" max="31" inputmode="numeric"/></div>
+        <div class="form-group"><label>Día de vencimiento</label><input id="tf-venc" type="number" min="1" max="31" inputmode="numeric"/></div>
+      </div>
+      <div class="form-group" style="margin-top:10px">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:400">
+          <input type="checkbox" id="tf-venc-mes-sig" style="width:auto;flex-shrink:0"/>
+          Vencimiento en el mes siguiente al cierre
+        </label>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-neutral" onclick="closeModal('modal-tarjeta-fechas')">Cancelar</button><button class="btn btn-primary" onclick="guardarFechasTarjeta()">Guardar</button></div>
   </div>
 </div>
 
@@ -1919,6 +1971,7 @@ function openNuevaTarjeta(){
   document.getElementById('modal-tarjeta-title').textContent='Nueva Tarjeta';
   ['t-nombre','t-limite','t-cierre','t-venc'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('t-color').value='#6c63ff';
+  document.getElementById('t-venc-mes-sig').checked=false;
   openModal('modal-tarjeta');
 }
 
@@ -1931,6 +1984,7 @@ function editTarjeta(id){
   document.getElementById('t-limite').value=t.limite;
   document.getElementById('t-cierre').value=t.cierre;
   document.getElementById('t-venc').value=t.vencimiento;
+  document.getElementById('t-venc-mes-sig').checked=!!t.vencMesSiguiente;
   openModal('modal-tarjeta');
 }
 
@@ -1941,7 +1995,8 @@ function guardarTarjeta(){
   const data={nombre:n,color:document.getElementById('t-color').value,
     limite:+document.getElementById('t-limite').value||0,
     cierre:+document.getElementById('t-cierre').value||5,
-    vencimiento:+document.getElementById('t-venc').value||15};
+    vencimiento:+document.getElementById('t-venc').value||15,
+    vencMesSiguiente:document.getElementById('t-venc-mes-sig').checked};
   if(editId){Object.assign(S.tarjetas.find(t=>t.id===editId),data);}
   else{S.tarjetas.push({id:uid(),...data});}
   save();closeModal('modal-tarjeta');renderTarjetas();
@@ -1950,6 +2005,23 @@ function guardarTarjeta(){
 function eliminarTarjeta(id){
   if(!confirm('¿Eliminar esta tarjeta?'))return;
   S.tarjetas=S.tarjetas.filter(t=>t.id!==id);save();renderTarjetas();
+}
+function editFechasTarjeta(id){
+  const t=S.tarjetas.find(t=>t.id===id);if(!t)return;
+  document.getElementById('tf-id').value=id;
+  document.getElementById('modal-tf-title').textContent='Fechas — '+esc(t.nombre);
+  document.getElementById('tf-cierre').value=t.cierre||5;
+  document.getElementById('tf-venc').value=t.vencimiento||15;
+  document.getElementById('tf-venc-mes-sig').checked=!!t.vencMesSiguiente;
+  openModal('modal-tarjeta-fechas');
+}
+function guardarFechasTarjeta(){
+  const id=document.getElementById('tf-id').value;
+  const t=S.tarjetas.find(t=>t.id===id);if(!t)return;
+  t.cierre=+document.getElementById('tf-cierre').value||5;
+  t.vencimiento=+document.getElementById('tf-venc').value||15;
+  t.vencMesSiguiente=document.getElementById('tf-venc-mes-sig').checked;
+  save();closeModal('modal-tarjeta-fechas');renderTarjetas();renderCuotas();
 }
 
 // ====== COMPRAS EN CUOTAS + GASTOS FINANCIEROS ======
@@ -1967,6 +2039,13 @@ function addMesesAFecha(fechaStr,n){
   // If day overflows (e.g. Jan 31 + 1 month), clamp to last day of target month
   if(d.getDate()!==dia){d.setDate(0);}
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function calcFechaVencTarjeta(t,mesYYYYMM){
+  const vencDia=t.vencimiento||15;
+  const mes=t.vencMesSiguiente?addMeses(mesYYYYMM,1):mesYYYYMM;
+  const[y,m]=mes.split('-').map(Number);
+  const maxDia=new Date(y,m,0).getDate();
+  return mes+'-'+String(Math.min(vencDia,maxDia)).padStart(2,'0');
 }
 
 function getStatementItems(tarjetaId,mes){
@@ -2145,6 +2224,7 @@ function renderTarjetas(){
           <div style="font-size:12px;color:var(--text2);margin-top:2px">Próx. cierre: <strong>${nextFechaDia(t.cierre)}</strong> · Próx. venc: <strong>${nextFechaDia(t.vencimiento)}</strong></div>
         </div>
         <div style="display:flex;gap:6px;flex-shrink:0">
+          <button class="btn btn-ghost btn-sm" onclick="editFechasTarjeta('${esc(t.id)}')" title="Editar fechas">📅</button>
           <button class="btn btn-ghost btn-sm" onclick="editTarjeta('${esc(t.id)}')">✏️ Editar</button>
           <button class="btn btn-danger btn-sm" onclick="eliminarTarjeta('${esc(t.id)}')">✕</button>
         </div>
@@ -2221,48 +2301,169 @@ function eliminarCuota(id){
   S.cuotas=S.cuotas.filter(c=>c.id!==id);save();renderCuotas();
 }
 
+let _cuotasMesOpen={};
+function toggleMesCard(mes){
+  _cuotasMesOpen[mes]=!_cuotasMesOpen[mes];
+  renderCuotas();
+}
+
 function renderCuotas(){
-  populateTarjetaSels();
-  document.getElementById('modal-cuota-title').textContent='Nueva Cuota';
-  document.getElementById('c-edit-id').value='';
-  document.getElementById('c-venc').value=today();
   const cont=document.getElementById('cuotas-list');
   const alertCont=document.getElementById('cuotas-alerts');
-  const activas=S.cuotas.filter(c=>c.cuotasPagadas<c.cuotasTotal);
-  const done=S.cuotas.filter(c=>c.cuotasPagadas>=c.cuotasTotal);
-  const urg=activas.filter(c=>diasHasta(c.proximoVencimiento)<=7);
-  alertCont.innerHTML=urg.map(c=>`<div class="alert a-danger">⚠️ <strong>${c.descripcion}</strong> vence el ${ff(c.proximoVencimiento)} (${diasHasta(c.proximoVencimiento)}d)</div>`).join('');
-  if(!S.cuotas.length){cont.innerHTML='<div class="empty"><div class="ei">📅</div><p>Sin cuotas registradas.</p></div>';return;}
-  const card=(c,isDone)=>{
-    const pct=Math.round(c.cuotasPagadas/c.cuotasTotal*100);
-    const dias=diasHasta(c.proximoVencimiento);
-    const urgente=!isDone&&dias<=7;
-    const pcls=isDone?'p-ok':pct>=70?'p-ok':pct>=40?'p-warn':'p-blue';
-    const tar=S.tarjetas.find(t=>t.id===c.tarjetaId);
-    return`<div class="cuota-card ${urgente?'urgent':''}">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
-        <div>
-          <div style="font-weight:600;font-size:14px">${c.descripcion}</div>
-          <div style="font-size:11px;color:var(--text2);margin-top:2px">
-            ${tar?`<span class="badge b-purple" style="margin-right:4px">${tar.nombre}</span>`:''}
-            Cuota ${c.cuotasPagadas}/${c.cuotasTotal} · ${$$(c.montoCuota)}/mes · Resta: ${$$(c.cuotasTotal-c.cuotasPagadas)*c.montoCuota}
-          </div>
-          ${c.notas?`<div style="font-size:11px;color:var(--text2);font-style:italic;margin-top:2px">${c.notas}</div>`:''}
+  alertCont.innerHTML='';
+  const hoy=today();
+  const mesHoy=hoy.slice(0,7);
+
+  // ── Construir byMes desde comprasCuotas ──
+  const byMes={};
+  (S.comprasCuotas||[]).forEach(c=>{
+    const montoCuota=c.montoCuota||c.montoPorCuota||0;
+    const totalCuotas=c.cuotas||c.totalCuotas||0;
+    if(!totalCuotas||!montoCuota)return;
+    for(let i=0;i<totalCuotas;i++){
+      let fechaPago;
+      if(c.fechaPrimerPago){fechaPago=addMesesAFecha(c.fechaPrimerPago,i);}
+      else if(c.primerMes){fechaPago=addMeses(c.primerMes,i)+'-01';}
+      else continue;
+      const mes=fechaPago.slice(0,7);
+      const tId=c.tarjetaId||'__sin__';
+      if(!byMes[mes])byMes[mes]={};
+      if(!byMes[mes][tId])byMes[mes][tId]=[];
+      byMes[mes][tId].push({desc:c.descripcion,cuotaNum:i+1,totalCuotas,monto:montoCuota,id:c.id,fecha:fechaPago});
+    }
+  });
+
+  const meses=Object.keys(byMes).sort();
+
+  // ── Alertas urgentes (venc ≤ 5d) ──
+  const alertas=[];
+  meses.forEach(mes=>{
+    Object.keys(byMes[mes]).forEach(tId=>{
+      const tar=S.tarjetas.find(t=>t.id===tId);if(!tar)return;
+      const fv=calcFechaVencTarjeta(tar,mes);
+      const dias=diasHasta(fv);
+      if(dias>=0&&dias<=5){
+        const tot=Object.values(byMes[mes]).flat().reduce((a,i)=>a+i.monto,0);
+        alertas.push(`<div class="alert a-danger">⚠️ <strong>${esc(tar.nombre)}</strong> — ${mesPretty(mes)} vence el ${ff(fv)} (${dias}d) · ${$$(tot)}</div>`);
+      }
+    });
+  });
+  alertCont.innerHTML=alertas.join('');
+
+  const cuotasLegacy=S.cuotas||[];
+  if(!meses.length&&!cuotasLegacy.length){
+    cont.innerHTML='<div class="empty"><div class="ei">📅</div><p>No hay cuotas registradas. Agregá una compra en cuotas desde <strong>Tarjetas</strong>.</p></div>';
+    return;
+  }
+
+  let html='';
+
+  // ── Accordion por mes ──
+  meses.forEach(mes=>{
+    const isPast=mes<mesHoy;
+    const isCurrent=mes===mesHoy;
+    if(_cuotasMesOpen[mes]===undefined)_cuotasMesOpen[mes]=isCurrent;
+    const isOpen=_cuotasMesOpen[mes];
+    const allItems=Object.values(byMes[mes]).flat();
+    const totalMes=allItems.reduce((a,i)=>a+i.monto,0);
+
+    // Fecha de vencimiento más próxima del mes (para header)
+    let minDias=Infinity,headerFV='';
+    Object.keys(byMes[mes]).forEach(tId=>{
+      const tar=S.tarjetas.find(t=>t.id===tId);if(!tar)return;
+      const fv=calcFechaVencTarjeta(tar,mes);
+      const d=diasHasta(fv);
+      if(d<minDias){minDias=d;headerFV=fv;}
+    });
+    const hUrgClass=minDias>=0&&minDias<=5?'vence-danger':minDias>=0&&minDias<=10?'vence-warn':'vence-ok';
+
+    // Grupos por tarjeta
+    const tarjetasHTML=Object.entries(byMes[mes]).map(([tId,items])=>{
+      const tar=S.tarjetas.find(t=>t.id===tId);
+      const tarColor=tar?tar.color:'var(--accent)';
+      const tarNombre=tar?esc(tar.nombre):'Sin tarjeta';
+      let fechaVencTar='',urgTar='vence-ok';
+      if(tar){
+        const fv=calcFechaVencTarjeta(tar,mes);
+        const d=diasHasta(fv);
+        fechaVencTar=ff(fv);
+        urgTar=d>=0&&d<=5?'vence-danger':d>=0&&d<=10?'vence-warn':'vence-ok';
+      }
+      const subtotal=items.reduce((a,i)=>a+i.monto,0);
+      const itemsHTML=items.map(item=>`<div class="cuota-item">
+        <div class="cuota-item-left">
+          <div class="cuota-item-desc">${esc(item.desc)}</div>
+          <div class="cuota-item-sub">Cuota ${item.cuotaNum}/${item.totalCuotas}</div>
         </div>
-        <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
-          ${!isDone?`<div style="text-align:right;font-size:11px;color:${dias<=3?'var(--accent4)':dias<=7?'var(--accent3)':'var(--text2)'}">Próx.<br><strong>${ff(c.proximoVencimiento)}</strong>${dias>=0?` (${dias}d)`:''}</div>`:'<span class="badge b-green">✓ Finalizada</span>'}
-          ${!isDone?`<button class="btn btn-success btn-sm" onclick="pagarCuota('${c.id}')">✓ Pagar</button>`:''}
-          <button class="btn btn-ghost btn-xs" onclick="editCuota('${c.id}')">✏️</button>
-          <button class="btn btn-danger btn-sm" onclick="eliminarCuota('${c.id}')">✕</button>
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+          <div class="cuota-item-monto">${$$(item.monto)}</div>
+          <button class="btn btn-ghost btn-xs" onclick="editCompraCuotas('${item.id}')">✏️</button>
+        </div>
+      </div>`).join('');
+      return`<div class="tarjeta-grupo">
+        <div class="tarjeta-grupo-title">
+          <span style="width:8px;height:8px;border-radius:50%;background:${tarColor};display:inline-block;flex-shrink:0"></span>
+          ${tarNombre}
+          ${tar?`<span class="vence-badge ${urgTar}" style="margin-left:auto">Vence ${fechaVencTar}</span>`:''}
+        </div>
+        ${itemsHTML}
+        <div style="display:flex;justify-content:flex-end;margin-top:6px;font-size:12px;color:var(--text2)">Subtotal: <strong style="margin-left:4px">${$$(subtotal)}</strong></div>
+      </div>`;
+    }).join('');
+
+    html+=`<div class="mes-card${isPast?' mes-pagado':''}">
+      <div class="mes-card-header" onclick="toggleMesCard('${mes}')">
+        <div>
+          <div class="mes-card-title">${isPast?'✅ ':isCurrent?'📌 ':''}${mesPretty(mes)}</div>
+          ${headerFV?`<div class="mes-card-meta"><span class="vence-badge ${hUrgClass}">Vence ${ff(headerFV)}${minDias>=0&&minDias<=30?' ('+minDias+'d)':''}</span></div>`:''}
+        </div>
+        <div class="mes-card-right">
+          <div class="mes-card-total" style="color:${minDias>=0&&minDias<=5?'var(--accent4)':minDias>=0&&minDias<=10?'var(--accent3)':'var(--text)'}">${$$(totalMes)}</div>
+          <div class="mes-card-chevron">${isOpen?'▲':'▼'}</div>
         </div>
       </div>
-      <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text2);margin-bottom:3px"><span>Progreso</span><span>${pct}%</span></div>
-      <div class="progress-bar"><div class="progress-fill ${pcls}" style="width:${pct}%"></div></div>
+      <div class="mes-card-body${isOpen?' open':''}">
+        ${tarjetasHTML}
+      </div>
     </div>`;
-  };
-  let html='';
-  if(activas.length){html+=`<div style="font-weight:600;font-size:14px;margin-bottom:10px">Activas (${activas.length})</div>`;html+=activas.sort((a,b)=>a.proximoVencimiento.localeCompare(b.proximoVencimiento)).map(c=>card(c,false)).join('');}
-  if(done.length){html+=`<div style="font-weight:600;font-size:14px;margin:16px 0 10px">Finalizadas (${done.length})</div>`;html+=done.map(c=>card(c,true)).join('');}
+  });
+
+  // ── Cuotas legacy (S.cuotas) ──
+  if(cuotasLegacy.length){
+    const activas=cuotasLegacy.filter(c=>c.cuotasPagadas<c.cuotasTotal);
+    const done=cuotasLegacy.filter(c=>c.cuotasPagadas>=c.cuotasTotal);
+    if(meses.length)html+=`<div style="font-weight:700;font-size:13px;color:var(--text2);margin:18px 0 10px;padding-top:10px;border-top:1px solid var(--border)">Cuotas manuales</div>`;
+    const card=(c,isDone)=>{
+      const pct=Math.round(c.cuotasPagadas/c.cuotasTotal*100);
+      const dias=diasHasta(c.proximoVencimiento);
+      const urgente=!isDone&&dias<=7;
+      const pcls=isDone?'p-ok':pct>=70?'p-ok':pct>=40?'p-warn':'p-blue';
+      const tar=S.tarjetas.find(t=>t.id===c.tarjetaId);
+      return`<div class="cuota-card ${urgente?'urgent':''}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+          <div>
+            <div style="font-weight:600;font-size:14px">${esc(c.descripcion)}</div>
+            <div style="font-size:11px;color:var(--text2);margin-top:2px">
+              ${tar?`<span class="badge b-purple" style="margin-right:4px">${esc(tar.nombre)}</span>`:''}
+              Cuota ${c.cuotasPagadas}/${c.cuotasTotal} · ${$$(c.montoCuota)}/mes · Resta: ${$$((c.cuotasTotal-c.cuotasPagadas)*c.montoCuota)}
+            </div>
+            ${c.notas?`<div style="font-size:11px;color:var(--text2);font-style:italic;margin-top:2px">${esc(c.notas)}</div>`:''}
+          </div>
+          <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
+            ${!isDone?`<div style="text-align:right;font-size:11px;color:${dias<=3?'var(--accent4)':dias<=7?'var(--accent3)':'var(--text2)'}">Próx.<br><strong>${ff(c.proximoVencimiento)}</strong>${dias>=0?` (${dias}d)`:''}</div>`:'<span class="badge b-green">✓ Finalizada</span>'}
+            ${!isDone?`<button class="btn btn-success btn-sm" onclick="pagarCuota('${c.id}')">✓ Pagar</button>`:''}
+            <button class="btn btn-ghost btn-xs" onclick="editCuota('${c.id}')">✏️</button>
+            <button class="btn btn-danger btn-sm" onclick="eliminarCuota('${c.id}')">✕</button>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--text2);margin-bottom:3px"><span>Progreso</span><span>${pct}%</span></div>
+        <div class="progress-bar"><div class="progress-fill ${pcls}" style="width:${pct}%"></div></div>
+      </div>`;
+    };
+    if(activas.length){html+=`<div style="font-size:13px;color:var(--text2);margin-bottom:8px">Activas (${activas.length})</div>`;html+=activas.sort((a,b)=>a.proximoVencimiento.localeCompare(b.proximoVencimiento)).map(c=>card(c,false)).join('');}
+    if(done.length){html+=`<div style="font-size:13px;color:var(--text2);margin:14px 0 8px">Finalizadas (${done.length})</div>`;html+=done.map(c=>card(c,true)).join('');}
+  }
+
   cont.innerHTML=html;
 }
 
