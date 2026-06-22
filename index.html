@@ -36,8 +36,8 @@
 .ac-teal{--accent:#0f766e}
 
 *,*::before,*::after{box-sizing:border-box}
-html{overflow-x:clip;width:100%}
-body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;display:flex;min-height:100vh;font-size:14px;transition:background .25s,color .25s;overflow-x:clip;width:100%}
+html{overflow-x:clip;width:100%;overscroll-behavior-y:none}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;display:flex;min-height:100vh;font-size:14px;transition:background .25s,color .25s;overflow-x:clip;width:100%;overscroll-behavior-y:none}
 
 /* ── SIDEBAR ── */
 #sidebar{width:230px;min-height:100vh;background:var(--sidebar);border-right:2px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;z-index:100;transition:background .25s}
