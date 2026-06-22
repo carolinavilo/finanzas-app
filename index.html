@@ -548,6 +548,8 @@ input[type=checkbox]{width:auto;margin-right:5px}
           </select>
         </div>
         <div class="form-group" id="g-tarjeta-group" style="display:none"><label>Tarjeta</label><select id="g-tarjeta"></select></div>
+        <div class="form-group" id="g-cuotas-group" style="display:none"><label>¿En cuotas?</label><label style="display:flex;align-items:center;gap:5px;padding-top:8px"><input type="checkbox" id="g-cuotas-check" onchange="toggleCuotasN()"/> Sí, en cuotas</label></div>
+        <div class="form-group" id="g-ncuotas-group" style="display:none"><label>N° de cuotas</label><input type="number" id="g-ncuotas" placeholder="12" min="2" value="3" inputmode="numeric"/></div>
         <div class="form-group"><label>Notas</label><input type="text" id="g-notas" placeholder="Opcional"/></div>
         <div class="form-group"><label>¿Recurrente?</label><label style="display:flex;align-items:center;gap:5px;padding-top:8px"><input type="checkbox" id="g-recurrente"/>Mensual</label></div>
       </div>
@@ -1625,8 +1627,17 @@ function populateTarjetaSels(){
 }
 
 function toggleTarjetaSel(){
-  document.getElementById('g-tarjeta-group').style.display=
-    document.getElementById('g-tipo').value==='tarjeta'?'flex':'none';
+  const isTarjeta=document.getElementById('g-tipo').value==='tarjeta';
+  document.getElementById('g-tarjeta-group').style.display=isTarjeta?'flex':'none';
+  document.getElementById('g-cuotas-group').style.display=isTarjeta?'flex':'none';
+  if(!isTarjeta){
+    document.getElementById('g-cuotas-check').checked=false;
+    document.getElementById('g-ncuotas-group').style.display='none';
+  }
+}
+function toggleCuotasN(){
+  document.getElementById('g-ncuotas-group').style.display=
+    document.getElementById('g-cuotas-check').checked?'flex':'none';
 }
 
 // ====== FILTROS MES ======
@@ -1727,10 +1738,26 @@ function agregarGasto(){
   if(!desc)return alert('Ingresá una descripción');
   if(!monto||monto<=0)return alert('El monto debe ser mayor a 0');
   const tipo=document.getElementById('g-tipo').value;
-  const nuevo={id:uid(),fecha:document.getElementById('g-fecha').value||today(),
-    descripcion:desc,categoria:document.getElementById('g-cat').value,
-    monto,tipo,tarjetaId:tipo==='tarjeta'?document.getElementById('g-tarjeta').value:null,
-    notas:document.getElementById('g-notas').value.trim(),
+  const enCuotas=tipo==='tarjeta'&&document.getElementById('g-cuotas-check').checked;
+  const ncuotas=enCuotas?Math.max(2,parseInt(document.getElementById('g-ncuotas').value)||2):1;
+  const tarjetaId=tipo==='tarjeta'?document.getElementById('g-tarjeta').value:null;
+  const fecha=document.getElementById('g-fecha').value||today();
+  const notas=document.getElementById('g-notas').value.trim();
+  const cat=document.getElementById('g-cat').value;
+  if(enCuotas&&ncuotas>1){
+    const cuota={id:uid(),descripcion:desc,montoCuota:Math.round(monto/ncuotas),
+      cuotasTotal:ncuotas,cuotasPagadas:0,proximoVencimiento:fecha,
+      tarjetaId:tarjetaId||null,notas,categoria:cat};
+    S.cuotas.push(cuota);save();
+    document.getElementById('g-desc').value='';document.getElementById('g-monto').value='';
+    document.getElementById('g-notas').value='';document.getElementById('g-recurrente').checked=false;
+    document.getElementById('g-cuotas-check').checked=false;
+    document.getElementById('g-ncuotas-group').style.display='none';
+    renderGastos();renderCuotas();refreshDashIfVisible();
+    return;
+  }
+  const nuevo={id:uid(),fecha,descripcion:desc,categoria:cat,
+    monto,tipo,tarjetaId,notas,
     recurrente:document.getElementById('g-recurrente').checked};
   S.gastos.push(nuevo);
   if(userRole==='usuario'){syncGastoAdd(nuevo);}else{save();}
