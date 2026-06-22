@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
 <meta name="theme-color" content="#f0ece7"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-title" content="FinanzasApp"/>
@@ -163,6 +163,15 @@ input[type=checkbox]{width:auto;margin-right:5px}
 
 /* ── FILTER BAR ── */
 .filter-bar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+.tipo-pago-selector{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:6px}
+.tipo-btn{border:2px solid var(--border);background:var(--bg2);color:var(--text);border-radius:10px;padding:11px 4px;font-size:13px;font-weight:600;cursor:pointer;transition:.15s;text-align:center;-webkit-tap-highlight-color:transparent}
+.tipo-btn.active{border-color:var(--accent);background:var(--accent-light);color:var(--accent)}
+.cuotas-preview{background:var(--bg2);border-radius:10px;padding:12px;margin-top:8px}
+.cuotas-preview-item{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px}
+.cuotas-preview-item:last-child{border-bottom:none}
+.gasto-form-v2 .form-group{margin-bottom:14px}
+.gasto-form-v2 input,.gasto-form-v2 select{font-size:16px}
+.gasto-form-v2 .extra-section{margin-top:2px}
 .filter-bar input,.filter-bar select{width:auto;flex:0 0 auto}
 
 /* ── INGRESO ROW ── */
@@ -235,8 +244,8 @@ input[type=checkbox]{width:auto;margin-right:5px}
   #sidebar{display:none}
   #mobile-header{display:flex}
   #bottom-nav{display:flex}
-  body{flex-direction:column}
-  #main{margin-left:0;padding:72px 20px 90px;min-height:100vh;width:100%;flex:none;overflow-x:hidden}
+  body{flex-direction:column;overflow-x:hidden}
+  #main{margin-left:0;padding:72px 16px 90px;min-height:100vh;width:100%;max-width:100vw;flex:none;overflow-x:hidden}
   canvas{max-width:100%!important}
   .cards-grid,.cards-grid-5{grid-template-columns:1fr 1fr;gap:8px}
   .two-col,.three-col{grid-template-columns:1fr}
@@ -537,31 +546,52 @@ input[type=checkbox]{width:auto;margin-right:5px}
   <div class="page-header"><div class="page-header-left"><h2>💸 Gastos</h2><p>Registrá y controlá tus gastos diarios</p></div></div>
   <div class="panel">
     <div class="panel-title">Nuevo gasto</div>
-    <div class="form-row">
-      <div class="form-group" style="flex:2"><label>Descripción</label><input type="text" id="g-desc" placeholder="Ej: Almuerzo, Nafta..." autocomplete="off"/></div>
-      <div class="form-group"><label>Categoría</label><select id="g-cat"></select></div>
-      <div class="form-group"><label>Monto (ARS)</label><input type="number" id="g-monto" inputmode="decimal" placeholder="0" onfocus="if(!+this.value)this.value=''" onblur="if(!this.value)this.value='0'"/></div>
-      <div class="form-group" style="align-self:flex-end;display:flex;flex-direction:column;gap:6px">
-        <button class="btn btn-primary" style="width:100%" onclick="agregarGasto()">+ Agregar</button>
-        <button class="btn btn-ghost" style="width:100%;font-size:12px" onclick="toggleExtras('gasto-extras',this)">⚙️ Opciones</button>
-      </div>
-    </div>
-    <div id="gasto-extras" style="display:none">
-      <div class="form-row" style="margin-top:4px">
+    <div class="gasto-form-v2">
+      <div class="form-group"><label>Descripción</label><input type="text" id="g-desc" placeholder="Ej: Almuerzo, Nafta, Netflix..." autocomplete="off"/></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="form-group"><label>Monto (ARS)</label><input type="number" id="g-monto" inputmode="decimal" placeholder="0"/></div>
         <div class="form-group"><label>Fecha</label><input type="date" id="g-fecha"/></div>
-        <div class="form-group"><label>Medio de pago</label>
-          <select id="g-tipo" onchange="toggleTarjetaSel()">
-            <option value="efectivo">💵 Efectivo</option>
-            <option value="debito">🏦 Débito</option>
-            <option value="tarjeta">💳 Tarjeta créd.</option>
+      </div>
+      <div class="form-group"><label>Categoría</label><select id="g-cat"></select></div>
+      <div class="form-group">
+        <label>Medio de pago</label>
+        <div class="tipo-pago-selector">
+          <button type="button" class="tipo-btn active" data-tipo="efectivo" onclick="setGastoTipo('efectivo')">💵 Efectivo</button>
+          <button type="button" class="tipo-btn" data-tipo="debito" onclick="setGastoTipo('debito')">🏦 Débito</button>
+          <button type="button" class="tipo-btn" data-tipo="tarjeta" onclick="setGastoTipo('tarjeta')">💳 Tarjeta</button>
+        </div>
+      </div>
+      <input type="hidden" id="g-tipo" value="efectivo"/>
+      <div id="g-debito-extra" class="extra-section" style="display:none">
+        <div class="form-group"><label>Billetera / Banco</label>
+          <select id="g-billetera">
+            <option>Mercado Pago</option><option>Naranja X</option><option>Ualá</option>
+            <option>Banco</option><option>Brubank</option><option>Otro</option>
           </select>
         </div>
-        <div class="form-group" id="g-tarjeta-group" style="display:none"><label>Tarjeta</label><select id="g-tarjeta"></select></div>
-        <div class="form-group" id="g-cuotas-group" style="display:none"><label>¿En cuotas?</label><label style="display:flex;align-items:center;gap:5px;padding-top:8px"><input type="checkbox" id="g-cuotas-check" onchange="toggleCuotasN()"/> Sí, en cuotas</label></div>
-        <div class="form-group" id="g-ncuotas-group" style="display:none"><label>N° de cuotas</label><input type="number" id="g-ncuotas" placeholder="12" min="2" value="3" inputmode="numeric"/></div>
-        <div class="form-group"><label>Notas</label><input type="text" id="g-notas" placeholder="Opcional"/></div>
-        <div class="form-group"><label>¿Recurrente?</label><label style="display:flex;align-items:center;gap:5px;padding-top:8px"><input type="checkbox" id="g-recurrente"/>Mensual</label></div>
       </div>
+      <div id="g-tarjeta-extra" class="extra-section" style="display:none">
+        <div class="form-group"><label>Tarjeta</label><select id="g-tarjeta"></select></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="form-group"><label>Cuotas</label>
+            <select id="g-ncuotas-sel" onchange="updateGastoCuotasPreview()">
+              <option value="1">1 · pago único</option>
+              <option value="2">2 cuotas</option><option value="3">3 cuotas</option>
+              <option value="6">6 cuotas</option><option value="9">9 cuotas</option>
+              <option value="12">12 cuotas</option><option value="18">18 cuotas</option>
+              <option value="24">24 cuotas</option><option value="36">36 cuotas</option>
+              <option value="48">48 cuotas</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Por cuota</label><input id="g-cuota-calc" readonly placeholder="—" style="background:var(--bg2)"/></div>
+        </div>
+        <div class="form-group" id="g-fecha-primer-pago-wrap" style="display:none">
+          <label>Fecha 1er pago</label><input type="date" id="g-fecha-primer-pago" onchange="updateGastoCuotasPreview()"/>
+        </div>
+        <div id="g-cuotas-preview"></div>
+      </div>
+      <div class="form-group"><label style="color:var(--text2);font-size:12px">Notas <span style="font-weight:400">(opcional)</span></label><input type="text" id="g-notas" placeholder=""/></div>
+      <button class="btn btn-primary" style="width:100%;padding:13px;font-size:15px" onclick="agregarGasto()">+ Agregar gasto</button>
     </div>
   </div>
   <div class="panel">
@@ -1629,18 +1659,33 @@ function populateTarjetaSels(){
   });
 }
 
-function toggleTarjetaSel(){
-  const isTarjeta=document.getElementById('g-tipo').value==='tarjeta';
-  document.getElementById('g-tarjeta-group').style.display=isTarjeta?'flex':'none';
-  document.getElementById('g-cuotas-group').style.display=isTarjeta?'flex':'none';
-  if(!isTarjeta){
-    document.getElementById('g-cuotas-check').checked=false;
-    document.getElementById('g-ncuotas-group').style.display='none';
-  }
+function setGastoTipo(tipo){
+  document.getElementById('g-tipo').value=tipo;
+  document.querySelectorAll('.tipo-btn').forEach(b=>b.classList.toggle('active',b.dataset.tipo===tipo));
+  document.getElementById('g-debito-extra').style.display=tipo==='debito'?'block':'none';
+  document.getElementById('g-tarjeta-extra').style.display=tipo==='tarjeta'?'block':'none';
+  if(tipo==='tarjeta') updateGastoCuotasPreview();
 }
-function toggleCuotasN(){
-  document.getElementById('g-ncuotas-group').style.display=
-    document.getElementById('g-cuotas-check').checked?'flex':'none';
+function updateGastoCuotasPreview(){
+  const monto=+document.getElementById('g-monto').value||0;
+  const ncuotas=+document.getElementById('g-ncuotas-sel').value||1;
+  const fechaPrimer=document.getElementById('g-fecha-primer-pago').value;
+  const wrap=document.getElementById('g-fecha-primer-pago-wrap');
+  wrap.style.display=ncuotas>1?'block':'none';
+  const montoCuota=ncuotas>0?Math.round(monto/ncuotas):monto;
+  document.getElementById('g-cuota-calc').value=ncuotas>1?'$'+montoCuota.toLocaleString('es-AR'):'—';
+  const preview=document.getElementById('g-cuotas-preview');
+  if(ncuotas<=1||!fechaPrimer){preview.innerHTML='';return;}
+  let html='<div class="cuotas-preview">';
+  const mostrar=Math.min(ncuotas,12);
+  for(let i=0;i<mostrar;i++){
+    const f=addMesesAFecha(fechaPrimer,i);
+    const[yy,mm,dd]=f.split('-');
+    html+=`<div class="cuotas-preview-item"><span style="color:var(--text2)">Cuota ${i+1}/${ncuotas}</span><span>${dd}/${mm}/${yy}</span><span style="font-weight:600">$${montoCuota.toLocaleString('es-AR')}</span></div>`;
+  }
+  if(ncuotas>12)html+=`<div style="font-size:11px;color:var(--text2);padding-top:6px">...y ${ncuotas-12} cuotas más</div>`;
+  html+='</div>';
+  preview.innerHTML=html;
 }
 
 // ====== FILTROS MES ======
@@ -1734,6 +1779,18 @@ function renderIngresos(){
 }
 
 // ====== GASTOS ======
+function resetGastoForm(){
+  document.getElementById('g-desc').value='';
+  document.getElementById('g-monto').value='';
+  document.getElementById('g-notas').value='';
+  document.getElementById('g-fecha').value=today();
+  setGastoTipo('efectivo');
+  document.getElementById('g-ncuotas-sel').value='1';
+  document.getElementById('g-cuota-calc').value='';
+  document.getElementById('g-cuotas-preview').innerHTML='';
+  document.getElementById('g-fecha-primer-pago').value='';
+  document.getElementById('g-fecha-primer-pago-wrap').style.display='none';
+}
 function agregarGasto(){
   if(!currentUser)return;
   const desc=document.getElementById('g-desc').value.trim();
@@ -1741,32 +1798,36 @@ function agregarGasto(){
   if(!desc)return alert('Ingresá una descripción');
   if(!monto||monto<=0)return alert('El monto debe ser mayor a 0');
   const tipo=document.getElementById('g-tipo').value;
-  const enCuotas=tipo==='tarjeta'&&document.getElementById('g-cuotas-check').checked;
-  const ncuotas=enCuotas?Math.max(2,parseInt(document.getElementById('g-ncuotas').value)||2):1;
-  const tarjetaId=tipo==='tarjeta'?document.getElementById('g-tarjeta').value:null;
   const fecha=document.getElementById('g-fecha').value||today();
   const notas=document.getElementById('g-notas').value.trim();
   const cat=document.getElementById('g-cat').value;
-  if(enCuotas&&ncuotas>1){
-    const cuota={id:uid(),descripcion:desc,montoCuota:Math.round(monto/ncuotas),
-      cuotasTotal:ncuotas,cuotasPagadas:0,proximoVencimiento:fecha,
-      tarjetaId:tarjetaId||null,notas,categoria:cat};
-    S.cuotas.push(cuota);save();
-    document.getElementById('g-desc').value='';document.getElementById('g-monto').value='';
-    document.getElementById('g-notas').value='';document.getElementById('g-recurrente').checked=false;
-    document.getElementById('g-cuotas-check').checked=false;
-    document.getElementById('g-ncuotas-group').style.display='none';
-    renderGastos();renderCuotas();refreshDashIfVisible();
+
+  if(tipo==='tarjeta'){
+    const tarjetaId=document.getElementById('g-tarjeta').value;
+    const ncuotas=+document.getElementById('g-ncuotas-sel').value||1;
+    if(ncuotas>1){
+      const fechaPrimerPago=document.getElementById('g-fecha-primer-pago').value;
+      if(!fechaPrimerPago)return alert('Indicá la fecha del 1er pago');
+      const compra={id:uid(),tarjetaId,fecha,descripcion:desc,categoria:cat,
+        montoTotal:monto,cuotas:ncuotas,montoCuota:Math.round(monto/ncuotas),
+        cuotasPagadas:0,fechaPrimerPago,notas};
+      S.comprasCuotas.push(compra);save();
+      resetGastoForm();renderGastos();renderTarjetas();refreshDashIfVisible();
+      return;
+    }
+    const nuevo={id:uid(),fecha,descripcion:desc,categoria:cat,monto,tipo,tarjetaId,notas,recurrente:false};
+    S.gastos.push(nuevo);
+    if(userRole==='usuario'){syncGastoAdd(nuevo);}else{save();}
+    resetGastoForm();renderGastos();refreshDashIfVisible();
     return;
   }
-  const nuevo={id:uid(),fecha,descripcion:desc,categoria:cat,
-    monto,tipo,tarjetaId,notas,
-    recurrente:document.getElementById('g-recurrente').checked};
+
+  const billetera=tipo==='debito'?document.getElementById('g-billetera').value:null;
+  const nuevo={id:uid(),fecha,descripcion:desc,categoria:cat,monto,tipo,
+    tarjetaId:null,billetera,notas,recurrente:false};
   S.gastos.push(nuevo);
   if(userRole==='usuario'){syncGastoAdd(nuevo);}else{save();}
-  document.getElementById('g-desc').value='';document.getElementById('g-monto').value='';
-  document.getElementById('g-notas').value='';document.getElementById('g-recurrente').checked=false;
-  renderGastos();refreshDashIfVisible();
+  resetGastoForm();renderGastos();refreshDashIfVisible();
 }
 
 function editGasto(id){
@@ -1813,6 +1874,7 @@ function eliminarGasto(id){
 
 function renderGastos(){
   buildMesSel('filtro-mes-g',S.gastos);populateCatSelects();populateTarjetaSels();
+  if(!document.getElementById('g-fecha').value)document.getElementById('g-fecha').value=today();
   const mes=document.getElementById('filtro-mes-g').value;
   const cat=document.getElementById('filtro-cat-g').value;
   const tipo=document.getElementById('filtro-tipo-g').value;
