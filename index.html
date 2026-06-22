@@ -1019,26 +1019,19 @@ let userRole = null;
 let currentNombre = '';
 let _afterLoginDone = false;
 
-// Listener principal de sesión — maneja todos los eventos de auth
+// Listener que renueva sesión en segundo plano sin cerrar la app
 sb.auth.onAuthStateChange(async (event, session) => {
-  if ((event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session) {
+  if (event === 'TOKEN_REFRESHED' && session) {
     currentUser = session.user;
-    if (!_afterLoginDone) {
-      _afterLoginDone = true;
-      await afterLogin();
-    }
   } else if (event === 'SIGNED_OUT') {
     currentUser = null;
     userRole = null;
     _afterLoginDone = false;
     showLogin();
-  } else if (event === 'INITIAL_SESSION' && !session && !_afterLoginDone) {
-    showLogin();
   }
 });
 
 async function checkSession() {
-  // Solo maneja links de invitación/recuperación con token en el hash
   const hash = window.location.hash;
   const params = new URLSearchParams(hash.replace('#', ''));
   const type = params.get('type');
@@ -1048,7 +1041,14 @@ async function checkSession() {
     showSetPasswordScreen();
     return;
   }
-  // La sesión normal es manejada por onAuthStateChange INITIAL_SESSION
+
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) {
+    currentUser = session.user;
+    await afterLogin();
+  } else {
+    showLogin();
+  }
 }
 
 function showSetPasswordScreen() {
