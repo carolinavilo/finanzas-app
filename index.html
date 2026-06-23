@@ -3333,31 +3333,55 @@ async function fetchCrypto(tickers){
 }
 
 async function obtenerCotizacion(ticker){
-  const urls=[
-    `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://query2.finance.yahoo.com/v8/finance/chart/${ticker}.BA?interval=1d&range=1d`)}`,
-    `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://query2.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d`)}`,
+  const yahooBA=`https://query2.finance.yahoo.com/v8/finance/chart/${ticker}.BA?interval=1d&range=1d`;
+  const yahooUS=`https://query2.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d`;
+  const proxies=[
+    u=>`https://corsproxy.io/?${encodeURIComponent(u)}`,
+    u=>`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
+    u=>`https://thingproxy.freeboard.io/fetch/${u}`,
+    u=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
   ];
 
-  for(const url of urls){
-    try{
-      const r=await fetch(url,{signal:AbortSignal.timeout(8000)});
-      const d=await r.json();
-      const meta=d?.chart?.result?.[0]?.meta;
-      if(!meta?.regularMarketPrice)continue;
+  console.log('[Cotizacion] Probando proxies para',ticker);
+  for(const makeProxy of proxies){
+    for(const yahooUrl of[yahooBA,yahooUS]){
+      const proxyUrl=makeProxy(yahooUrl);
+      try{
+        const r=await fetch(proxyUrl,{signal:AbortSignal.timeout(6000)});
+        if(!r.ok){console.log('[Cotizacion]',ticker,'proxy falló (HTTP',r.status,'):',proxyUrl.split('?')[0]);continue;}
+        const d=await r.json();
+        const meta=d?.chart?.result?.[0]?.meta;
+        if(!meta?.regularMarketPrice){console.log('[Cotizacion]',ticker,'sin precio en respuesta:',proxyUrl.split('?')[0]);continue;}
 
-      let precioARS=meta.regularMarketPrice;
-      let precioUSD=null;
+        let precioARS=meta.regularMarketPrice;
+        let precioUSD=null;
 
-      if(meta.currency==='USD'){
-        const dolarR=await fetch('https://dolarapi.com/v1/dolares/blue',{signal:AbortSignal.timeout(5000)});
-        const dolarD=await dolarR.json();
-        precioUSD=precioARS;
-        precioARS=precioUSD*dolarD.venta;
-      }
+        if(meta.currency==='USD'){
+          try{
+            const dr=await fetch('https://dolarapi.com/v1/dolares/blue',{signal:AbortSignal.timeout(4000)});
+            const dd=await dr.json();
+            precioUSD=precioARS;
+            precioARS=precioUSD*dd.venta;
+          }catch(e){console.log('[Cotizacion]',ticker,'fallo al obtener dólar blue');continue;}
+        }
 
-      return{precioARS,precioUSD,variacion:meta.regularMarketChangePercent,fuente:meta.currency==='USD'?'Yahoo USD→ARS':'Yahoo ARS'};
-    }catch(e){continue;}
+        const fuente=meta.currency==='USD'?'Yahoo USD→ARS':'Yahoo ARS';
+        console.log('[Cotizacion] ✅',ticker,'→ $'+precioARS.toLocaleString('es-AR'),'vía',proxyUrl.split('?')[0].replace('https://',''));
+        // Guardar en cache individual
+        localStorage.setItem('precio_'+ticker.toUpperCase(),JSON.stringify({
+          precioARS,precioUSD,variacion:meta.regularMarketChangePercent,timestamp:Date.now(),fuente
+        }));
+        return{precioARS,precioUSD,variacion:meta.regularMarketChangePercent,fuente};
+      }catch(e){console.log('[Cotizacion]',ticker,'excepción en',proxyUrl.split('?')[0].replace('https://',''),':',e.message);continue;}
+    }
   }
+
+  // Todos los proxies fallaron — intentar cache individual
+  console.log('[Cotizacion] ❌',ticker,'— todos los proxies fallaron, usando cache');
+  try{
+    const cached=localStorage.getItem('precio_'+ticker.toUpperCase());
+    if(cached){const c=JSON.parse(cached);c.desdeCache=true;return c;}
+  }catch(e){}
   return null;
 }
 
