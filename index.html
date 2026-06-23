@@ -340,8 +340,11 @@ input[type=checkbox]{width:auto;margin-right:5px}
 .ai-chip:hover{background:var(--accent);color:#fff}
 #ai-attach-btn{background:none;border:none;color:var(--text2);font-size:17px;cursor:pointer;padding:4px 6px;flex-shrink:0;opacity:.8;transition:opacity .15s;line-height:1}
 #ai-attach-btn:hover,#ai-attach-btn.has-file{opacity:1;color:var(--accent)}
-#ai-attachment-label{display:none;padding:2px 12px 8px;font-size:11px;color:var(--accent);align-items:center;gap:4px}
-#ai-attachment-label button{background:none;border:none;cursor:pointer;color:var(--text2);font-size:14px;padding:0 4px;line-height:1}
+#ai-attachment-label{display:none;padding:4px 12px 8px;flex-wrap:wrap;gap:4px}
+.ai-attach-chip{display:inline-flex;align-items:center;gap:3px;padding:2px 6px 2px 8px;background:var(--accent-light);border:1px solid var(--accent-border);border-radius:20px;font-size:11px;color:var(--accent);max-width:200px}
+.ai-attach-chip-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:140px}
+.ai-attach-chip button{background:none;border:none;cursor:pointer;color:var(--text2);font-size:13px;padding:0 2px;line-height:1;flex-shrink:0}
+.ai-attach-chip button:hover{color:var(--accent4)}
 .ai-import-wrap{max-width:100%!important;width:100%;box-sizing:border-box;white-space:normal;padding:12px!important}
 .ai-import-panel{width:100%;display:flex;flex-direction:column;gap:8px}
 .ai-import-section{border:1px solid var(--border);border-radius:10px;overflow:hidden}
@@ -859,13 +862,10 @@ input[type=checkbox]{width:auto;margin-right:5px}
     <button class="ai-chip" onclick="aiQuick('balance')">⚖️ Balance</button>
   </div>
   <div id="ai-messages"></div>
-  <div id="ai-attachment-label">
-    <span id="ai-attachment-text"></span>
-    <button onclick="clearAIAttachment()" title="Quitar archivo">×</button>
-  </div>
+  <div id="ai-attachment-label"></div>
   <div id="ai-input-row">
-    <input type="file" id="ai-file-input" accept=".pdf,image/*" style="display:none" onchange="handleAIFileSelect(event)"/>
-    <button id="ai-attach-btn" title="Adjuntar resumen bancario (PDF o imagen)" onclick="document.getElementById('ai-file-input').click()">📎</button>
+    <input type="file" id="ai-file-input" accept=".pdf,image/*" multiple style="display:none" onchange="handleAIFileSelect(event)"/>
+    <button id="ai-attach-btn" title="Adjuntar resúmenes bancarios (PDF o imágenes)" onclick="document.getElementById('ai-file-input').click()">📎</button>
     <input id="ai-input" placeholder="Preguntá algo..." onkeydown="if(event.key==='Enter')sendAIMsg()"/>
     <button class="btn btn-primary" style="padding:8px 14px;border-radius:20px" onclick="sendAIMsg()">↑</button>
   </div>
@@ -3443,7 +3443,7 @@ Cuando pida "resumen", dá un análisis claro del balance del mes.`;
 // ── IA: CHAT ──
 let aiMessages = [];
 let aiPanelOpen = false;
-let aiAttachment = null;
+let aiAttachments = [];
 const _aiImportData = {};
 
 function toggleAIPanel() {
@@ -3529,49 +3529,87 @@ function escHtml(s){
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-function handleAIFileSelect(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-  e.target.value = '';
-  const reader = new FileReader();
-  reader.onload = (ev) => {
-    const dataUrl = ev.target.result;
-    const base64 = dataUrl.slice(dataUrl.indexOf(',') + 1);
-    aiAttachment = { base64, mediaType: file.type, fileName: file.name };
-    const lbl = document.getElementById('ai-attachment-label');
-    const txt = document.getElementById('ai-attachment-text');
-    if (lbl && txt) { txt.textContent = '📎 ' + file.name; lbl.style.display = 'flex'; }
-    const btn = document.getElementById('ai-attach-btn');
-    if (btn) btn.classList.add('has-file');
-  };
-  reader.readAsDataURL(file);
-}
-
-function clearAIAttachment() {
-  aiAttachment = null;
+function renderAttachmentChips() {
   const lbl = document.getElementById('ai-attachment-label');
-  if (lbl) lbl.style.display = 'none';
   const btn = document.getElementById('ai-attach-btn');
-  if (btn) btn.classList.remove('has-file');
+  if (!lbl) return;
+  if (!aiAttachments.length) {
+    lbl.style.display = 'none';
+    lbl.innerHTML = '';
+    if (btn) btn.classList.remove('has-file');
+    return;
+  }
+  lbl.style.display = 'flex';
+  if (btn) btn.classList.add('has-file');
+  if (aiAttachments.length <= 3) {
+    lbl.innerHTML = aiAttachments.map((a, i) => {
+      const icon = a.mediaType.startsWith('image/') ? '🖼️' : '📄';
+      return `<span class="ai-attach-chip">${icon} <span class="ai-attach-chip-name">${escHtml(a.fileName)}</span><button onclick="removeAIAttachment(${i})" title="Quitar">×</button></span>`;
+    }).join('');
+  } else {
+    lbl.innerHTML = `<span class="ai-attach-chip">📎 <span class="ai-attach-chip-name">${aiAttachments.length} archivos seleccionados</span><button onclick="clearAIAttachments()" title="Quitar todos">×</button></span>`;
+  }
 }
 
-async function analizarResumenBancario(base64, mediaType, loadingEl) {
-  const apiKey = localStorage.getItem('anthropic_api_key') || localStorage.getItem('ai_key');
-  const isImage = mediaType.startsWith('image/');
-  const fileBlock = isImage
-    ? { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } }
-    : { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } };
+function handleAIFileSelect(e) {
+  const files = Array.from(e.target.files);
+  e.target.value = '';
+  if (!files.length) return;
+  let pending = files.length;
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target.result;
+      aiAttachments.push({ base64: dataUrl.slice(dataUrl.indexOf(',') + 1), mediaType: file.type, fileName: file.name });
+      if (--pending === 0) renderAttachmentChips();
+    };
+    reader.readAsDataURL(file);
+  });
+}
 
-  const analysisPrompt = `Analizá este resumen bancario o de tarjeta de crédito.
+function removeAIAttachment(idx) {
+  aiAttachments.splice(idx, 1);
+  renderAttachmentChips();
+}
+
+function clearAIAttachments() {
+  aiAttachments = [];
+  renderAttachmentChips();
+}
+
+async function analizarResumenBancario(attachments, loadingEl) {
+  const apiKey = localStorage.getItem('anthropic_api_key') || localStorage.getItem('ai_key');
+  const n = attachments.length;
+
+  const fileBlocks = attachments.map(att => {
+    const isImage = att.mediaType.startsWith('image/');
+    return isImage
+      ? { type: 'image', source: { type: 'base64', media_type: att.mediaType, data: att.base64 } }
+      : { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: att.base64 } };
+  });
+
+  const jsonSchema = `{
+  "gastos": [{ "fecha": "YYYY-MM-DD", "descripcion": "string", "monto": number, "categoria_sugerida": "string" }],
+  "cuotas": [{ "fecha": "YYYY-MM-DD", "descripcion": "string", "monto_total": number, "monto_cuota": number, "cuota_actual": number, "total_cuotas": number, "categoria_sugerida": "string" }]
+}`;
+
+  const analysisPrompt = n > 1
+    ? `Analizá estos ${n} resúmenes bancarios/fotos de tickets.
+Consolidá TODOS los movimientos de todos los archivos en un único JSON sin duplicados.
+GASTOS: compras en una sola cuota o débitos
+CUOTAS: compras en cuotas (identificalas por el texto 'X/Y' o 'cuota X de Y')
+
+Respondé ÚNICAMENTE con este JSON sin texto adicional:
+${jsonSchema}`
+    : `Analizá este resumen bancario o de tarjeta de crédito.
 Extraé TODOS los movimientos y clasificalos en dos grupos:
 GASTOS: compras en una sola cuota o débitos
 CUOTAS: compras en cuotas (identificalas por el texto 'X/Y' o 'cuota X de Y')
 
 Respondé ÚNICAMENTE con este JSON sin texto adicional:
-{
-  "gastos": [{ "fecha": "YYYY-MM-DD", "descripcion": "string", "monto": number, "categoria_sugerida": "string" }],
-  "cuotas": [{ "fecha": "YYYY-MM-DD", "descripcion": "string", "monto_total": number, "monto_cuota": number, "cuota_actual": number, "total_cuotas": number, "categoria_sugerida": "string" }]
-}`;
+${jsonSchema}`;
+
+  const content = [...fileBlocks, { type: 'text', text: analysisPrompt }];
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -3585,7 +3623,7 @@ Respondé ÚNICAMENTE con este JSON sin texto adicional:
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
         max_tokens: 4096,
-        messages: [{ role: 'user', content: [fileBlock, { type: 'text', text: analysisPrompt }] }]
+        messages: [{ role: 'user', content }]
       })
     });
     loadingEl.remove();
@@ -3737,21 +3775,23 @@ async function llamarClaudeAPI(prompt) {
 async function sendAIMsg() {
   const input = document.getElementById('ai-input');
   const text = input.value.trim();
-  if (!text && !aiAttachment) return;
+  if (!text && !aiAttachments.length) return;
   const apiKey = localStorage.getItem('anthropic_api_key') || localStorage.getItem('ai_key') || '';
   if (!apiKey) {
     appendAIMsg('bot', '⚠️ Configurá tu API key de Anthropic en Ajustes → Asistente IA para usar esta función.');
     return;
   }
 
-  if (aiAttachment) {
-    const att = { ...aiAttachment };
-    clearAIAttachment();
+  if (aiAttachments.length) {
+    const atts = [...aiAttachments];
+    clearAIAttachments();
     input.value = '';
-    appendAIMsg('user', '📎 ' + att.fileName);
-    const loading = appendAIMsg('bot', '⏳ Analizando resumen bancario...');
+    const userLabel = atts.length === 1 ? '📎 ' + atts[0].fileName : `📎 ${atts.length} archivos adjuntos`;
+    appendAIMsg('user', userLabel);
+    const loadingText = atts.length > 1 ? `⏳ Analizando ${atts.length} archivos...` : '⏳ Analizando resumen bancario...';
+    const loading = appendAIMsg('bot', loadingText);
     loading.classList.add('loading');
-    await analizarResumenBancario(att.base64, att.mediaType, loading);
+    await analizarResumenBancario(atts, loading);
     return;
   }
 
