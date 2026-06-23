@@ -3333,41 +3333,39 @@ async function fetchCrypto(tickers){
 }
 
 async function obtenerCotizacion(ticker){
-  if(!dolarRates.blue?.venta)await fetchDolar();
-  const blue=dolarRates.blue?.venta||null;
-  const ao=u=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`;
+  // query2 es más permisivo con CORS que query1 de Yahoo Finance
+  const urls=[
+    // CEDEAR en pesos argentinos (mercado BA)
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://query2.finance.yahoo.com/v8/finance/chart/${ticker}.BA?interval=1d&range=1d`)}`,
+    // Si no existe .BA, buscar en USD y convertir
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://query2.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d`)}`,
+  ];
 
-  // Intento 1: Yahoo Finance .BA — precio en ARS directo (CEDEAR en BCBA)
-  try{
-    const r=await fetch(ao(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}.BA?interval=1d&range=1d`),{signal:AbortSignal.timeout(6000)});
-    if(r.ok){
+  for(const url of urls){
+    try{
+      const r=await fetch(url,{signal:AbortSignal.timeout(8000)});
       const d=await r.json();
       const meta=d?.chart?.result?.[0]?.meta;
-      if(meta?.regularMarketPrice){
-        const price=meta.regularMarketPrice;
-        const prev=meta.previousClose||meta.chartPreviousClose||price;
-        return{price,priceARS:price,priceUSD:blue?price/blue:null,change:prev?((price-prev)/prev*100):0,currency:'ARS',fuente:'Yahoo.BA'};
-      }
-    }
-  }catch(e){}
+      if(!meta?.regularMarketPrice)continue;
 
-  // Intento 2: Yahoo Finance USD — convertir a ARS con dólar blue
-  try{
-    const r=await fetch(ao(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=1d`),{signal:AbortSignal.timeout(6000)});
-    if(r.ok){
-      const d=await r.json();
-      const meta=d?.chart?.result?.[0]?.meta;
-      if(meta?.regularMarketPrice){
-        const precioUSD=meta.regularMarketPrice;
-        const prev=meta.previousClose||meta.chartPreviousClose||precioUSD;
-        const change=prev?((precioUSD-prev)/prev*100):0;
-        const cur=meta.currency||'USD';
-        const precioARS=(cur==='USD'&&blue)?precioUSD*blue:precioUSD;
-        return{price:precioARS,priceARS:precioARS,priceUSD:cur==='USD'?precioUSD:null,change,currency:cur,fuente:'Yahoo USD'};
-      }
-    }
-  }catch(e){}
+      let precioARS=meta.regularMarketPrice;
+      let precioUSD=null;
+      const prev=meta.previousClose||meta.chartPreviousClose||precioARS;
+      const change=prev?((precioARS-prev)/prev*100):0;
 
+      // Si la cotización es en USD (mercado USA), convertir a ARS con dólar blue
+      if(meta.currency==='USD'){
+        precioUSD=precioARS;
+        if(!dolarRates.blue?.venta)await fetchDolar();
+        if(dolarRates.blue?.venta)precioARS=precioUSD*dolarRates.blue.venta;
+        else continue; // sin tipo de cambio no podemos convertir
+      }
+
+      const fuente=url.includes('.BA')?'Yahoo.BA':'Yahoo USD';
+      console.log('[Cotizacion]',ticker,'→',precioARS,'ARS vía',fuente);
+      return{price:precioARS,priceARS,priceUSD,change,currency:meta.currency||'ARS',fuente};
+    }catch(e){continue;}
+  }
   return null;
 }
 
