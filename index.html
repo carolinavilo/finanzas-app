@@ -2735,6 +2735,7 @@ function nuevaInversion(){resetInvModal();openModal('modal-inversion');}
 
 function renderInversiones(){
   resetInvModal();
+  loadCacheToLive(); // mostrar precios cacheados inmediatamente antes de cualquier fetch
   // Auto-fetch precios si hay tickers y no hay datos recientes
   const hasTickers=S.inversiones.some(i=>i.ticker&&i.ticker!=='USD');
   if(hasTickers&&(!lastUpdate||Date.now()-lastUpdate>4*60*1000)){
@@ -2827,6 +2828,20 @@ function renderInversiones(){
             <div style="font-size:11px;color:${gc}">${ga} ${Math.abs(gPct).toFixed(2)}%</div>
           </div>
         </div>
+        ${(()=>{
+          if(!live.ts)return'';
+          const diff=Date.now()-live.ts;
+          const h=Math.floor(diff/3600000);const m=Math.floor((diff%3600000)/60000);
+          const timeAgo=h>0?`hace ${h}h${m>0?` ${m}min`:''}`:(m>0?`hace ${m}min`:'hace un momento');
+          const isManual=live.fuente==='manual';
+          const isIA=live.fuente?.includes('IA');
+          const icon=isManual?'✏️':isIA?'🤖':'⏱';
+          const label=isManual?`Precio manual · ${timeAgo}`:isIA?`Estimado por IA (no tiempo real) · ${timeAgo}`:`Último precio · ${timeAgo}`;
+          return`<div style="font-size:10px;color:var(--text2);margin-top:8px;padding:5px 10px;background:rgba(128,128,128,.06);border-radius:6px;display:flex;align-items:center;gap:8px">
+            <span>${icon} ${label}</span>
+            <button class="btn btn-ghost btn-sm" onclick="delete liveprices['${ticker}'];refreshPrices()" style="font-size:10px;padding:2px 8px;margin-left:auto">🔄 Actualizar</button>
+          </div>`;
+        })()}
       </div>`;
     }
     if(dolarLive&&dolarLive.blue){
@@ -3247,6 +3262,38 @@ let lastUpdate=null;
 let pricecache=(()=>{try{const d=localStorage.getItem('fz_pricecache');return d?JSON.parse(d):{};}catch(e){return{};}})();
 function savePriceCache(){try{localStorage.setItem('fz_pricecache',JSON.stringify(pricecache));}catch(e){}}
 
+// Carga precios no expirados del cache en liveprices para mostrar inmediatamente
+function loadCacheToLive(){
+  const now=Date.now();const EXPIRY=24*60*60*1000;
+  Object.entries(pricecache).forEach(([ticker,c])=>{
+    if(!c?.priceARS||!c.ts||now-c.ts>EXPIRY)return;
+    if(!liveprices[ticker]||liveprices[ticker].fromCache)
+      liveprices[ticker]={price:c.priceARS,priceARS:c.priceARS,priceUSD:c.priceUSD||null,change:c.change||0,currency:'ARS',fuente:c.fuente||'caché',fromCache:true,ts:c.ts};
+  });
+}
+
+// Cotización vía Claude API como fallback cuando las APIs externas fallan
+async function obtenerCotizacionViaIA(ticker){
+  const apiKey=localStorage.getItem('anthropic_api_key')||localStorage.getItem('ai_key');
+  if(!apiKey)return null;
+  try{
+    const r=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:200,messages:[{role:'user',
+        content:`¿Cuál es el precio actual del CEDEAR ${ticker} en pesos argentinos (ARS) en el mercado de Buenos Aires? Respondé ÚNICAMENTE con un JSON así, sin texto adicional: {"precioARS": 287264, "precioUSD": 192.15, "fuente": "estimado"}`
+      }]}),
+      signal:AbortSignal.timeout(20000)
+    });
+    const data=await r.json();
+    const text=data?.content?.[0]?.text;
+    if(!text)return null;
+    const parsed=JSON.parse(text.replace(/```json|```/g,'').trim());
+    if(parsed?.precioARS>0)return parsed;
+  }catch(e){}
+  return null;
+}
+
 async function fetchDolar(){
   try{
     const r=await fetch('https://dolarapi.com/v1/dolares',{signal:AbortSignal.timeout(8000)});
@@ -3276,81 +3323,37 @@ async function fetchCrypto(tickers){
 }
 
 async function obtenerCotizacion(ticker){
-  // Proxies CORS disponibles — se prueban en orden para cada fuente
-  const PROXIES=[
-    u=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
-    u=>`https://corsproxy.io/?${encodeURIComponent(u)}`,
-    u=>`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
-  ];
-
-  // Helper: intenta una URL con todos los proxies, parsea con fn
-  async function tryProxies(url,parseFn){
-    for(const mkProxy of PROXIES){
-      try{
-        const r=await fetch(mkProxy(url),{signal:AbortSignal.timeout(6000)});
-        if(!r.ok)continue;
-        const d=await r.json();
-        const res=parseFn(d);
-        if(res)return res;
-      }catch(e){}
-    }
-    return null;
-  }
-
-  // Asegurarse de tener dólar blue para conversiones
   if(!dolarRates.blue?.venta)await fetchDolar();
   const blue=dolarRates.blue?.venta||null;
+  const ao=u=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`;
 
-  // Fuente 1: Yahoo Finance .BA — precio directo en ARS (CEDEAR en BCBA)
-  const resBA=await tryProxies(
-    `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}.BA?interval=1d&range=1d`,
-    d=>{
-      const meta=d?.chart?.result?.[0]?.meta;
-      if(!meta?.regularMarketPrice)return null;
-      const price=meta.regularMarketPrice;
-      const prev=meta.previousClose||meta.chartPreviousClose||price;
-      return{price,priceARS:price,priceUSD:blue?price/blue:null,change:prev?((price-prev)/prev*100):0,currency:'ARS',fuente:'Yahoo.BA'};
-    }
-  );
-  if(resBA)return resBA;
-
-  // Fuente 2: Yahoo Finance USD — precio en USD, convertir a ARS
-  const resYF=await tryProxies(
-    `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=1d`,
-    d=>{
-      const meta=d?.chart?.result?.[0]?.meta;
-      if(!meta?.regularMarketPrice)return null;
-      const precioUSD=meta.regularMarketPrice;
-      const prev=meta.previousClose||meta.chartPreviousClose||precioUSD;
-      const change=prev?((precioUSD-prev)/prev*100):0;
-      const cur=meta.currency||'USD';
-      const precioARS=(cur==='USD'&&blue)?precioUSD*blue:precioUSD;
-      return{price:precioARS,priceARS:precioARS,priceUSD:cur==='USD'?precioUSD:null,change,currency:cur,fuente:'Yahoo USD'};
-    }
-  );
-  if(resYF)return resYF;
-
-  // Fuente 3: Stooq — fuente alternativa, precio en USD
-  const resStooq=await tryProxies(
-    `https://stooq.com/q/l/?s=${encodeURIComponent(ticker.toLowerCase())}.us&f=sd2t2ohlcv&h&e=json`,
-    d=>{
-      const sym=d?.symbols?.[0];
-      if(!sym?.close||sym.close<=0)return null;
-      const precioUSD=sym.close;
-      if(!blue)return null;
-      return{price:precioUSD*blue,priceARS:precioUSD*blue,priceUSD:precioUSD,change:0,currency:'USD',fuente:'Stooq'};
-    }
-  );
-  if(resStooq)return resStooq;
-
-  // Fuente 4: TwelveData demo (CORS real, sin proxy)
+  // Intento 1: Yahoo Finance .BA — precio en ARS directo (CEDEAR en BCBA)
   try{
-    const r=await fetch(`https://api.twelvedata.com/price?symbol=${encodeURIComponent(ticker)}&apikey=demo`,{signal:AbortSignal.timeout(5000)});
-    const d=await r.json();
-    if(d.price){
-      const precioUSD=parseFloat(d.price);
-      if(!isNaN(precioUSD)&&precioUSD>0&&blue){
-        return{price:precioUSD*blue,priceARS:precioUSD*blue,priceUSD:precioUSD,change:0,currency:'USD',fuente:'TwelveData'};
+    const r=await fetch(ao(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}.BA?interval=1d&range=1d`),{signal:AbortSignal.timeout(6000)});
+    if(r.ok){
+      const d=await r.json();
+      const meta=d?.chart?.result?.[0]?.meta;
+      if(meta?.regularMarketPrice){
+        const price=meta.regularMarketPrice;
+        const prev=meta.previousClose||meta.chartPreviousClose||price;
+        return{price,priceARS:price,priceUSD:blue?price/blue:null,change:prev?((price-prev)/prev*100):0,currency:'ARS',fuente:'Yahoo.BA'};
+      }
+    }
+  }catch(e){}
+
+  // Intento 2: Yahoo Finance USD — convertir a ARS con dólar blue
+  try{
+    const r=await fetch(ao(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?interval=1d&range=1d`),{signal:AbortSignal.timeout(6000)});
+    if(r.ok){
+      const d=await r.json();
+      const meta=d?.chart?.result?.[0]?.meta;
+      if(meta?.regularMarketPrice){
+        const precioUSD=meta.regularMarketPrice;
+        const prev=meta.previousClose||meta.chartPreviousClose||precioUSD;
+        const change=prev?((precioUSD-prev)/prev*100):0;
+        const cur=meta.currency||'USD';
+        const precioARS=(cur==='USD'&&blue)?precioUSD*blue:precioUSD;
+        return{price:precioARS,priceARS:precioARS,priceUSD:cur==='USD'?precioUSD:null,change,currency:cur,fuente:'Yahoo USD'};
       }
     }
   }catch(e){}
@@ -3367,16 +3370,28 @@ async function refreshPrices(){
   const stockTickers=[...new Set(invCon.filter(i=>i.ticker&&!CRYPTO_IDS[i.ticker]&&i.ticker!=='USD').map(i=>i.ticker))];
   const hasDolar=invCon.some(i=>i.ticker==='USD');
 
+  // Cargar cache primero para mostrar precios conocidos mientras se actualizan
+  loadCacheToLive();
   // Run dolar + crypto in parallel, then stocks sequentially
   await Promise.all([fetchDolar(),fetchCrypto(cryptoTickers)]);
   for(const t of stockTickers){
     const res=await obtenerCotizacion(t);
     if(res){
       liveprices[t]=res;
-      pricecache[t]={priceARS:res.priceARS,priceUSD:res.priceUSD,fuente:res.fuente,ts:Date.now()};
+      pricecache[t]={priceARS:res.priceARS,priceUSD:res.priceUSD,fuente:res.fuente,change:res.change||0,ts:Date.now()};
       savePriceCache();
-    } else if(!liveprices[t]||!liveprices[t].price){
-      liveprices[t]={failed:true};
+    } else {
+      // Fallback: cotización via Claude API
+      const resIA=await obtenerCotizacionViaIA(t);
+      if(resIA?.precioARS>0){
+        const entry={price:resIA.precioARS,priceARS:resIA.precioARS,priceUSD:resIA.precioUSD||null,change:0,currency:'ARS',fuente:'IA (estimado)',ts:Date.now()};
+        liveprices[t]=entry;
+        pricecache[t]={priceARS:entry.priceARS,priceUSD:entry.priceUSD,fuente:entry.fuente,change:0,ts:Date.now()};
+        savePriceCache();
+      } else if(!liveprices[t]?.priceARS){
+        // Solo marcar como failed si no hay ningún precio (ni cache)
+        liveprices[t]={failed:true};
+      }
     }
   }
 
@@ -3398,7 +3413,10 @@ function setPriceManual(ticker){
   const priceARS=parseFloat(inp.value);
   if(!priceARS||priceARS<=0){inp.style.borderColor='var(--accent4)';inp.focus();return;}
   const priceUSD=dolarRates.blue?.venta?priceARS/dolarRates.blue.venta:null;
-  liveprices[ticker]={price:priceARS,priceARS,priceUSD,change:0,currency:'ARS',manual:true};
+  const ts=Date.now();
+  liveprices[ticker]={price:priceARS,priceARS,priceUSD,change:0,currency:'ARS',fuente:'manual',ts};
+  pricecache[ticker]={priceARS,priceUSD,fuente:'manual',change:0,ts};
+  savePriceCache();
   renderInversiones();
 }
 
