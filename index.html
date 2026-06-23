@@ -2910,7 +2910,7 @@ function renderInversiones(){
           else{icon='🕐';label=`Actualizado hace ${timeAgo}`;}
           return`<div style="font-size:10px;color:var(--text2);margin-top:8px;padding:5px 10px;background:rgba(128,128,128,.06);border-radius:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
             <span>${icon} ${label}</span>
-            <a href="https://balanz.com/inversiones/cedears/" target="_blank" rel="noopener" style="font-size:10px;color:var(--accent);text-decoration:none;white-space:nowrap">🔗 Ver en Balanz</a>
+            <a href="https://bullmarket.com.ar/mercados/cotizaciones/cedears/" target="_blank" rel="noopener" style="font-size:10px;color:var(--accent);text-decoration:none;white-space:nowrap">🔗 Ver en Bull Market</a>
             <button class="btn btn-ghost btn-sm btn-actualizar-cot" style="font-size:10px;padding:2px 8px;margin-left:auto">${btnLabel}</button>
           </div>`;
         })()}
@@ -3451,6 +3451,23 @@ function setRatioManual(ticker){
   refreshPrices();
 }
 
+async function obtenerCotizacionBullmarket(ticker){
+  try{
+    const r=await fetch(
+      `https://api.allorigins.win/raw?url=${encodeURIComponent('https://bullmarket.com.ar/mercados/cotizaciones/cedears/')}`,
+      {signal:AbortSignal.timeout(8000)}
+    );
+    const html=await r.text();
+    const regex=new RegExp(ticker+'[\\s\\S]{0,200}?([\\d\\.]+,[\\d]{2})','i');
+    const match=html.match(regex);
+    if(match){
+      const precioStr=match[1].replace(/\./g,'').replace(',','.');
+      return{precioARS:parseFloat(precioStr),fuente:'bullmarket.com.ar'};
+    }
+  }catch(e){}
+  return null;
+}
+
 async function obtenerCotizacion(ticker,forceRefresh=false){
   console.log('obtenerCotizacion llamada para:',ticker,forceRefresh?'(forzado)':'');
   const cacheKey='precio_'+ticker.toUpperCase();
@@ -3463,6 +3480,15 @@ async function obtenerCotizacion(ticker,forceRefresh=false){
   const apiKey=localStorage.getItem('anthropic_api_key')||localStorage.getItem('ai_key');
   if(!apiKey){cotizacionDebug[ticker]={error:'Sin API key configurada',ts:Date.now()};return cached?JSON.parse(cached):null;}
 
+  // Intentar fetch directo a bullmarket.com.ar primero
+  const bullResult=await obtenerCotizacionBullmarket(ticker);
+  if(bullResult?.precioARS>0){
+    cotizacionDebug[ticker]={fuente:'bullmarket.com.ar (directo)',precioARS:bullResult.precioARS,ts:Date.now()};
+    const entry={precioARS:bullResult.precioARS,precioUSD:null,ratio:null,dolarCCL:null,fuente:bullResult.fuente,mercado:null,fechaPrecio:new Date().toISOString().slice(0,10),timestamp:Date.now()};
+    localStorage.setItem(cacheKey,JSON.stringify(entry));
+    return{...entry,viaWebSearch:false};
+  }
+
   let rawResponse=null;
   try{
     const r=await fetch('https://api.anthropic.com/v1/messages',{
@@ -3473,7 +3499,7 @@ async function obtenerCotizacion(ticker,forceRefresh=false){
         max_tokens:200,
         system:'Sos un bot que responde ÚNICAMENTE con JSON válido. Sin texto, sin markdown, sin explicaciones. Solo el objeto JSON pedido.',
         tools:[{type:'web_search_20250305',name:'web_search'}],
-        messages:[{role:'user',content:`Buscá el precio actual del CEDEAR ${ticker} en balanz.com en pesos argentinos.\nURL a buscar: https://balanz.com/inversiones/cedears/\n\nEl precio que necesito es el último precio operado en ARS del CEDEAR ${ticker} en BYMA según Balanz.\n\nSi no encontrás en Balanz, buscá en:\n- https://www.balanz.com/cotizaciones/?tipo=cedears\n- "CEDEAR ${ticker} precio ARS balanz.com 2026"\n\nDevolvé SOLO este JSON sin texto adicional:\n{"precioARS": 485000, "fuente": "balanz.com", "fecha": "${new Date().toISOString().slice(0,10)}"}`}]
+        messages:[{role:'user',content:`Buscá el precio actual del CEDEAR ${ticker} en pesos argentinos en https://bullmarket.com.ar/mercados/cotizaciones/cedears/\n\nNecesito el último precio operado en ARS del CEDEAR ${ticker} en ese sitio.\n\nSi no encontrás ahí, buscá: "CEDEAR ${ticker} precio ARS site:bullmarket.com.ar"\n\nEl precio debe ser un número en pesos argentinos, por ejemplo 485000 para SMH o 6500 para XLK.\n\nDevolvé SOLO este JSON sin ningún texto adicional:\n{"precioARS": 485000, "fuente": "bullmarket.com.ar", "fecha": "${new Date().toISOString().slice(0,10)}"}`}]
       })
     });
     rawResponse=await r.json();
