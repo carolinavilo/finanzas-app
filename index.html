@@ -2798,8 +2798,9 @@ function renderInversiones(){
   stats.innerHTML=`
     <div class="stat-card c-purple"><div class="icon">💼</div><div class="label">Total invertido</div><div class="value">${$$(totalInvPortfolio)}</div><div class="sub">${nPositions} posicione${nPositions!==1?'s':''}</div></div>
     <div class="stat-card c-green"><div class="icon">📈</div><div class="label">Valor actual</div><div class="value">${$$(valorActualPortfolio)}</div><div class="sub" style="color:${rendColor}">${rendPortfolio>=0?'+':''}${$$(rendPortfolio)} (${totalInvPortfolio?((rendPortfolio/totalInvPortfolio*100).toFixed(1))+'%':'—'})</div></div>
-    <div class="stat-card c-yellow"><div class="icon">📅</div><div class="label">Próx. vencimiento</div><div class="value" style="font-size:15px">${prox?ff(prox.fechaVencimiento):'—'}</div><div class="sub">${prox?prox.descripcion:''}</div></div>
+    <div class="stat-card c-yellow"><div class="icon">📅</div><div class="label">Próx. vencimiento</div><div class="value" id="prox-venc-value" style="font-size:15px">${prox?ff(prox.fechaVencimiento):'⏳'}</div><div class="sub" id="prox-venc-sub">${prox?prox.descripcion:'cargando...'}</div></div>
   `;
+  cargarVencimientosCEDEARs();
 
   // Banner informativo sobre ratios CEDEAR (colapsable, dismissable)
   const bannerEl=document.getElementById('banner-cedear');
@@ -3366,6 +3367,7 @@ let liveprices={};   // { ticker: {price, priceARS, priceUSD, change, fuente} }
 let dolarRates={};   // { casa: {compra, venta, nombre} }
 let cotizacionDebug={}; // { ticker: {rawResponse, error, ts} } para diagnóstico
 let lastUpdate=null;
+let cedearVencimientos={}; // { ticker: {fecha, tipo, fuente, timestamp} }
 let pricecache=(()=>{try{const d=localStorage.getItem('fz_pricecache');return d?JSON.parse(d):{};}catch(e){return{};}})();
 function savePriceCache(ticker,priceARS){
   console.log('[PriceCache] Guardando:',ticker,'→',priceARS);
@@ -3482,6 +3484,75 @@ function setRatioManual(ticker){
   localStorage.removeItem('precio_'+ticker.toUpperCase());
   delete liveprices[ticker];
   refreshPrices();
+}
+
+async function obtenerVencimientoCEDEAR(ticker){
+  const cacheKey='vencimiento_'+ticker.toUpperCase();
+  const cached=localStorage.getItem(cacheKey);
+  if(cached){
+    const c=JSON.parse(cached);
+    if((Date.now()-c.timestamp)<24*3600000)return c;
+  }
+  const apiKey=localStorage.getItem('anthropic_api_key')||localStorage.getItem('ai_key');
+  if(!apiKey)return null;
+  try{
+    const r=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-6',
+        max_tokens:200,
+        system:'Respondé ÚNICAMENTE con JSON válido. Sin texto, sin markdown.',
+        tools:[{type:'web_search_20250305',name:'web_search'}],
+        messages:[{role:'user',content:`Buscá en bullmarket.com.ar o balanz.com o cnv.gov.ar cuándo es el próximo vencimiento o fecha de rescate del CEDEAR ${ticker} en Argentina.\nDevolvé SOLO este JSON:\n{"fecha": "2026-08-15", "tipo": "vencimiento/rescate/sin vencimiento", "fuente": "sitio"}`}]
+      })
+    });
+    const data=await r.json();
+    const textBlock=data.content.filter(b=>b.type==='text').pop();
+    if(!textBlock)return null;
+    const match=textBlock.text.match(/\{[\s\S]*\}/);
+    if(!match)return null;
+    const result=JSON.parse(match[0]);
+    localStorage.setItem(cacheKey,JSON.stringify({...result,timestamp:Date.now()}));
+    return result;
+  }catch(e){return null;}
+}
+
+function actualizarCardVencimiento(){
+  const valEl=document.getElementById('prox-venc-value');
+  const subEl=document.getElementById('prox-venc-sub');
+  if(!valEl||!subEl)return;
+  const entries=Object.entries(cedearVencimientos);
+  if(!entries.length)return;
+  const meses=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  const conFecha=entries
+    .filter(([,v])=>v.fecha&&v.tipo!=='sin vencimiento')
+    .sort((a,b)=>a[1].fecha.localeCompare(b[1].fecha));
+  if(!conFecha.length){
+    // Todos sin vencimiento (ETFs permanentes)
+    valEl.textContent='♾';valEl.style.fontSize='20px';
+    subEl.textContent='Sin vencimiento · ETF';
+    return;
+  }
+  const [ticker,venc]=conFecha[0];
+  const [y,m,d]=venc.fecha.split('-');
+  valEl.textContent=`${parseInt(d)} ${meses[parseInt(m)-1]} ${y}`;
+  valEl.style.fontSize='13px';
+  subEl.textContent=`${ticker}${venc.tipo&&venc.tipo!=='vencimiento'?' · '+venc.tipo:''}`;
+}
+
+async function cargarVencimientosCEDEARs(){
+  const tickers=[...new Set(
+    S.inversiones
+      .filter(i=>i.ticker&&!CRYPTO_IDS[i.ticker]&&i.ticker!=='USD')
+      .map(i=>i.ticker.toUpperCase())
+  )];
+  if(!tickers.length)return;
+  for(const t of tickers){
+    const result=await obtenerVencimientoCEDEAR(t);
+    if(result)cedearVencimientos[t]=result;
+    actualizarCardVencimiento();
+  }
 }
 
 async function obtenerCotizacionBullmarket(ticker){
