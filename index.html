@@ -3179,6 +3179,28 @@ function renderDashboard(){
   const totalCuotas=cuotasAct.reduce((a,c)=>a+c.montoCuota,0);
   const balance=totalI-totalG-totalCuotas;
   const totalInv=S.inversiones.reduce((a,i)=>a+i.montoInvertido,0);
+  const toARS=(m,mon)=>(mon==='USD'&&dolarRates.blue?.venta)?m*dolarRates.blue.venta:m;
+  const totalInvARS=S.inversiones.reduce((a,i)=>a+toARS(+i.montoInvertido||0,i.moneda),0);
+  // Valor actual del portfolio desde precios cacheados
+  const tickerUnidades={};
+  S.inversiones.filter(i=>i.ticker&&i.ticker!=='USD').forEach(i=>{
+    const t=i.ticker.toUpperCase();
+    tickerUnidades[t]=(tickerUnidades[t]||0)+(+i.cantidad||0);
+  });
+  let valorPortfolio=0;const tickersSinPrecio=[];
+  Object.entries(tickerUnidades).forEach(([t,unidades])=>{
+    const live=liveprices[t];
+    const cached=(()=>{try{const c=localStorage.getItem('precio_'+t);return c?JSON.parse(c):null;}catch(e){return null;}})();
+    const precio=live?.priceARS||cached?.precioARS||null;
+    if(precio>0)valorPortfolio+=precio*unidades;
+    else tickersSinPrecio.push(t);
+  });
+  const usdUnidades=S.inversiones.filter(i=>i.ticker==='USD').reduce((a,i)=>a+(+i.cantidad||0),0);
+  if(usdUnidades>0&&dolarRates.blue?.venta)valorPortfolio+=usdUnidades*dolarRates.blue.venta;
+  const tieneValorActual=valorPortfolio>0;
+  const gananciaPort=tieneValorActual?valorPortfolio-totalInvARS:0;
+  const gPctPort=totalInvARS?(gananciaPort/totalInvARS*100):0;
+  const gColorPort=gananciaPort>=0?'var(--accent2)':'var(--accent4)';
 
   // ALERTS presupuesto 80%
   const alertsDiv=document.getElementById('dash-alerts');
@@ -3198,7 +3220,18 @@ function renderDashboard(){
     <div class="stat-card c-red"><div class="icon">💸</div><div class="label">Gastos del mes</div><div class="value">${$$(totalG)}</div><div class="sub">${gMes.length} transacciones</div></div>
     <div class="stat-card c-yellow"><div class="icon">📅</div><div class="label">Cuotas este mes</div><div class="value">${$$(totalCuotas)}</div><div class="sub">${cuotasAct.length} cuotas activas</div></div>
     <div class="stat-card ${balance>=0?'c-green':'c-red'}"><div class="icon">⚖️</div><div class="label">Balance neto</div><div class="value ${balance>=0?'pos':'neg'}">${balance>=0?'+':''}${$$(balance)}</div><div class="sub">Ingresos − gastos − cuotas</div></div>
-    <div class="stat-card c-blue"><div class="icon">📈</div><div class="label">Total invertido</div><div class="value">${$$(totalInv)}</div><div class="sub">${S.inversiones.length} posiciones</div></div>
+    <div class="stat-card c-blue" onclick="navMob('inversiones')" style="cursor:pointer" title="Ver detalle de inversiones">
+      <div class="icon">📈</div>
+      <div class="label">Valor portfolio</div>
+      <div class="value">${tieneValorActual?$$(valorPortfolio):$$(totalInvARS)}</div>
+      <div class="sub" style="display:flex;flex-direction:column;gap:2px">
+        ${tieneValorActual&&!tickersSinPrecio.length
+          ?`<span style="color:${gColorPort}">${gananciaPort>=0?'+':''}${$$(gananciaPort)} (${gananciaPort>=0?'+':''}${Math.abs(gPctPort).toFixed(1)}%)</span>`
+          :tickersSinPrecio.length?`<span>⚠️ Actualizar cotizaciones</span>`:`<span>${S.inversiones.length} posiciones</span>`
+        }
+        <span style="color:var(--text2);font-size:9px">${S.inversiones.length} posicion${S.inversiones.length!==1?'es':''} · Ver detalle →</span>
+      </div>
+    </div>
   `;
 
   // CHART categorías
