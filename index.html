@@ -700,6 +700,19 @@ input[type=checkbox]{width:auto;margin-right:5px}
       <div id="inv-cotizaciones"><p style="color:var(--text2);font-size:12px">Agregá un ticker a tus inversiones y presioná Actualizar.</p></div>
     </div>
   </div>
+  <div id="banner-cedear" style="display:none;margin-bottom:14px;padding:12px 16px;background:rgba(var(--accent1-rgb,99,102,241),.08);border:1px solid rgba(99,102,241,.25);border-radius:10px;font-size:12px;color:var(--text)">
+    <div style="display:flex;align-items:flex-start;gap:10px">
+      <span style="font-size:16px">ℹ️</span>
+      <div style="flex:1">
+        <strong>Para valores correctos en CEDEARs:</strong> verificá el ratio de conversión de cada ticker en
+        <a href="https://www.byma.com.ar/cedears/" target="_blank" style="color:var(--accent1)">byma.com.ar/cedears</a>
+        y ajustalo con el botón <strong>✏️ Corregir ratio</strong> de cada card. El ratio indica cuántos CEDEARs equivalen a 1 acción en NYSE.
+        <span style="display:block;margin-top:4px;color:var(--text2)">Ejemplo: XLK tiene ratio 2 → 1 CEDEAR XLK = 0.5 acciones de XLK.</span>
+      </div>
+      <button onclick="localStorage.setItem('banner_cedear_dismissed','1');document.getElementById('banner-cedear').style.display='none'"
+        style="background:none;border:none;cursor:pointer;color:var(--text2);font-size:16px;padding:0;line-height:1">✕</button>
+    </div>
+  </div>
   <div id="inversiones-list"></div>
 </div>
 
@@ -2788,6 +2801,12 @@ function renderInversiones(){
     <div class="stat-card c-yellow"><div class="icon">📅</div><div class="label">Próx. vencimiento</div><div class="value" style="font-size:15px">${prox?ff(prox.fechaVencimiento):'—'}</div><div class="sub">${prox?prox.descripcion:''}</div></div>
   `;
 
+  // Banner informativo sobre ratios CEDEAR (colapsable, dismissable)
+  const bannerEl=document.getElementById('banner-cedear');
+  if(bannerEl&&!localStorage.getItem('banner_cedear_dismissed')){
+    bannerEl.style.display='block';
+  }
+
   const cont=document.getElementById('inversiones-list');
   if(!S.inversiones.length){cont.innerHTML='<div class="empty"><div class="ei">📈</div><p>Sin inversiones registradas.</p></div>';renderCotizacionesPanel();return;}
   const tcol={'Plazo Fijo':'b-green','FCI':'b-purple','Acciones':'b-yellow','Cripto':'b-red','Bono':'b-gray','Dólar':'b-yellow','Otro':'b-gray'};
@@ -2829,6 +2848,27 @@ function renderInversiones(){
             <div style="font-size:11px;color:${gc}">${ga} ${Math.abs(gPct).toFixed(2)}%</div>
           </div>
         </div>
+        ${(()=>{
+          const dbg=cotizacionDebug[ticker];
+          if(!dbg)return'';
+          const hasError=!!dbg.error;
+          const toolCount=dbg.toolBlocksCount||0;
+          const summary=hasError
+            ?`❌ Error: ${dbg.error}`
+            :`✅ ${toolCount} búsqueda(s) · USD ${dbg.precioUSD} · CCL ${dbg.dolarCCL?.toFixed(0)} · ratio ${dbg.ratio} → ARS ${dbg.precioARSCalculado?.toLocaleString('es-AR',{maximumFractionDigits:0})}`;
+          const raw=JSON.stringify(dbg.rawResponse,null,2);
+          const dbgId='dbg-'+ticker;
+          return`<div style="margin-top:8px;border-radius:6px;overflow:hidden;border:1px solid ${hasError?'var(--accent4)':'rgba(128,128,128,.2)'}">
+            <div onclick="const d=document.getElementById('${dbgId}');d.style.display=d.style.display==='none'?'block':'none'"
+              style="padding:5px 10px;font-size:10px;cursor:pointer;background:${hasError?'rgba(255,80,80,.08)':'rgba(128,128,128,.06)'};display:flex;gap:6px;align-items:center">
+              <span style="color:${hasError?'var(--accent4)':'var(--text2)'}">${summary}</span>
+              <span style="margin-left:auto;color:var(--text2)">▼ ver respuesta API</span>
+            </div>
+            <div id="${dbgId}" style="display:none;padding:8px;background:var(--bg2)">
+              <pre style="font-size:9px;color:var(--text2);white-space:pre-wrap;word-break:break-all;max-height:200px;overflow-y:auto;margin:0">${raw.replace(/</g,'&lt;')}</pre>
+            </div>
+          </div>`;
+        })()}
         ${(()=>{
           const ratio=live.ratio||getRatioCached(ticker);
           if(!ratio||ticker==='USD')return'';
@@ -3283,6 +3323,7 @@ const CRYPTO_IDS={
 
 let liveprices={};   // { ticker: {price, priceARS, priceUSD, change, fuente} }
 let dolarRates={};   // { casa: {compra, venta, nombre} }
+let cotizacionDebug={}; // { ticker: {rawResponse, error, ts} } para diagnóstico
 let lastUpdate=null;
 let pricecache=(()=>{try{const d=localStorage.getItem('fz_pricecache');return d?JSON.parse(d):{};}catch(e){return{};}})();
 function savePriceCache(ticker,priceARS){
@@ -3411,31 +3452,72 @@ async function obtenerCotizacion(ticker){
   }
 
   const apiKey=localStorage.getItem('anthropic_api_key')||localStorage.getItem('ai_key');
-  if(!apiKey)return cached?JSON.parse(cached):null;
+  if(!apiKey){cotizacionDebug[ticker]={error:'Sin API key configurada',ts:Date.now()};return cached?JSON.parse(cached):null;}
 
+  let rawResponse=null;
   try{
+    // Obtener ratio (manual o IA) y CCL en paralelo
+    const [ratio,dolarData]=await Promise.all([
+      obtenerRatioCEDEAR(ticker).then(r=>r||1),
+      fetch('https://dolarapi.com/v1/dolares/contadoconliqui',{signal:AbortSignal.timeout(4000)}).then(r=>r.json()).catch(()=>null)
+    ]);
+    const dolarCCL=dolarData?.venta||null;
+
     const r=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
       headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify({
         model:'claude-sonnet-4-6',
-        max_tokens:300,
+        max_tokens:500,
         tools:[{type:'web_search_20250305',name:'web_search'}],
-        messages:[{role:'user',content:`Buscá el precio actual del CEDEAR ${ticker} en pesos argentinos en el mercado de Buenos Aires (BYMA). Buscá en Google "CEDEAR ${ticker} precio hoy" o en sitios como invertironline.com, iol.com.ar, o balanz.com. Respondé ÚNICAMENTE con este JSON sin texto adicional: {"precioARS": 123456, "precioUSD": 192.15, "fuente": "nombre del sitio"}`}]
+        messages:[{role:'user',content:`Buscá el precio actual en dólares (USD) de ${ticker} en NYSE o NASDAQ hoy. También buscá "CEDEAR ${ticker} precio Argentina" en invertironline.com o iol.com.ar para verificar. Necesito el precio de la acción subyacente en USD (no en ARS). Respondé ÚNICAMENTE con este JSON sin texto adicional: {"precioUSD": 192.15, "fuente": "nombre del sitio"}`}]
       })
     });
-    const data=await r.json();
+    rawResponse=await r.json();
 
-    // La respuesta puede tener tool_use blocks antes del texto final
-    const textBlock=data.content?.find(b=>b.type==='text');
-    if(!textBlock)throw new Error('sin respuesta de texto');
+    // Guardar debug completo
+    const toolBlocks=rawResponse.content?.filter(b=>b.type==='tool_use')||[];
+    const toolResults=rawResponse.content?.filter(b=>b.type==='tool_result')||[];
+    cotizacionDebug[ticker]={
+      rawResponse,
+      toolBlocksCount:toolBlocks.length,
+      toolBlocks,
+      dolarCCL,
+      ratio,
+      ts:Date.now()
+    };
+
+    // Buscar bloque de texto con JSON (puede venir después de tool_use blocks)
+    const textBlock=rawResponse.content?.find(b=>b.type==='text');
+    if(!textBlock){
+      cotizacionDebug[ticker].error='No hay text block en la respuesta';
+      throw new Error('sin text block');
+    }
 
     const text=textBlock.text.replace(/```json|```/g,'').trim();
-    const result=JSON.parse(text);
+    let result;
+    try{result=JSON.parse(text);}
+    catch(pe){
+      cotizacionDebug[ticker].error=`JSON inválido: ${text.substring(0,200)}`;
+      throw pe;
+    }
+    if(!(result?.precioUSD>0)){
+      cotizacionDebug[ticker].error=`precioUSD inválido: ${JSON.stringify(result)}`;
+      throw new Error('precioUSD inválido');
+    }
 
-    localStorage.setItem(cacheKey,JSON.stringify({...result,timestamp:Date.now()}));
-    return{...result,viaWebSearch:true};
+    const precioUSD=result.precioUSD;
+    const precioARS=dolarCCL?(precioUSD/ratio)*dolarCCL:null;
+    cotizacionDebug[ticker].precioUSD=precioUSD;
+    cotizacionDebug[ticker].precioARSCalculado=precioARS;
+
+    const entry={precioARS,precioUSD,ratio,dolarCCL,fuente:result.fuente||'web search',timestamp:Date.now()};
+    localStorage.setItem(cacheKey,JSON.stringify(entry));
+    return{...entry,viaWebSearch:true};
   }catch(e){
+    if(!cotizacionDebug[ticker])cotizacionDebug[ticker]={ts:Date.now()};
+    cotizacionDebug[ticker].error=cotizacionDebug[ticker].error||e.message;
+    cotizacionDebug[ticker].rawResponse=cotizacionDebug[ticker].rawResponse||rawResponse;
     return cached?{...JSON.parse(cached),desdeCache:true}:null;
   }
 }
