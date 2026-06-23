@@ -1122,10 +1122,15 @@ let userRole = null;
 let currentNombre = '';
 let _afterLoginDone = false;
 
-// Listener que renueva sesión en segundo plano sin cerrar la app
+// Listener de auth: maneja INITIAL_SESSION (recarga de página) y TOKEN_REFRESHED
 sb.auth.onAuthStateChange(async (event, session) => {
   dbg('auth: ' + event + ' user=' + (session?.user?.email || 'null'));
-  if (event === 'TOKEN_REFRESHED' && session) {
+  if (event === 'INITIAL_SESSION' && session && !_afterLoginDone) {
+    // Sesión recuperada al recargar — iniciar app directamente desde aquí
+    currentUser = session.user;
+    _afterLoginDone = true;
+    await afterLogin();
+  } else if (event === 'TOKEN_REFRESHED' && session) {
     currentUser = session.user;
   } else if (event === 'SIGNED_OUT') {
     currentUser = null;
@@ -1147,10 +1152,12 @@ async function checkSession() {
   }
 
   const { data: { session } } = await sb.auth.getSession();
-  if (session) {
+  if (session && !_afterLoginDone) {
+    // Fallback: INITIAL_SESSION no disparó (navegador sin soporte de eventos)
     currentUser = session.user;
+    _afterLoginDone = true;
     await afterLogin();
-  } else {
+  } else if (!session && !_afterLoginDone) {
     showLogin();
   }
 }
@@ -1231,6 +1238,7 @@ async function doLogin() {
 }
 
 async function afterLogin() {
+  _afterLoginDone = true;
   // Usar función SECURITY DEFINER para bypasear RLS
   let perfil = null;
   const { data: rpcData, error: rpcErr } = await sb.rpc('get_mi_perfil');
