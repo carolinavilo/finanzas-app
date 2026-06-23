@@ -2928,7 +2928,7 @@ function renderInversiones(){
             style="width:150px;padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:13px"
             onkeydown="if(event.key==='Enter')setPriceManual('${ticker}')"/>
           <button class="btn btn-primary btn-sm" onclick="setPriceManual('${ticker}')">✓ Aplicar</button>
-          <button class="btn btn-ghost btn-sm" onclick="delete liveprices['${ticker}'];refreshPrices()">🔄 Reintentar</button>
+          <button class="btn btn-ghost btn-sm btn-reintentar-cot">🔄 Reintentar</button>
         </div>
         ${lastKnownHtml}
       </div>`;
@@ -2982,7 +2982,7 @@ function renderInversiones(){
       </div>`;
     }).join(''):'';
 
-    return`<div class="inv-card" style="flex-direction:column;align-items:stretch">
+    return`<div class="inv-card" data-ticker="${ticker}" style="flex-direction:column;align-items:stretch">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
         <div style="flex:1;min-width:0">
           <div style="margin-bottom:6px;display:flex;gap:5px;flex-wrap:wrap;align-items:center">
@@ -3007,6 +3007,7 @@ function renderInversiones(){
         </div>
       </div>
       ${liveBlockFor(ticker,tenenciaActual,ppm,costoBasis)}
+      <div id="debug-cot-${ticker}" style="display:none;margin-top:8px;padding:8px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;font-size:10px;color:var(--text2);white-space:pre-wrap;word-break:break-all;max-height:300px;overflow-y:auto"></div>
       <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
         <div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;font-weight:600">📥 Compras</div>
         ${compraRows}
@@ -3443,10 +3444,11 @@ function setRatioManual(ticker){
   refreshPrices();
 }
 
-async function obtenerCotizacion(ticker){
+async function obtenerCotizacion(ticker,forceRefresh=false){
+  console.log('obtenerCotizacion llamada para:',ticker,forceRefresh?'(forzado)':'');
   const cacheKey='precio_'+ticker.toUpperCase();
   const cached=localStorage.getItem(cacheKey);
-  if(cached){
+  if(!forceRefresh&&cached){
     const c=JSON.parse(cached);
     if((Date.now()-c.timestamp)<3600000)return{...c,desdeCache:true};
   }
@@ -3676,6 +3678,33 @@ function verCacheInversiones(){
   });
   alert('Cache de precios:\n\n'+lines.join('\n'));
 }
+
+// Delegación global para botón Reintentar cotización
+document.addEventListener('click',async(e)=>{
+  const btn=e.target.matches('.btn-reintentar-cot')?e.target:e.target.closest('.btn-reintentar-cot');
+  if(!btn)return;
+  const ticker=btn.closest('[data-ticker]')?.dataset?.ticker;
+  if(!ticker)return;
+  e.stopPropagation();
+  const debugDiv=document.getElementById('debug-cot-'+ticker);
+  if(debugDiv){debugDiv.style.display='block';debugDiv.textContent='🔍 Buscando '+ticker+'...';}
+  btn.disabled=true;btn.textContent='⏳';
+  const result=await obtenerCotizacion(ticker,true);
+  if(debugDiv)debugDiv.textContent=JSON.stringify(result,null,2)||'null';
+  // Actualizar liveprices con el resultado
+  if(result?.precioARS>0){
+    const entry={price:result.precioARS,priceARS:result.precioARS,priceUSD:result.precioUSD||null,change:0,currency:'ARS',
+      fuente:result.viaWebSearch?result.fuente||'web search':result.desdeCache?'caché':'',
+      timestamp:result.timestamp||Date.now(),viaWebSearch:result.viaWebSearch||false,desdeCache:result.desdeCache||false,
+      ratio:result.ratio,dolarCCL:result.dolarCCL};
+    liveprices[ticker]=entry;
+    pricecache[ticker]={priceARS:entry.priceARS,priceUSD:entry.priceUSD,fuente:entry.fuente,change:0,ts:Date.now()};
+    savePriceCache(ticker,entry.priceARS);
+  }else{
+    liveprices[ticker]={failed:true};
+  }
+  renderInversiones();
+});
 
 function startApp(){
   const now=new Date();
