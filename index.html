@@ -3510,9 +3510,10 @@ function dividendoCardHTML(ticker,tenencia){
     <div style="display:flex;flex-direction:column;gap:5px;font-size:12px">
       ${d.proximaFechaEx?`<div><span style="color:var(--text2)">Próxima fecha ex-dividendo:</span> <strong>${fmtDate(d.proximaFechaEx)}</strong></div>`:''}
       ${d.proximaFechaPago?`<div><span style="color:var(--text2)">Fecha de pago:</span> <strong>${fmtDate(d.proximaFechaPago)}</strong></div>`:''}
-      ${d.ultimoDividendoUSD?`<div><span style="color:var(--text2)">Último dividendo pagado:</span> <strong>USD ${d.ultimoDividendoUSD.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:4})}</strong> por acción subyacente</div>`:''}
-      ${divPorCedear?`<div><span style="color:var(--text2)">Ajustado por ratio (1/${ratio}):</span> <strong>USD ${divPorCedear.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:4})}</strong> por CEDEAR</div>`:''}
-      ${cobroUSD?`<div><span style="color:var(--text2)">Mis ${tenencia.toLocaleString('es-AR',{maximumFractionDigits:4})} unidades cobrarían:</span> <strong style="color:var(--accent2)">~USD ${cobroUSD.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}${cobroARS?` (~${$$(cobroARS)} al CCL)`:''}</strong></div>`:''}
+      ${d.sospechoso?`<div style="color:#f59e0b;font-size:11px">⚠️ ${d.advertencia}</div>`:''}
+      ${d.ultimoDividendoUSD?`<div><span style="color:var(--text2)">Dividendo por acción (NYSE):</span> <strong>USD ${d.ultimoDividendoUSD.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:4})}</strong></div>`:''}
+      ${divPorCedear?`<div><span style="color:var(--text2)">Ajustado por ratio 1/${ratio}:</span> <strong>USD ${divPorCedear.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:4})}</strong> por CEDEAR</div>`:''}
+      ${cobroUSD?`<div><span style="color:var(--text2)">Mis ${tenencia.toLocaleString('es-AR',{maximumFractionDigits:4})} CEDEARs:</span> <strong style="color:var(--accent2)">~USD ${cobroUSD.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}${cobroARS?` (~${$$(cobroARS)} al CCL)`:''}</strong></div>`:''}
       <div style="margin-top:2px"><span style="color:var(--text2)">Frecuencia: <strong style="color:var(--text)">${d.frecuencia||'—'}</strong></span>${d.dividendYield?` · <span style="color:var(--text2)">Yield: <strong style="color:var(--text)">${d.dividendYield.toFixed(1)}% anual</strong></span>`:''} · <span style="font-size:10px;color:var(--text2)">fuente: ${d.fuente||'web search'}</span></div>
     </div>
     <div style="margin-top:8px;font-size:10px;color:var(--text2);font-style:italic">* El dividendo se acredita en ARS al tipo de cambio del día de pago. Estimación basada en el último dividendo pagado, sujeto a variación.</div>
@@ -3534,7 +3535,7 @@ async function obtenerDividendoCEDEAR(ticker){
         max_tokens:300,
         system:'Respondé ÚNICAMENTE con JSON válido. Sin texto, sin markdown.',
         tools:[{type:'web_search_20250305',name:'web_search'}],
-        messages:[{role:'user',content:`Buscá información sobre dividendos del ETF ${ticker} (que cotiza como CEDEAR en Argentina).\n\nNecesito:\n1. Si paga dividendos o no\n2. Frecuencia de pago (trimestral, anual, etc.)\n3. Próxima fecha ex-dividendo o fecha de pago\n4. Monto del último dividendo en USD por acción\n5. Dividend yield anual aproximado\n\nBuscá en: dividendhistory.org, stockanalysis.com, etf.com o similar.\n\nDevolvé SOLO este JSON:\n{"pagaDividendos": true, "frecuencia": "trimestral", "proximaFechaEx": "2026-09-19", "proximaFechaPago": "2026-09-30", "ultimoDividendoUSD": 0.45, "dividendYield": 1.2, "fuente": "stockanalysis.com"}`}]
+        messages:[{role:'user',content:`Buscá el dividendo más reciente pagado por el ETF ${ticker} en USD por acción.\nBuscá en stockanalysis.com/${ticker.toLowerCase()}/dividend o etf.com o dividendhistory.org.\nXLK por ejemplo paga aproximadamente USD 0.40-0.50 por acción por trimestre.\nSMH paga aproximadamente USD 0.15-0.30 por acción por trimestre.\nEl valor de ultimoDividendoUSD debe ser el dividendo completo por acción subyacente en NYSE, típicamente entre USD 0.05 y USD 5.00 para ETFs conocidos.\n\nDevolvé SOLO este JSON:\n{"pagaDividendos": true, "ultimoDividendoUSD": 0.45, "frecuencia": "trimestral", "proximaFechaEx": "2026-09-19", "proximaFechaPago": "2026-09-30", "dividendYield": 1.2, "fuente": "stockanalysis.com"}`}]
       })
     });
     const data=await r.json();
@@ -3543,6 +3544,13 @@ async function obtenerDividendoCEDEAR(ticker){
     const match=textBlock.text.match(/\{[\s\S]*\}/);
     if(!match)return null;
     const result=JSON.parse(match[0]);
+    // Validar rango razonable para dividendo por acción de ETF
+    if(result.pagaDividendos&&result.ultimoDividendoUSD){
+      if(result.ultimoDividendoUSD<0.05||result.ultimoDividendoUSD>10){
+        result.sospechoso=true;
+        result.advertencia=`Valor sospechoso: USD ${result.ultimoDividendoUSD} — verificar manualmente`;
+      }
+    }
     localStorage.setItem(cacheKey,JSON.stringify({...result,timestamp:Date.now()}));
     return result;
   }catch(e){return null;}
