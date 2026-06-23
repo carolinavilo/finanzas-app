@@ -3450,73 +3450,51 @@ async function obtenerCotizacion(ticker,forceRefresh=false){
 
   let rawResponse=null;
   try{
-    // Obtener CCL en paralelo (por si necesitamos conversión manual)
-    const dolarData=await fetch('https://dolarapi.com/v1/dolares/contadoconliqui',{signal:AbortSignal.timeout(4000)}).then(r=>r.json()).catch(()=>null);
-    const dolarCCL=dolarData?.venta||null;
-
     const r=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
       headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify({
         model:'claude-sonnet-4-6',
-        max_tokens:500,
+        max_tokens:200,
+        system:'Sos un bot que responde ÚNICAMENTE con JSON válido. Sin texto, sin markdown, sin explicaciones. Solo el objeto JSON pedido.',
         tools:[{type:'web_search_20250305',name:'web_search'}],
-        messages:[{role:'user',content:`Buscá en internet el precio actual del CEDEAR ${ticker} en pesos argentinos en Argentina y su ratio de conversión oficial.\n\nBuscá en estos sitios: iol.com.ar, portfoliopersonal.com, balanz.com, o invertironline.com\nBuscá: "CEDEAR ${ticker} precio ratio conversión Argentina 2026"\n\nNecesito:\n1. El precio del CEDEAR en ARS (no el precio de la acción en NYSE)\n2. El ratio de conversión (cuántos CEDEARs = 1 acción)\n\nIMPORTANTE: El precio del CEDEAR en ARS ya incluye el tipo de cambio implícito. No hacer conversión manual USD * CCL si obtenés el precio directo en ARS.\n\nRespondé ÚNICAMENTE con este JSON sin texto adicional:\n{"precioARS": 123456, "precioUSD": null, "ratio": 2, "fuente": "nombre del sitio", "conversion_manual": false}`}]
+        messages:[{role:'user',content:`Buscá el precio actual del CEDEAR ${ticker} en pesos argentinos en Argentina hoy ${new Date().toLocaleDateString('es-AR')}.\nBuscá en iol.com.ar, portfoliopersonal.com, cohen.com.ar o balanz.com el precio directo en ARS del CEDEAR (no la acción en NYSE).\nDevolvé SOLO este JSON: {"precioARS": 6485, "fuente": "cohen.com.ar", "fecha": "${new Date().toISOString().slice(0,10)}"}`}]
       })
     });
     rawResponse=await r.json();
 
     const toolBlocks=rawResponse.content?.filter(b=>b.type==='tool_use')||[];
-    cotizacionDebug[ticker]={rawResponse,toolBlocksCount:toolBlocks.length,toolBlocks,dolarCCL,ts:Date.now()};
+    cotizacionDebug[ticker]={rawResponse,toolBlocksCount:toolBlocks.length,toolBlocks,ts:Date.now()};
 
-    const textBlock=rawResponse.content?.find(b=>b.type==='text');
+    const textBlock=rawResponse.content.filter(b=>b.type==='text').pop();
     if(!textBlock){
       cotizacionDebug[ticker].error='No hay text block en la respuesta';
       throw new Error('sin text block');
     }
 
-    const text=textBlock.text.replace(/```json|```/g,'').trim();
+    const match=textBlock.text.match(/\{[\s\S]*\}/);
+    if(!match){
+      cotizacionDebug[ticker].error='JSON no encontrado en: '+textBlock.text.substring(0,100);
+      throw new Error('JSON no encontrado en: '+textBlock.text.substring(0,100));
+    }
+
     let result;
-    try{result=JSON.parse(text);}
+    try{result=JSON.parse(match[0]);}
     catch(pe){
-      cotizacionDebug[ticker].error=`JSON inválido: ${text.substring(0,200)}`;
+      cotizacionDebug[ticker].error=`JSON inválido: ${match[0].substring(0,200)}`;
       throw pe;
     }
 
-    let precioARS=null;
-    const precioUSD=result.precioUSD||null;
-    const ratioRes=result.ratio||null;
-
-    if(result.conversion_manual===false && result.precioARS>0){
-      // Precio directo en ARS — ya incluye tipo de cambio, no aplicar ratio/CCL
-      precioARS=result.precioARS;
-    }else if(precioUSD>0){
-      // Conversión manual: aplicar (precioUSD / ratio) * CCL
-      const ratioFinal=ratioRes||getRatioCached(ticker)||1;
-      if(!dolarCCL)throw new Error('sin CCL para conversión manual');
-      precioARS=(precioUSD/ratioFinal)*dolarCCL;
+    if(!result.precioARS){
+      cotizacionDebug[ticker].error=`precioARS missing: ${JSON.stringify(result)}`;
+      throw new Error('precioARS missing');
     }
 
-    if(!(precioARS>0)){
-      cotizacionDebug[ticker].error=`Precio ARS inválido: ${JSON.stringify(result)}`;
-      throw new Error('precioARS inválido');
-    }
-
-    // Actualizar ratio en cache si vino en la respuesta y no está fijado manualmente
-    if(ratioRes>0){
-      const ratioCacheKey='ratio_'+ticker.toUpperCase();
-      const ratioCache=localStorage.getItem(ratioCacheKey);
-      if(!ratioCache||!JSON.parse(ratioCache).manual){
-        localStorage.setItem(ratioCacheKey,JSON.stringify({ratio:ratioRes,timestamp:Date.now()}));
-      }
-    }
-
+    const precioARS=result.precioARS;
     cotizacionDebug[ticker].precioARS=precioARS;
-    cotizacionDebug[ticker].precioUSD=precioUSD;
-    cotizacionDebug[ticker].ratio=ratioRes;
-    cotizacionDebug[ticker].conversionManual=result.conversion_manual;
+    cotizacionDebug[ticker].fuente=result.fuente;
 
-    const entry={precioARS,precioUSD,ratio:ratioRes,dolarCCL,fuente:result.fuente||'web search',timestamp:Date.now()};
+    const entry={precioARS,precioUSD:null,ratio:null,dolarCCL:null,fuente:result.fuente||'web search',timestamp:Date.now()};
     localStorage.setItem(cacheKey,JSON.stringify(entry));
     return{...entry,viaWebSearch:true};
   }catch(e){
