@@ -2830,17 +2830,21 @@ function renderInversiones(){
           </div>
         </div>
         ${(()=>{
-          if(!live.ts)return'';
-          const diff=Date.now()-live.ts;
-          const h=Math.floor(diff/3600000);const m=Math.floor((diff%3600000)/60000);
-          const timeAgo=h>0?`hace ${h}h${m>0?` ${m}min`:''}`:(m>0?`hace ${m}min`:'hace un momento');
+          const ts=live.timestamp||live.ts;
           const isManual=live.fuente==='manual';
-          const isIA=live.fuente?.includes('IA');
-          const icon=isManual?'✏️':isIA?'🤖':'⏱';
-          const label=isManual?`Precio manual · ${timeAgo}`:isIA?`Estimado por IA (no tiempo real) · ${timeAgo}`:`Último precio · ${timeAgo}`;
+          if(!ts&&!isManual)return'';
+          const diff=ts?Date.now()-ts:0;
+          const horasAtras=diff/3600000;
+          const h=Math.floor(horasAtras);const m=Math.floor((diff%3600000)/60000);
+          const timeAgo=h>0?`${h}h${m>0?` ${m}min`:''}`:(m>0?`${m}min`:'un momento');
+          let icon,label,btnLabel='🔄';
+          if(isManual){icon='✏️';label=`Precio manual · hace ${timeAgo}`;}
+          else if(live.viaIA){icon='🤖';label=`Estimado por IA · hace ${timeAgo}`;}
+          else if(horasAtras>=12){icon='⚠️';label=`Precio desactualizado · hace ${timeAgo}`;btnLabel='🔄 Actualizar';}
+          else{icon='🕐';label=`Actualizado hace ${timeAgo}`;}
           return`<div style="font-size:10px;color:var(--text2);margin-top:8px;padding:5px 10px;background:rgba(128,128,128,.06);border-radius:6px;display:flex;align-items:center;gap:8px">
             <span>${icon} ${label}</span>
-            <button class="btn btn-ghost btn-sm" onclick="delete liveprices['${ticker}'];refreshPrices()" style="font-size:10px;padding:2px 8px;margin-left:auto">🔄 Actualizar</button>
+            <button class="btn btn-ghost btn-sm" onclick="delete liveprices['${ticker}'];refreshPrices()" style="font-size:10px;padding:2px 8px;margin-left:auto">${btnLabel}</button>
           </div>`;
         })()}
       </div>`;
@@ -3333,56 +3337,41 @@ async function fetchCrypto(tickers){
 }
 
 async function obtenerCotizacion(ticker){
-  const yahooBA=`https://query2.finance.yahoo.com/v8/finance/chart/${ticker}.BA?interval=1d&range=1d`;
-  const yahooUS=`https://query2.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d`;
-  const proxies=[
-    u=>`https://corsproxy.io/?${encodeURIComponent(u)}`,
-    u=>`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`,
-    u=>`https://thingproxy.freeboard.io/fetch/${u}`,
-    u=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
-  ];
+  const cacheKey='precio_'+ticker.toUpperCase();
 
-  console.log('[Cotizacion] Probando proxies para',ticker);
-  for(const makeProxy of proxies){
-    for(const yahooUrl of[yahooBA,yahooUS]){
-      const proxyUrl=makeProxy(yahooUrl);
-      try{
-        const r=await fetch(proxyUrl,{signal:AbortSignal.timeout(6000)});
-        if(!r.ok){console.log('[Cotizacion]',ticker,'proxy falló (HTTP',r.status,'):',proxyUrl.split('?')[0]);continue;}
-        const d=await r.json();
-        const meta=d?.chart?.result?.[0]?.meta;
-        if(!meta?.regularMarketPrice){console.log('[Cotizacion]',ticker,'sin precio en respuesta:',proxyUrl.split('?')[0]);continue;}
-
-        let precioARS=meta.regularMarketPrice;
-        let precioUSD=null;
-
-        if(meta.currency==='USD'){
-          try{
-            const dr=await fetch('https://dolarapi.com/v1/dolares/blue',{signal:AbortSignal.timeout(4000)});
-            const dd=await dr.json();
-            precioUSD=precioARS;
-            precioARS=precioUSD*dd.venta;
-          }catch(e){console.log('[Cotizacion]',ticker,'fallo al obtener dólar blue');continue;}
-        }
-
-        const fuente=meta.currency==='USD'?'Yahoo USD→ARS':'Yahoo ARS';
-        console.log('[Cotizacion] ✅',ticker,'→ $'+precioARS.toLocaleString('es-AR'),'vía',proxyUrl.split('?')[0].replace('https://',''));
-        // Guardar en cache individual
-        localStorage.setItem('precio_'+ticker.toUpperCase(),JSON.stringify({
-          precioARS,precioUSD,variacion:meta.regularMarketChangePercent,timestamp:Date.now(),fuente
-        }));
-        return{precioARS,precioUSD,variacion:meta.regularMarketChangePercent,fuente};
-      }catch(e){console.log('[Cotizacion]',ticker,'excepción en',proxyUrl.split('?')[0].replace('https://',''),':',e.message);continue;}
-    }
+  // 1. Retornar cache si tiene menos de 12hs
+  const cached=localStorage.getItem(cacheKey);
+  if(cached){
+    const c=JSON.parse(cached);
+    const horasAtras=(Date.now()-c.timestamp)/3600000;
+    if(horasAtras<12)return{...c,desdeCache:true};
   }
 
-  // Todos los proxies fallaron — intentar cache individual
-  console.log('[Cotizacion] ❌',ticker,'— todos los proxies fallaron, usando cache');
+  // 2. Pedir cotización a Claude
+  const apiKey=localStorage.getItem('anthropic_api_key')||localStorage.getItem('ai_key');
+  if(!apiKey)return cached?{...JSON.parse(cached),desdeCache:true}:null;
+
   try{
-    const cached=localStorage.getItem('precio_'+ticker.toUpperCase());
-    if(cached){const c=JSON.parse(cached);c.desdeCache=true;return c;}
-  }catch(e){}
-  return null;
+    const hoy=new Date().toLocaleDateString('es-AR');
+    const r=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-6',
+        max_tokens:150,
+        messages:[{role:'user',content:`Precio aproximado del CEDEAR ${ticker} en pesos argentinos hoy ${hoy}. Usá el precio del dólar CCL/MEP actual para estimar. Respondé SOLO con este JSON sin texto adicional: {"precioARS": 287264, "precioUSD": 192.15, "nota": "estimado"}`}]
+      })
+    });
+    const data=await r.json();
+    const text=data.content[0].text.replace(/```json|```/g,'').trim();
+    const result=JSON.parse(text);
+
+    // Guardar en cache
+    localStorage.setItem(cacheKey,JSON.stringify({...result,timestamp:Date.now()}));
+    return{...result,viaIA:true};
+  }catch(e){
+    return cached?{...JSON.parse(cached),desdeCache:true}:null;
+  }
 }
 
 async function refreshPrices(){
@@ -3402,31 +3391,18 @@ async function refreshPrices(){
   const stockTickersNorm=[...new Set(stockTickers.map(t=>t.trim().toUpperCase()))];
   for(const t of stockTickersNorm){
     const res=await obtenerCotizacion(t);
-    if(res){
-      // mapear formato {precioARS,precioUSD,variacion,fuente} → estructura interna liveprices
-      const entry={price:res.precioARS,priceARS:res.precioARS,priceUSD:res.precioUSD||null,change:res.variacion||0,currency:res.precioUSD?'USD':'ARS',fuente:res.fuente};
+    if(res?.precioARS>0){
+      const entry={price:res.precioARS,priceARS:res.precioARS,priceUSD:res.precioUSD||null,change:0,currency:'ARS',
+        fuente:res.viaIA?'IA (est.)':res.desdeCache?'caché':'',
+        timestamp:res.timestamp||Date.now(),viaIA:res.viaIA||false,desdeCache:res.desdeCache||false};
       liveprices[t]=entry;
-      pricecache[t]={priceARS:entry.priceARS,priceUSD:entry.priceUSD,fuente:entry.fuente,change:entry.change,ts:Date.now()};
-      savePriceCache(t,entry.priceARS);
-      console.log('[Cotizacion]',t,'→',entry.priceARS,'ARS vía',entry.fuente);
-    } else {
-      console.log('[PriceCache] APIs externas fallaron para',t,'— intentando IA...');
-      // Fallback: cotización via Claude API solo si NO hay precio manual en cache
-      const cachedFuente=pricecache[t]?.fuente;
-      const skipIA=(cachedFuente==='manual'); // no pisar precio manual con estimado IA
-      const resIA=skipIA?null:await obtenerCotizacionViaIA(t);
-      if(resIA?.precioARS>0){
-        const entry={price:resIA.precioARS,priceARS:resIA.precioARS,priceUSD:resIA.precioUSD||null,change:0,currency:'ARS',fuente:'IA (estimado)',ts:Date.now()};
-        liveprices[t]=entry;
+      if(!res.desdeCache){
         pricecache[t]={priceARS:entry.priceARS,priceUSD:entry.priceUSD,fuente:entry.fuente,change:0,ts:Date.now()};
         savePriceCache(t,entry.priceARS);
-      } else if(!liveprices[t]?.priceARS){
-        // Solo marcar como failed si no hay ningún precio (ni cache)
-        console.log('[PriceCache] Sin precio para',t,'— marcando failed');
-        liveprices[t]={failed:true};
-      } else {
-        console.log('[PriceCache] Usando precio cacheado para',t,':',liveprices[t].priceARS);
       }
+      console.log('[Cotizacion]',t,'→ $'+entry.priceARS.toLocaleString('es-AR'),res.viaIA?'(IA)':res.desdeCache?'(caché)':'');
+    }else if(!liveprices[t]?.priceARS){
+      liveprices[t]={failed:true};
     }
   }
 
