@@ -2823,7 +2823,13 @@ function renderInversiones(){
       const gPct=costoBasis?(ganancia/costoBasis*100):0;
       const gc=ganancia>=0?'var(--accent2)':'var(--accent4)';
       const ga=ganancia>=0?'▲':'▼';
-      const fuenteTag=live.fuente?` <span style="font-size:10px;color:var(--text2);font-weight:400">(${live.fuente})</span>`:'';
+      const fuenteTag=(()=>{
+        if(!live.fuente)return'';
+        const parts=[live.fuente];
+        if(live.mercado&&live.mercado!==live.fuente)parts.push(live.mercado);
+        if(live.fechaPrecio){const d=new Date(live.fechaPrecio+'T12:00:00');parts.push(d.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'}));}
+        return` <span style="font-size:10px;color:var(--text2);font-weight:400">(fuente: ${parts.join(' · ')})</span>`;
+      })();
       return`<div style="padding-top:12px;margin-top:12px;border-top:1px solid var(--border)">
         <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:space-between">
           <div style="min-width:140px">
@@ -2880,6 +2886,14 @@ function renderInversiones(){
               <button class="btn btn-ghost btn-sm btn-corregir-ratio" style="font-size:10px;padding:2px 6px;margin-left:auto">✏️ Corregir ratio</button>
             </div>
           </div>`;
+        })()}
+        ${(()=>{
+          if(!live.fechaPrecio)return'';
+          const today=new Date().toISOString().slice(0,10);
+          if(live.fechaPrecio===today)return'';
+          const d=new Date(live.fechaPrecio+'T12:00:00');
+          const ddmm=d.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'});
+          return`<div style="font-size:10px;color:#f59e0b;margin-top:4px;padding:4px 10px;background:rgba(245,158,11,.1);border-radius:6px">⚠️ Precio del ${ddmm} — puede estar desactualizado</div>`;
         })()}
         ${(()=>{
           const ts=live.timestamp||live.ts;
@@ -3458,7 +3472,7 @@ async function obtenerCotizacion(ticker,forceRefresh=false){
         max_tokens:200,
         system:'Sos un bot que responde ÚNICAMENTE con JSON válido. Sin texto, sin markdown, sin explicaciones. Solo el objeto JSON pedido.',
         tools:[{type:'web_search_20250305',name:'web_search'}],
-        messages:[{role:'user',content:`Buscá el precio actual del CEDEAR ${ticker} en pesos argentinos en Argentina hoy ${new Date().toLocaleDateString('es-AR')}.\nBuscá en iol.com.ar, portfoliopersonal.com, cohen.com.ar o balanz.com el precio directo en ARS del CEDEAR (no la acción en NYSE).\nDevolvé SOLO este JSON: {"precioARS": 6485, "fuente": "cohen.com.ar", "fecha": "${new Date().toISOString().slice(0,10)}"}`}]
+        messages:[{role:'user',content:`Buscá el precio de cierre de HOY ${new Date().toLocaleDateString('es-AR')} del CEDEAR ${ticker} en el Panel General de BYMA (Bolsa y Mercados Argentinos).\n\nBuscá específicamente en:\n- iol.com.ar/herramientas/cotizaciones/cedears\n- portfoliopersonal.com/cotizaciones/cedears\n- invertironline.com cotizaciones CEDEARs\n- cinver.com.ar\n\nEl precio del CEDEAR ${ticker} en BYMA es distinto al precio de la acción en NYSE. Es el precio al que se negocia la unidad de CEDEAR en el mercado local en pesos.\n\nDevolvé SOLO este JSON sin texto:\n{"precioARS": 6485, "fuente": "iol.com.ar", "fecha": "${new Date().toISOString().slice(0,10)}", "mercado": "BYMA"}`}]
       })
     });
     rawResponse=await r.json();
@@ -3493,8 +3507,10 @@ async function obtenerCotizacion(ticker,forceRefresh=false){
     const precioARS=result.precioARS;
     cotizacionDebug[ticker].precioARS=precioARS;
     cotizacionDebug[ticker].fuente=result.fuente;
+    cotizacionDebug[ticker].mercado=result.mercado;
+    cotizacionDebug[ticker].fechaPrecio=result.fecha;
 
-    const entry={precioARS,precioUSD:null,ratio:null,dolarCCL:null,fuente:result.fuente||'web search',timestamp:Date.now()};
+    const entry={precioARS,precioUSD:null,ratio:null,dolarCCL:null,fuente:result.fuente||'web search',mercado:result.mercado||null,fechaPrecio:result.fecha||null,timestamp:Date.now()};
     localStorage.setItem(cacheKey,JSON.stringify(entry));
     return{...entry,viaWebSearch:true};
   }catch(e){
@@ -3525,6 +3541,7 @@ async function refreshPrices(){
     if(res?.precioARS>0){
       const entry={price:res.precioARS,priceARS:res.precioARS,priceUSD:res.precioUSD||null,change:0,currency:'ARS',
         fuente:res.viaWebSearch?res.fuente||'web search':res.desdeCache?'caché':'',
+        mercado:res.mercado||null,fechaPrecio:res.fechaPrecio||null,
         timestamp:res.timestamp||Date.now(),viaWebSearch:res.viaWebSearch||false,desdeCache:res.desdeCache||false};
       liveprices[t]=entry;
       if(!res.desdeCache){
@@ -3665,6 +3682,7 @@ document.addEventListener('click',async(e)=>{
   function livepricesToEntry(result){
     return{price:result.precioARS,priceARS:result.precioARS,priceUSD:result.precioUSD||null,change:0,currency:'ARS',
       fuente:result.viaWebSearch?result.fuente||'web search':result.desdeCache?'caché':'',
+      mercado:result.mercado||null,fechaPrecio:result.fechaPrecio||null,
       timestamp:result.timestamp||Date.now(),viaWebSearch:result.viaWebSearch||false,desdeCache:result.desdeCache||false,
       ratio:result.ratio,dolarCCL:result.dolarCCL};
   }
