@@ -3333,11 +3333,8 @@ async function fetchCrypto(tickers){
 }
 
 async function obtenerCotizacion(ticker){
-  // query2 es más permisivo con CORS que query1 de Yahoo Finance
   const urls=[
-    // CEDEAR en pesos argentinos (mercado BA)
     `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://query2.finance.yahoo.com/v8/finance/chart/${ticker}.BA?interval=1d&range=1d`)}`,
-    // Si no existe .BA, buscar en USD y convertir
     `https://api.allorigins.win/raw?url=${encodeURIComponent(`https://query2.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d`)}`,
   ];
 
@@ -3350,20 +3347,15 @@ async function obtenerCotizacion(ticker){
 
       let precioARS=meta.regularMarketPrice;
       let precioUSD=null;
-      const prev=meta.previousClose||meta.chartPreviousClose||precioARS;
-      const change=prev?((precioARS-prev)/prev*100):0;
 
-      // Si la cotización es en USD (mercado USA), convertir a ARS con dólar blue
       if(meta.currency==='USD'){
+        const dolarR=await fetch('https://dolarapi.com/v1/dolares/blue',{signal:AbortSignal.timeout(5000)});
+        const dolarD=await dolarR.json();
         precioUSD=precioARS;
-        if(!dolarRates.blue?.venta)await fetchDolar();
-        if(dolarRates.blue?.venta)precioARS=precioUSD*dolarRates.blue.venta;
-        else continue; // sin tipo de cambio no podemos convertir
+        precioARS=precioUSD*dolarD.venta;
       }
 
-      const fuente=url.includes('.BA')?'Yahoo.BA':'Yahoo USD';
-      console.log('[Cotizacion]',ticker,'→',precioARS,'ARS vía',fuente);
-      return{price:precioARS,priceARS,priceUSD,change,currency:meta.currency||'ARS',fuente};
+      return{precioARS,precioUSD,variacion:meta.regularMarketChangePercent,fuente:meta.currency==='USD'?'Yahoo USD→ARS':'Yahoo ARS'};
     }catch(e){continue;}
   }
   return null;
@@ -3387,9 +3379,12 @@ async function refreshPrices(){
   for(const t of stockTickersNorm){
     const res=await obtenerCotizacion(t);
     if(res){
-      liveprices[t]=res;
-      pricecache[t]={priceARS:res.priceARS,priceUSD:res.priceUSD,fuente:res.fuente,change:res.change||0,ts:Date.now()};
-      savePriceCache(t,res.priceARS);
+      // mapear formato {precioARS,precioUSD,variacion,fuente} → estructura interna liveprices
+      const entry={price:res.precioARS,priceARS:res.precioARS,priceUSD:res.precioUSD||null,change:res.variacion||0,currency:res.precioUSD?'USD':'ARS',fuente:res.fuente};
+      liveprices[t]=entry;
+      pricecache[t]={priceARS:entry.priceARS,priceUSD:entry.priceUSD,fuente:entry.fuente,change:entry.change,ts:Date.now()};
+      savePriceCache(t,entry.priceARS);
+      console.log('[Cotizacion]',t,'→',entry.priceARS,'ARS vía',entry.fuente);
     } else {
       console.log('[PriceCache] APIs externas fallaron para',t,'— intentando IA...');
       // Fallback: cotización via Claude API solo si NO hay precio manual en cache
