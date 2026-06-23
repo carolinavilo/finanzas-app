@@ -1248,7 +1248,6 @@ async function afterLogin() {
   // Fallback: query directa si RPC falla
   if (!perfil) {
     const { data: rows, error: rowsErr } = await sb.from('perfiles').select('rol,nombre,email').eq('id', currentUser.id);
-    console.log('DEBUG ROWS:', JSON.stringify(rows), 'ERR:', JSON.stringify(rowsErr));
     perfil = rows?.[0] || null;
   }
 
@@ -3463,7 +3462,6 @@ async function llamarClaudeAPI(prompt) {
   if (!apiKey) {
     return 'Error: no hay API key configurada. Andá a Ajustes y pegá tu API key de Anthropic.';
   }
-  console.log('Usando key: ' + apiKey.slice(0, 8) + '...');
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
