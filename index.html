@@ -2877,15 +2877,7 @@ function renderInversiones(){
           return`<div style="font-size:10px;color:var(--text2);margin-top:6px;padding:5px 10px;background:rgba(128,128,128,.04);border-radius:6px">
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
               <span title="El ratio indica cuántos CEDEARs equivalen a 1 acción en NYSE. Consultá el ratio oficial en invertironline.com o BYMA">📐 Ratio CEDEAR: 1 CEDEAR = ${ratioStr}${isManualRatio?' ✏️ (manual)':' (est. IA)'}</span>
-              <button class="btn btn-ghost btn-sm" onclick="document.getElementById('ratio-edit-${ticker}').style.display='flex'" style="font-size:10px;padding:2px 6px;margin-left:auto">✏️ Corregir ratio</button>
-            </div>
-            <div id="ratio-edit-${ticker}" style="display:none;gap:6px;align-items:center;margin-top:6px">
-              <input id="ratio-inp-${ticker}" type="number" value="${ratio}" min="0.01" step="0.01"
-                style="width:70px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:12px"
-                onkeydown="if(event.key==='Enter')setRatioManual('${ticker}')"/>
-              <span style="font-size:10px;color:var(--text2)">CEDEARs por acción</span>
-              <button class="btn btn-primary btn-sm" onclick="setRatioManual('${ticker}')" style="font-size:10px;padding:2px 8px">Guardar</button>
-              <button class="btn btn-ghost btn-sm" onclick="document.getElementById('ratio-edit-${ticker}').style.display='none'" style="font-size:10px;padding:2px 6px">✕</button>
+              <button class="btn btn-ghost btn-sm btn-corregir-ratio" style="font-size:10px;padding:2px 6px;margin-left:auto">✏️ Corregir ratio</button>
             </div>
           </div>`;
         })()}
@@ -2904,7 +2896,7 @@ function renderInversiones(){
           else{icon='🕐';label=`Actualizado hace ${timeAgo}`;}
           return`<div style="font-size:10px;color:var(--text2);margin-top:8px;padding:5px 10px;background:rgba(128,128,128,.06);border-radius:6px;display:flex;align-items:center;gap:8px">
             <span>${icon} ${label}</span>
-            <button class="btn btn-ghost btn-sm" onclick="delete liveprices['${ticker}'];refreshPrices()" style="font-size:10px;padding:2px 8px;margin-left:auto">${btnLabel}</button>
+            <button class="btn btn-ghost btn-sm btn-actualizar-cot" style="font-size:10px;padding:2px 8px;margin-left:auto">${btnLabel}</button>
           </div>`;
         })()}
       </div>`;
@@ -2924,10 +2916,10 @@ function renderInversiones(){
       return`<div style="padding-top:10px;margin-top:10px;border-top:1px solid var(--border)">
         <div style="font-size:12px;color:var(--text2);margin-bottom:8px">⚠️ API no disponible — ingresá el precio en ARS para <b>${ticker}</b>:</div>
         <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-          <input type="number" id="mp-${ticker}" placeholder="Precio en ARS" min="0" step="0.01"
+          <input type="number" class="input-precio-manual" id="mp-${ticker}" placeholder="Precio en ARS" min="0" step="0.01"
             style="width:150px;padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:13px"
             onkeydown="if(event.key==='Enter')setPriceManual('${ticker}')"/>
-          <button class="btn btn-primary btn-sm" onclick="setPriceManual('${ticker}')">✓ Aplicar</button>
+          <button class="btn btn-primary btn-sm btn-aplicar-precio">✓ Aplicar</button>
           <button class="btn btn-ghost btn-sm btn-reintentar-cot">🔄 Reintentar</button>
         </div>
         ${lastKnownHtml}
@@ -2935,7 +2927,7 @@ function renderInversiones(){
     }
     return`<div style="padding-top:10px;margin-top:10px;border-top:1px solid var(--border);font-size:12px;color:var(--text2);display:flex;align-items:center;gap:8px">
       <span style="animation:spin 1s linear infinite;display:inline-block">⏳</span> Obteniendo cotización de <span class="badge b-blue">${ticker}</span>...
-      <button class="btn btn-ghost btn-sm" onclick="refreshPrices()" style="margin-left:auto">🔄 Actualizar</button>
+      <button class="btn btn-ghost btn-sm btn-actualizar-cot" style="margin-left:auto">🔄 Actualizar</button>
     </div>`;
   }
 
@@ -3690,31 +3682,89 @@ function verCacheInversiones(){
   alert('Cache de precios:\n\n'+lines.join('\n'));
 }
 
-// Delegación global para botón Reintentar cotización
+// Delegación global — botones de cards de inversión
 document.addEventListener('click',async(e)=>{
-  const btn=e.target.matches('.btn-reintentar-cot')?e.target:e.target.closest('.btn-reintentar-cot');
-  if(!btn)return;
-  const ticker=btn.closest('[data-ticker]')?.dataset?.ticker;
-  if(!ticker)return;
-  e.stopPropagation();
-  const debugDiv=document.getElementById('debug-cot-'+ticker);
-  if(debugDiv){debugDiv.style.display='block';debugDiv.textContent='🔍 Buscando '+ticker+'...';}
-  btn.disabled=true;btn.textContent='⏳';
-  const result=await obtenerCotizacion(ticker,true);
-  if(debugDiv)debugDiv.textContent=JSON.stringify(result,null,2)||'null';
-  // Actualizar liveprices con el resultado
-  if(result?.precioARS>0){
-    const entry={price:result.precioARS,priceARS:result.precioARS,priceUSD:result.precioUSD||null,change:0,currency:'ARS',
+  function livepricesToEntry(result){
+    return{price:result.precioARS,priceARS:result.precioARS,priceUSD:result.precioUSD||null,change:0,currency:'ARS',
       fuente:result.viaWebSearch?result.fuente||'web search':result.desdeCache?'caché':'',
       timestamp:result.timestamp||Date.now(),viaWebSearch:result.viaWebSearch||false,desdeCache:result.desdeCache||false,
       ratio:result.ratio,dolarCCL:result.dolarCCL};
-    liveprices[ticker]=entry;
-    pricecache[ticker]={priceARS:entry.priceARS,priceUSD:entry.priceUSD,fuente:entry.fuente,change:0,ts:Date.now()};
-    savePriceCache(ticker,entry.priceARS);
-  }else{
-    liveprices[ticker]={failed:true};
   }
-  renderInversiones();
+
+  // Botón Actualizar cotización
+  const btnAct=e.target.matches('.btn-actualizar-cot')?e.target:e.target.closest('.btn-actualizar-cot');
+  if(btnAct){
+    const card=btnAct.closest('[data-ticker]');if(!card)return;
+    const ticker=card.dataset.ticker;
+    e.stopPropagation();
+    btnAct.textContent='⏳';btnAct.disabled=true;
+    localStorage.removeItem('precio_'+ticker.toUpperCase());
+    delete liveprices[ticker];
+    const result=await obtenerCotizacion(ticker,true);
+    const debugDiv=document.getElementById('debug-cot-'+ticker);
+    if(debugDiv)debugDiv.textContent=JSON.stringify(result,null,2);
+    if(result?.precioARS>0){
+      const entry=livepricesToEntry(result);
+      liveprices[ticker]=entry;
+      pricecache[ticker]={priceARS:entry.priceARS,priceUSD:entry.priceUSD,fuente:entry.fuente,change:0,ts:Date.now()};
+      savePriceCache(ticker,entry.priceARS);
+    }else{liveprices[ticker]={failed:true};}
+    renderInversiones();return;
+  }
+
+  // Botón Corregir ratio
+  const btnRatio=e.target.matches('.btn-corregir-ratio')?e.target:e.target.closest('.btn-corregir-ratio');
+  if(btnRatio){
+    const card=btnRatio.closest('[data-ticker]');if(!card)return;
+    const ticker=card.dataset.ticker;
+    e.stopPropagation();
+    const cached=localStorage.getItem('ratio_'+ticker.toUpperCase());
+    const ratioActual=cached?JSON.parse(cached).ratio:1;
+    const nuevoRatio=prompt(`Ratio de ${ticker}: ¿cuántos CEDEARs = 1 acción?\nEj: 2 significa 1 CEDEAR = 0.5 acciones\nRatio actual: ${ratioActual}`);
+    if(!nuevoRatio||isNaN(nuevoRatio))return;
+    localStorage.setItem('ratio_'+ticker.toUpperCase(),JSON.stringify({ratio:parseFloat(nuevoRatio),manual:true,timestamp:Date.now()}));
+    renderInversiones();return;
+  }
+
+  // Botón Reintentar (fallback manual)
+  const btnRein=e.target.matches('.btn-reintentar-cot')?e.target:e.target.closest('.btn-reintentar-cot');
+  if(btnRein){
+    const card=btnRein.closest('[data-ticker]');if(!card)return;
+    const ticker=card.dataset.ticker;
+    e.stopPropagation();
+    const debugDiv=document.getElementById('debug-cot-'+ticker);
+    if(debugDiv){debugDiv.style.display='block';debugDiv.textContent='🔍 Buscando '+ticker+'...';}
+    btnRein.disabled=true;btnRein.textContent='⏳';
+    localStorage.removeItem('precio_'+ticker.toUpperCase());
+    delete liveprices[ticker];
+    const result=await obtenerCotizacion(ticker,true);
+    if(debugDiv)debugDiv.textContent=JSON.stringify(result,null,2)||'null';
+    if(result?.precioARS>0){
+      const entry=livepricesToEntry(result);
+      liveprices[ticker]=entry;
+      pricecache[ticker]={priceARS:entry.priceARS,priceUSD:entry.priceUSD,fuente:entry.fuente,change:0,ts:Date.now()};
+      savePriceCache(ticker,entry.priceARS);
+    }else{liveprices[ticker]={failed:true};}
+    renderInversiones();return;
+  }
+
+  // Botón Aplicar precio manual
+  const btnPrecio=e.target.matches('.btn-aplicar-precio')?e.target:e.target.closest('.btn-aplicar-precio');
+  if(btnPrecio){
+    const card=btnPrecio.closest('[data-ticker]');if(!card)return;
+    const ticker=card.dataset.ticker;
+    e.stopPropagation();
+    const input=card.querySelector('.input-precio-manual');
+    if(!input||!input.value)return;
+    const priceARS=parseFloat(input.value.replace(/\./g,'').replace(',','.'));
+    if(!priceARS||priceARS<=0){input.style.borderColor='var(--accent4)';input.focus();return;}
+    const priceUSD=dolarRates.blue?.venta?priceARS/dolarRates.blue.venta:null;
+    const ts=Date.now();
+    liveprices[ticker]={price:priceARS,priceARS,priceUSD,change:0,currency:'ARS',fuente:'manual',ts};
+    pricecache[ticker]={priceARS,priceUSD,fuente:'manual',change:0,ts};
+    savePriceCache(ticker,priceARS);
+    renderInversiones();return;
+  }
 });
 
 function startApp(){
