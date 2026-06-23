@@ -488,6 +488,15 @@ input[type=checkbox]{width:auto;margin-right:5px}
       <div class="color-row-pick"><label>🔵 Info</label><input type="color" id="sb-color5" oninput="setSemanticColor(5,this.value)"/></div>
       <button onclick="resetSemanticColors()" style="font-size:10px;color:var(--text2);background:none;border:none;cursor:pointer;padding:4px 0;text-decoration:underline">Restaurar colores por defecto</button>
     </div>
+    <div id="sb-ai-key-section" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+      <p style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px;color:var(--text2)">🤖 Asistente IA</p>
+      <div class="form-group" style="margin-bottom:6px">
+        <label style="font-size:11px">API key de Anthropic</label>
+        <input type="password" id="sb-ai-api-key-input" placeholder="sk-ant-..." style="width:100%;font-size:13px"
+          onchange="localStorage.setItem('anthropic_api_key',this.value.trim())" autocomplete="off"/>
+      </div>
+      <a href="https://console.anthropic.com" target="_blank" style="font-size:10px;color:var(--accent);text-decoration:underline">Obtener API key →</a>
+    </div>
   </div>
 </div>
 
@@ -832,8 +841,13 @@ input[type=checkbox]{width:auto;margin-right:5px}
         <div style="font-size:10px;opacity:.8">Análisis financiero personal</div>
       </div>
     </div>
-    <button onclick="toggleAIPanel()" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;padding:4px">×</button>
+    <div style="display:flex;align-items:center;gap:4px">
+      <button onclick="toggleAIKeyConfig()" title="Configurar API key" style="background:none;border:none;color:rgba(255,255,255,.7);font-size:15px;cursor:pointer;padding:4px 6px;border-radius:6px" id="ai-cfg-btn">⚙️</button>
+      <button onclick="toggleAIPanel()" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;padding:4px">×</button>
+    </div>
   </div>
+  <!-- Sección inline configuración API key -->
+  <div id="ai-key-config" style="display:none;padding:12px;border-bottom:1px solid var(--border);background:var(--bg2)"></div>
   <div style="padding:8px 12px;border-bottom:1px solid var(--border);display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch">
     <button class="ai-chip" onclick="aiQuick('resumen')">📊 Resumen</button>
     <button class="ai-chip" onclick="aiQuick('cuotas')">📅 Cuotas</button>
@@ -1292,6 +1306,11 @@ async function afterLogin() {
     const savedKey = localStorage.getItem('anthropic_api_key') || localStorage.getItem('ai_key') || '';
     const keyInput = document.getElementById('ai-api-key-input');
     if (keyInput && savedKey) keyInput.value = savedKey;
+    // Sidebar desktop: mostrar sección API key
+    const sbAiKeySection = document.getElementById('sb-ai-key-section');
+    if (sbAiKeySection) sbAiKeySection.style.display = 'block';
+    const sbKeyInput = document.getElementById('sb-ai-api-key-input');
+    if (sbKeyInput && savedKey) sbKeyInput.value = savedKey;
   } else {
     // USUARIO: solo sección de gastos
     // Solo mostrar sidebar en desktop
@@ -3364,6 +3383,61 @@ function toggleAIPanel() {
     }
   }
   if (aiPanelOpen) setTimeout(()=>document.getElementById('ai-input').focus(), 100);
+}
+
+function toggleAIKeyConfig() {
+  const el = document.getElementById('ai-key-config');
+  if (el.style.display === 'none' || !el.style.display) {
+    renderAIKeyConfig();
+    el.style.display = 'block';
+  } else {
+    el.style.display = 'none';
+  }
+}
+
+function renderAIKeyConfig() {
+  const el = document.getElementById('ai-key-config');
+  const key = localStorage.getItem('anthropic_api_key') || localStorage.getItem('ai_key') || '';
+  if (key) {
+    const preview = key.slice(0, 8) + '...' + key.slice(-4);
+    el.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+      <span style="font-size:12px;color:var(--accent2)">✅ API key configurada (${preview})</span>
+      <button class="btn btn-ghost btn-sm" onclick="showAIKeyInput()">Cambiar</button>
+    </div>`;
+  } else {
+    showAIKeyInput();
+  }
+}
+
+function showAIKeyInput() {
+  const el = document.getElementById('ai-key-config');
+  el.style.display = 'block';
+  el.innerHTML = `
+    <input type="password" id="ai-key-inline-input" placeholder="Pegá tu API key de Anthropic (sk-ant-...)"
+      style="width:100%;margin-bottom:8px;font-size:13px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text)"
+      onkeydown="if(event.key==='Enter')saveAIKeyInline()"/>
+    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+      <button class="btn btn-primary btn-sm" onclick="saveAIKeyInline()">Guardar</button>
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('ai-key-config').style.display='none'">Cancelar</button>
+      <a href="https://console.anthropic.com" target="_blank" rel="noopener" style="font-size:11px;color:var(--accent);text-decoration:underline;margin-left:auto">Obtener API key →</a>
+    </div>
+    <p id="ai-key-save-msg" style="font-size:12px;margin-top:6px;min-height:16px"></p>`;
+  setTimeout(() => document.getElementById('ai-key-inline-input')?.focus(), 50);
+}
+
+function saveAIKeyInline() {
+  const val = (document.getElementById('ai-key-inline-input')?.value || '').trim();
+  const msg = document.getElementById('ai-key-save-msg');
+  if (!val) { if (msg) msg.textContent = '⚠️ Pegá tu API key primero.'; return; }
+  localStorage.setItem('anthropic_api_key', val);
+  // Sincronizar con inputs de ajustes
+  const keyInput = document.getElementById('ai-api-key-input');
+  if (keyInput) keyInput.value = val;
+  const sbKeyInput = document.getElementById('sb-ai-api-key-input');
+  if (sbKeyInput) sbKeyInput.value = val;
+  if (msg) msg.style.color = 'var(--accent2)';
+  if (msg) msg.textContent = '✅ API key guardada';
+  setTimeout(() => renderAIKeyConfig(), 1200);
 }
 
 function appendAIMsg(role, text) {
