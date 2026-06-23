@@ -483,6 +483,7 @@ input[type=checkbox]{width:auto;margin-right:5px}
       <button class="toggle-btn" onclick="toggleTheme()" id="theme-btn">🌙 Oscuro</button>
       <button class="toggle-btn" onclick="backupData()" id="btn-backup">💾 Backup</button>
       <button class="toggle-btn" onclick="document.getElementById('restore-input').click()" id="btn-restore">📂 Restaurar</button>
+      <button class="toggle-btn" onclick="verCacheInversiones()" title="Debug: ver precios cacheados">🗄️ Ver caché</button>
       <input type="file" id="restore-input" accept=".json" style="display:none" onchange="restoreData(event)"/>
       <button class="toggle-btn" onclick="doLogout()" style="color:var(--accent4);border-color:rgba(248,113,113,.3)">🚪 Salir</button>
     </div>
@@ -3260,16 +3261,25 @@ let liveprices={};   // { ticker: {price, priceARS, priceUSD, change, fuente} }
 let dolarRates={};   // { casa: {compra, venta, nombre} }
 let lastUpdate=null;
 let pricecache=(()=>{try{const d=localStorage.getItem('fz_pricecache');return d?JSON.parse(d):{};}catch(e){return{};}})();
-function savePriceCache(){try{localStorage.setItem('fz_pricecache',JSON.stringify(pricecache));}catch(e){}}
+function savePriceCache(ticker,priceARS){
+  console.log('[PriceCache] Guardando:',ticker,'→',priceARS);
+  try{localStorage.setItem('fz_pricecache',JSON.stringify(pricecache));}catch(e){console.error('[PriceCache] Error al guardar:',e);}
+}
 
 // Carga precios no expirados del cache en liveprices para mostrar inmediatamente
 function loadCacheToLive(){
-  const now=Date.now();const EXPIRY=24*60*60*1000;
+  const now=Date.now();const EXPIRY=7*24*60*60*1000; // 7 días
+  let loaded=0;
   Object.entries(pricecache).forEach(([ticker,c])=>{
     if(!c?.priceARS||!c.ts||now-c.ts>EXPIRY)return;
-    if(!liveprices[ticker]||liveprices[ticker].fromCache)
+    // Overwrite solo si: vacío, fromCache, o failed (nunca borrar datos frescos de API)
+    const prev=liveprices[ticker];
+    if(!prev||prev.fromCache||prev.failed){
       liveprices[ticker]={price:c.priceARS,priceARS:c.priceARS,priceUSD:c.priceUSD||null,change:c.change||0,currency:'ARS',fuente:c.fuente||'caché',fromCache:true,ts:c.ts};
+      loaded++;
+    }
   });
+  if(loaded)console.log('[PriceCache] Cargados',loaded,'ticker(s) desde cache:',Object.keys(pricecache));
 }
 
 // Cotización vía Claude API como fallback cuando las APIs externas fallan
@@ -3374,23 +3384,31 @@ async function refreshPrices(){
   loadCacheToLive();
   // Run dolar + crypto in parallel, then stocks sequentially
   await Promise.all([fetchDolar(),fetchCrypto(cryptoTickers)]);
-  for(const t of stockTickers){
+  // Normalizar tickers a uppercase para que coincidan con las claves de pricecache
+  const stockTickersNorm=[...new Set(stockTickers.map(t=>t.trim().toUpperCase()))];
+  for(const t of stockTickersNorm){
     const res=await obtenerCotizacion(t);
     if(res){
       liveprices[t]=res;
       pricecache[t]={priceARS:res.priceARS,priceUSD:res.priceUSD,fuente:res.fuente,change:res.change||0,ts:Date.now()};
-      savePriceCache();
+      savePriceCache(t,res.priceARS);
     } else {
-      // Fallback: cotización via Claude API
-      const resIA=await obtenerCotizacionViaIA(t);
+      console.log('[PriceCache] APIs externas fallaron para',t,'— intentando IA...');
+      // Fallback: cotización via Claude API solo si NO hay precio manual en cache
+      const cachedFuente=pricecache[t]?.fuente;
+      const skipIA=(cachedFuente==='manual'); // no pisar precio manual con estimado IA
+      const resIA=skipIA?null:await obtenerCotizacionViaIA(t);
       if(resIA?.precioARS>0){
         const entry={price:resIA.precioARS,priceARS:resIA.precioARS,priceUSD:resIA.precioUSD||null,change:0,currency:'ARS',fuente:'IA (estimado)',ts:Date.now()};
         liveprices[t]=entry;
         pricecache[t]={priceARS:entry.priceARS,priceUSD:entry.priceUSD,fuente:entry.fuente,change:0,ts:Date.now()};
-        savePriceCache();
+        savePriceCache(t,entry.priceARS);
       } else if(!liveprices[t]?.priceARS){
         // Solo marcar como failed si no hay ningún precio (ni cache)
+        console.log('[PriceCache] Sin precio para',t,'— marcando failed');
         liveprices[t]={failed:true};
+      } else {
+        console.log('[PriceCache] Usando precio cacheado para',t,':',liveprices[t].priceARS);
       }
     }
   }
@@ -3416,7 +3434,8 @@ function setPriceManual(ticker){
   const ts=Date.now();
   liveprices[ticker]={price:priceARS,priceARS,priceUSD,change:0,currency:'ARS',fuente:'manual',ts};
   pricecache[ticker]={priceARS,priceUSD,fuente:'manual',change:0,ts};
-  savePriceCache();
+  savePriceCache(ticker,priceARS);
+  console.log('[PriceCache] Precio manual guardado para',ticker,':',priceARS,'— cache ahora:',JSON.stringify(pricecache));
   renderInversiones();
 }
 
@@ -3501,6 +3520,22 @@ function registerPWA(){
 }
 
 // ====== INIT ======
+function verCacheInversiones(){
+  const keys=Object.keys(pricecache);
+  if(!keys.length){alert('Cache vacío — no hay precios guardados.');return;}
+  const EXPIRY=7*24*60*60*1000;
+  const now=Date.now();
+  const lines=keys.map(k=>{
+    const c=pricecache[k];
+    const diff=now-c.ts;
+    const h=Math.floor(diff/3600000);const m=Math.floor((diff%3600000)/60000);
+    const age=h>0?`hace ${h}h${m>0?` ${m}min`:''}`:(m>0?`hace ${m}min`:'recién');
+    const exp=diff>EXPIRY?'⚠️ EXPIRADO':'✅ válido';
+    return`${k}: $${c.priceARS?.toLocaleString('es-AR')} (${c.fuente||'?'}) · ${age} · ${exp}`;
+  });
+  alert('Cache de precios:\n\n'+lines.join('\n'));
+}
+
 function startApp(){
   const now=new Date();
   document.getElementById('fecha-sb').textContent=now.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});
@@ -3509,6 +3544,9 @@ function startApp(){
   populateCatSelects();populateTarjetaSels();
   buildMesSel('filtro-mes-g',S.gastos);
   buildMesSel('filtro-mes-i',S.ingresos);
+  // Pre-cargar cache antes de cualquier render para que esté disponible al abrir Inversiones
+  loadCacheToLive();
+  console.log('[PriceCache] Cache al arrancar:',JSON.stringify(pricecache));
   renderDashboard();
   registerPWA();
   fetchDolar().then(()=>{renderDolarWidget();renderDashboard();});
