@@ -2753,6 +2753,10 @@ function nuevaInversion(){resetInvModal();openModal('modal-inversion');}
 
 function renderInversiones(){
   resetInvModal();
+  // Limpiar caches de dividendos con valores inválidos (< 0.05 USD)
+  Object.keys(localStorage).filter(k=>k.startsWith('dividendo_')).forEach(k=>{
+    try{const v=JSON.parse(localStorage.getItem(k));if(!v?.ultimoDividendoUSD||v.ultimoDividendoUSD<0.05){localStorage.removeItem(k);}}catch(e){localStorage.removeItem(k);}
+  });
   loadCacheToLive(); // mostrar precios cacheados inmediatamente antes de cualquier fetch
   // Auto-fetch precios si hay tickers y no hay datos recientes
   const hasTickers=S.inversiones.some(i=>i.ticker&&i.ticker!=='USD');
@@ -3549,7 +3553,13 @@ function dividendoCardHTML(ticker,tenencia){
 async function obtenerDividendoCEDEAR(ticker){
   const cacheKey='dividendo_'+ticker.toUpperCase();
   const cached=localStorage.getItem(cacheKey);
-  if(cached){const c=JSON.parse(cached);if((Date.now()-c.timestamp)<24*3600000)return c;}
+  if(cached){
+    try{
+      const c=JSON.parse(cached);
+      if(!c.ultimoDividendoUSD||c.ultimoDividendoUSD<0.05){localStorage.removeItem(cacheKey);}
+      else if((Date.now()-c.timestamp)<24*3600000)return c;
+    }catch(e){localStorage.removeItem(cacheKey);}
+  }
   const apiKey=localStorage.getItem('anthropic_api_key')||localStorage.getItem('ai_key');
   if(!apiKey)return null;
   try{
@@ -3937,8 +3947,7 @@ function toggleCotPanel(){
 }
 
 function actualizarDividendosForzado(){
-  const tickers=[...new Set(S.inversiones.filter(i=>i.ticker&&!CRYPTO_IDS[i.ticker]&&i.ticker!=='USD').map(i=>i.ticker.toUpperCase()))];
-  tickers.forEach(t=>localStorage.removeItem('dividendo_'+t));
+  Object.keys(localStorage).filter(k=>k.startsWith('dividendo_')).forEach(k=>localStorage.removeItem(k));
   cedearDividendos={};
   cargarDividendosCEDEARs();
 }
