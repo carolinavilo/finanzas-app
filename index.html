@@ -2855,7 +2855,7 @@ function renderInversiones(){
           const toolCount=dbg.toolBlocksCount||0;
           const summary=hasError
             ?`❌ Error: ${dbg.error}`
-            :`✅ ${toolCount} búsqueda(s) · USD ${dbg.precioUSD} · CCL ${dbg.dolarCCL?.toFixed(0)} · ratio ${dbg.ratio} → ARS ${dbg.precioARSCalculado?.toLocaleString('es-AR',{maximumFractionDigits:0})}`;
+            :`✅ ${toolCount} búsqueda(s) · ARS ${dbg.precioARS?.toLocaleString('es-AR',{maximumFractionDigits:0})}${dbg.precioUSD?` · USD ${dbg.precioUSD}`:''} · ratio ${dbg.ratio||'-'}${dbg.conversionManual?' (conv.manual)':''}`;
           const raw=JSON.stringify(dbg.rawResponse,null,2);
           const dbgId='dbg-'+ticker;
           return`<div style="margin-top:8px;border-radius:6px;overflow:hidden;border:1px solid ${hasError?'var(--accent4)':'rgba(128,128,128,.2)'}">
