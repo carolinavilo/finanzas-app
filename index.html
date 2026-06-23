@@ -2830,6 +2830,26 @@ function renderInversiones(){
           </div>
         </div>
         ${(()=>{
+          const ratio=live.ratio||getRatioCached(ticker);
+          if(!ratio||ticker==='USD')return'';
+          const isManualRatio=(()=>{try{const c=localStorage.getItem('ratio_'+ticker.toUpperCase());return!!(c&&JSON.parse(c).manual);}catch(e){return false;}})();
+          const ratioStr=ratio>1?`1/${ratio} acción`:ratio<1?`${ratio} acciones`:'1 acción completa';
+          return`<div style="font-size:10px;color:var(--text2);margin-top:6px;padding:5px 10px;background:rgba(128,128,128,.04);border-radius:6px">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              <span title="El ratio indica cuántos CEDEARs equivalen a 1 acción en NYSE. Consultá el ratio oficial en invertironline.com o BYMA">📐 Ratio CEDEAR: 1 CEDEAR = ${ratioStr}${isManualRatio?' ✏️ (manual)':' (est. IA)'}</span>
+              <button class="btn btn-ghost btn-sm" onclick="document.getElementById('ratio-edit-${ticker}').style.display='flex'" style="font-size:10px;padding:2px 6px;margin-left:auto">✏️ Corregir ratio</button>
+            </div>
+            <div id="ratio-edit-${ticker}" style="display:none;gap:6px;align-items:center;margin-top:6px">
+              <input id="ratio-inp-${ticker}" type="number" value="${ratio}" min="0.01" step="0.01"
+                style="width:70px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:12px"
+                onkeydown="if(event.key==='Enter')setRatioManual('${ticker}')"/>
+              <span style="font-size:10px;color:var(--text2)">CEDEARs por acción</span>
+              <button class="btn btn-primary btn-sm" onclick="setRatioManual('${ticker}')" style="font-size:10px;padding:2px 8px">Guardar</button>
+              <button class="btn btn-ghost btn-sm" onclick="document.getElementById('ratio-edit-${ticker}').style.display='none'" style="font-size:10px;padding:2px 6px">✕</button>
+            </div>
+          </div>`;
+        })()}
+        ${(()=>{
           const ts=live.timestamp||live.ts;
           const isManual=live.fuente==='manual';
           if(!ts&&!isManual)return'';
@@ -3336,6 +3356,52 @@ async function fetchCrypto(tickers){
   }catch(e){console.warn('CoinGecko error:',e);}
 }
 
+function getRatioCached(ticker){
+  try{const c=localStorage.getItem('ratio_'+ticker.toUpperCase());return c?JSON.parse(c).ratio:null;}
+  catch(e){return null;}
+}
+
+async function obtenerRatioCEDEAR(ticker){
+  const cacheKey='ratio_'+ticker.toUpperCase();
+  const cached=localStorage.getItem(cacheKey);
+  if(cached){
+    const c=JSON.parse(cached);
+    if(c.manual)return c.ratio; // ratio manual: sin expiración
+    if((Date.now()-c.timestamp)<7*24*3600000)return c.ratio;
+  }
+
+  const apiKey=localStorage.getItem('anthropic_api_key')||localStorage.getItem('ai_key');
+  if(!apiKey)return null;
+
+  try{
+    const r=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-6',
+        max_tokens:100,
+        messages:[{role:'user',content:`¿Cuál es el ratio de conversión oficial del CEDEAR ${ticker} en Argentina según BYMA o CNV? El ratio indica cuántos CEDEARs equivalen a 1 acción subyacente. Respondé ÚNICAMENTE con este JSON sin texto adicional: {"ratio": 2, "fuente": "BYMA"}`}]
+      })
+    });
+    const data=await r.json();
+    const text=data.content[0].text.replace(/```json|```/g,'').trim();
+    const result=JSON.parse(text);
+    localStorage.setItem(cacheKey,JSON.stringify({ratio:result.ratio,timestamp:Date.now()}));
+    return result.ratio;
+  }catch(e){return null;}
+}
+
+function setRatioManual(ticker){
+  const inp=document.getElementById('ratio-inp-'+ticker);
+  if(!inp)return;
+  const ratio=parseFloat(inp.value);
+  if(!ratio||ratio<=0){inp.style.borderColor='var(--accent4)';inp.focus();return;}
+  localStorage.setItem('ratio_'+ticker.toUpperCase(),JSON.stringify({ratio,timestamp:Date.now(),manual:true}));
+  localStorage.removeItem('precio_'+ticker.toUpperCase());
+  delete liveprices[ticker];
+  refreshPrices();
+}
+
 async function obtenerCotizacion(ticker){
   const cacheKey='precio_'+ticker.toUpperCase();
 
@@ -3352,6 +3418,13 @@ async function obtenerCotizacion(ticker){
   if(!apiKey)return cached?{...JSON.parse(cached),desdeCache:true}:null;
 
   try{
+    // Ratio y dólar CCL en paralelo
+    const [ratio,dolarData]=await Promise.all([
+      obtenerRatioCEDEAR(ticker).then(r=>r||1),
+      fetch('https://dolarapi.com/v1/dolares/contadoconliqui',{signal:AbortSignal.timeout(4000)}).then(r=>r.json()).catch(()=>null)
+    ]);
+    const dolarCCL=dolarData?.venta||null;
+
     const hoy=new Date().toLocaleDateString('es-AR');
     const r=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
@@ -3359,16 +3432,20 @@ async function obtenerCotizacion(ticker){
       body:JSON.stringify({
         model:'claude-sonnet-4-6',
         max_tokens:150,
-        messages:[{role:'user',content:`Precio aproximado del CEDEAR ${ticker} en pesos argentinos hoy ${hoy}. Usá el precio del dólar CCL/MEP actual para estimar. Respondé SOLO con este JSON sin texto adicional: {"precioARS": 287264, "precioUSD": 192.15, "nota": "estimado"}`}]
+        messages:[{role:'user',content:`¿Cuál es el precio actual de ${ticker} en dólares en NYSE/NASDAQ hoy ${hoy}? Respondé SOLO con este JSON sin texto adicional: {"precioUSD": 192.15, "nota": "estimado"}`}]
       })
     });
     const data=await r.json();
     const text=data.content[0].text.replace(/```json|```/g,'').trim();
     const result=JSON.parse(text);
+    if(!(result?.precioUSD>0))throw new Error('precioUSD inválido');
 
-    // Guardar en cache
-    localStorage.setItem(cacheKey,JSON.stringify({...result,timestamp:Date.now()}));
-    return{...result,viaIA:true};
+    const precioUSD=result.precioUSD;
+    const precioARS=dolarCCL?(precioUSD/ratio)*dolarCCL:null;
+
+    const entry={precioARS,precioUSD,ratio,dolarCCL,nota:result.nota,timestamp:Date.now()};
+    localStorage.setItem(cacheKey,JSON.stringify(entry));
+    return{...entry,viaIA:true};
   }catch(e){
     return cached?{...JSON.parse(cached),desdeCache:true}:null;
   }
