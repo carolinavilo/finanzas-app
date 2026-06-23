@@ -2908,8 +2908,9 @@ function renderInversiones(){
           else if(live.viaWebSearch){icon='🌐';label=`Precio vía web search · hace ${timeAgo}`;}
           else if(horasAtras>=1){icon='⚠️';label=`Precio desactualizado · hace ${timeAgo}`;btnLabel='🔄 Actualizar';}
           else{icon='🕐';label=`Actualizado hace ${timeAgo}`;}
-          return`<div style="font-size:10px;color:var(--text2);margin-top:8px;padding:5px 10px;background:rgba(128,128,128,.06);border-radius:6px;display:flex;align-items:center;gap:8px">
+          return`<div style="font-size:10px;color:var(--text2);margin-top:8px;padding:5px 10px;background:rgba(128,128,128,.06);border-radius:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
             <span>${icon} ${label}</span>
+            <a href="https://balanz.com/inversiones/cedears/" target="_blank" rel="noopener" style="font-size:10px;color:var(--accent);text-decoration:none;white-space:nowrap">🔗 Ver en Balanz</a>
             <button class="btn btn-ghost btn-sm btn-actualizar-cot" style="font-size:10px;padding:2px 8px;margin-left:auto">${btnLabel}</button>
           </div>`;
         })()}
@@ -3472,7 +3473,7 @@ async function obtenerCotizacion(ticker,forceRefresh=false){
         max_tokens:200,
         system:'Sos un bot que responde ÚNICAMENTE con JSON válido. Sin texto, sin markdown, sin explicaciones. Solo el objeto JSON pedido.',
         tools:[{type:'web_search_20250305',name:'web_search'}],
-        messages:[{role:'user',content:`Buscá el precio de cierre de HOY ${new Date().toLocaleDateString('es-AR')} del CEDEAR ${ticker} en el Panel General de BYMA (Bolsa y Mercados Argentinos).\n\nBuscá específicamente en:\n- iol.com.ar/herramientas/cotizaciones/cedears\n- portfoliopersonal.com/cotizaciones/cedears\n- invertironline.com cotizaciones CEDEARs\n- cinver.com.ar\n\nEl precio del CEDEAR ${ticker} en BYMA es distinto al precio de la acción en NYSE. Es el precio al que se negocia la unidad de CEDEAR en el mercado local en pesos.\n\nDevolvé SOLO este JSON sin texto:\n{"precioARS": 6485, "fuente": "iol.com.ar", "fecha": "${new Date().toISOString().slice(0,10)}", "mercado": "BYMA"}`}]
+        messages:[{role:'user',content:`Buscá el precio actual del CEDEAR ${ticker} en balanz.com en pesos argentinos.\nURL a buscar: https://balanz.com/inversiones/cedears/\n\nEl precio que necesito es el último precio operado en ARS del CEDEAR ${ticker} en BYMA según Balanz.\n\nSi no encontrás en Balanz, buscá en:\n- https://www.balanz.com/cotizaciones/?tipo=cedears\n- "CEDEAR ${ticker} precio ARS balanz.com 2026"\n\nDevolvé SOLO este JSON sin texto adicional:\n{"precioARS": 485000, "fuente": "balanz.com", "fecha": "${new Date().toISOString().slice(0,10)}"}`}]
       })
     });
     rawResponse=await r.json();
