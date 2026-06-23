@@ -2859,8 +2859,8 @@ function renderInversiones(){
           const timeAgo=h>0?`${h}h${m>0?` ${m}min`:''}`:(m>0?`${m}min`:'un momento');
           let icon,label,btnLabel='🔄';
           if(isManual){icon='✏️';label=`Precio manual · hace ${timeAgo}`;}
-          else if(live.viaIA){icon='🤖';label=`Estimado por IA · hace ${timeAgo}`;}
-          else if(horasAtras>=12){icon='⚠️';label=`Precio desactualizado · hace ${timeAgo}`;btnLabel='🔄 Actualizar';}
+          else if(live.viaWebSearch){icon='🌐';label=`Precio vía web search · hace ${timeAgo}`;}
+          else if(horasAtras>=1){icon='⚠️';label=`Precio desactualizado · hace ${timeAgo}`;btnLabel='🔄 Actualizar';}
           else{icon='🕐';label=`Actualizado hace ${timeAgo}`;}
           return`<div style="font-size:10px;color:var(--text2);margin-top:8px;padding:5px 10px;background:rgba(128,128,128,.06);border-radius:6px;display:flex;align-items:center;gap:8px">
             <span>${icon} ${label}</span>
@@ -3404,48 +3404,37 @@ function setRatioManual(ticker){
 
 async function obtenerCotizacion(ticker){
   const cacheKey='precio_'+ticker.toUpperCase();
-
-  // 1. Retornar cache si tiene menos de 12hs
   const cached=localStorage.getItem(cacheKey);
   if(cached){
     const c=JSON.parse(cached);
-    const horasAtras=(Date.now()-c.timestamp)/3600000;
-    if(horasAtras<12)return{...c,desdeCache:true};
+    if((Date.now()-c.timestamp)<3600000)return{...c,desdeCache:true};
   }
 
-  // 2. Pedir cotización a Claude
   const apiKey=localStorage.getItem('anthropic_api_key')||localStorage.getItem('ai_key');
-  if(!apiKey)return cached?{...JSON.parse(cached),desdeCache:true}:null;
+  if(!apiKey)return cached?JSON.parse(cached):null;
 
   try{
-    // Ratio y dólar CCL en paralelo
-    const [ratio,dolarData]=await Promise.all([
-      obtenerRatioCEDEAR(ticker).then(r=>r||1),
-      fetch('https://dolarapi.com/v1/dolares/contadoconliqui',{signal:AbortSignal.timeout(4000)}).then(r=>r.json()).catch(()=>null)
-    ]);
-    const dolarCCL=dolarData?.venta||null;
-
-    const hoy=new Date().toLocaleDateString('es-AR');
     const r=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
       headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify({
         model:'claude-sonnet-4-6',
-        max_tokens:150,
-        messages:[{role:'user',content:`¿Cuál es el precio actual de ${ticker} en dólares en NYSE/NASDAQ hoy ${hoy}? Respondé SOLO con este JSON sin texto adicional: {"precioUSD": 192.15, "nota": "estimado"}`}]
+        max_tokens:300,
+        tools:[{type:'web_search_20250305',name:'web_search'}],
+        messages:[{role:'user',content:`Buscá el precio actual del CEDEAR ${ticker} en pesos argentinos en el mercado de Buenos Aires (BYMA). Buscá en Google "CEDEAR ${ticker} precio hoy" o en sitios como invertironline.com, iol.com.ar, o balanz.com. Respondé ÚNICAMENTE con este JSON sin texto adicional: {"precioARS": 123456, "precioUSD": 192.15, "fuente": "nombre del sitio"}`}]
       })
     });
     const data=await r.json();
-    const text=data.content[0].text.replace(/```json|```/g,'').trim();
+
+    // La respuesta puede tener tool_use blocks antes del texto final
+    const textBlock=data.content?.find(b=>b.type==='text');
+    if(!textBlock)throw new Error('sin respuesta de texto');
+
+    const text=textBlock.text.replace(/```json|```/g,'').trim();
     const result=JSON.parse(text);
-    if(!(result?.precioUSD>0))throw new Error('precioUSD inválido');
 
-    const precioUSD=result.precioUSD;
-    const precioARS=dolarCCL?(precioUSD/ratio)*dolarCCL:null;
-
-    const entry={precioARS,precioUSD,ratio,dolarCCL,nota:result.nota,timestamp:Date.now()};
-    localStorage.setItem(cacheKey,JSON.stringify(entry));
-    return{...entry,viaIA:true};
+    localStorage.setItem(cacheKey,JSON.stringify({...result,timestamp:Date.now()}));
+    return{...result,viaWebSearch:true};
   }catch(e){
     return cached?{...JSON.parse(cached),desdeCache:true}:null;
   }
@@ -3470,14 +3459,14 @@ async function refreshPrices(){
     const res=await obtenerCotizacion(t);
     if(res?.precioARS>0){
       const entry={price:res.precioARS,priceARS:res.precioARS,priceUSD:res.precioUSD||null,change:0,currency:'ARS',
-        fuente:res.viaIA?'IA (est.)':res.desdeCache?'caché':'',
-        timestamp:res.timestamp||Date.now(),viaIA:res.viaIA||false,desdeCache:res.desdeCache||false};
+        fuente:res.viaWebSearch?res.fuente||'web search':res.desdeCache?'caché':'',
+        timestamp:res.timestamp||Date.now(),viaWebSearch:res.viaWebSearch||false,desdeCache:res.desdeCache||false};
       liveprices[t]=entry;
       if(!res.desdeCache){
         pricecache[t]={priceARS:entry.priceARS,priceUSD:entry.priceUSD,fuente:entry.fuente,change:0,ts:Date.now()};
         savePriceCache(t,entry.priceARS);
       }
-      console.log('[Cotizacion]',t,'→ $'+entry.priceARS.toLocaleString('es-AR'),res.viaIA?'(IA)':res.desdeCache?'(caché)':'');
+      console.log('[Cotizacion]',t,'→ $'+entry.priceARS.toLocaleString('es-AR'),res.viaWebSearch?'(web search)':res.desdeCache?'(caché)':'');
     }else if(!liveprices[t]?.priceARS){
       liveprices[t]={failed:true};
     }
