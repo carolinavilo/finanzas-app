@@ -1522,17 +1522,61 @@ const CAT_COLORS={
   'Alquiler':'#60a5fa','Inversiones':'#f59e0b','Regalo':'#e879f9'
 };
 
-let S={
-  gastos:[],ingresos:[],tarjetas:[],cuotas:[],inversiones:[],presupuesto:{},
-  comprasCuotas:[],gastosFinTarjeta:[],ventas:[],
-  catsGasto:[...DEFAULT_CATS_GASTO],catsIngreso:[...DEFAULT_CATS_INGRESO],
-  config:{tema:'light',colorTheme:'verde'}
-};
+function _defaultS(){
+  return{gastos:[],ingresos:[],tarjetas:[],cuotas:[],inversiones:[],presupuesto:{},
+    comprasCuotas:[],gastosFinTarjeta:[],ventas:[],
+    catsGasto:[...DEFAULT_CATS_GASTO],catsIngreso:[...DEFAULT_CATS_INGRESO],
+    config:{tema:'light',colorTheme:'verde'}};
+}
+function _applyGuards(p){
+  if(!p.catsGasto||!p.catsGasto.length)p.catsGasto=[...DEFAULT_CATS_GASTO];
+  if(!p.catsIngreso||!p.catsIngreso.length)p.catsIngreso=[...DEFAULT_CATS_INGRESO];
+  if(!p.config)p.config={tema:'light',colorTheme:'verde'};
+  if(!p.config.colorTheme)p.config.colorTheme='verde';
+  if(!p.comprasCuotas)p.comprasCuotas=[];
+  if(!p.gastosFinTarjeta)p.gastosFinTarjeta=[];
+  if(!p.ventas)p.ventas=[];
+  return p;
+}
+// S se inicializa eagerly en sincrónico — antes de cualquier flujo async de auth.
+// Si el JSON primario falla, intenta el backup automático.
+let S=(()=>{
+  try{
+    const d=localStorage.getItem('fz_v3');
+    if(d)return _applyGuards(JSON.parse(d));
+  }catch(e){
+    console.error('[FinanzasApp] fz_v3 corrupto, intentando backup:',e);
+    try{
+      const b=localStorage.getItem('fz_v3_backup');
+      if(b){console.warn('[FinanzasApp] Restaurando desde backup.');return _applyGuards(JSON.parse(b));}
+    }catch(e2){console.error('[FinanzasApp] Backup también inválido:',e2);}
+  }
+  return _defaultS();
+})();
 
 function load(){
-  try{const d=localStorage.getItem('fz_v3');if(d){const p=JSON.parse(d);Object.assign(S,p);if(!S.catsGasto)S.catsGasto=[...DEFAULT_CATS_GASTO];if(!S.catsIngreso)S.catsIngreso=[...DEFAULT_CATS_INGRESO];if(!S.config)S.config={tema:'light',colorTheme:'verde'};if(!S.config.colorTheme)S.config.colorTheme='verde';if(!S.comprasCuotas)S.comprasCuotas=[];if(!S.gastosFinTarjeta)S.gastosFinTarjeta=[];if(!S.ventas)S.ventas=[];}}catch(e){}
+  // Llamado desde afterLogin() para asegurar datos frescos post-login.
+  // Con la inicialización eager arriba, este paso es redundante en la mayoría de los casos.
+  try{
+    const d=localStorage.getItem('fz_v3');
+    if(d)Object.assign(S,_applyGuards(JSON.parse(d)));
+  }catch(e){
+    console.error('[FinanzasApp] Error en load():',e);
+    try{
+      const b=localStorage.getItem('fz_v3_backup');
+      if(b){console.warn('[FinanzasApp] load() usando backup.');Object.assign(S,_applyGuards(JSON.parse(b)));}
+    }catch(e2){}
+  }
 }
-function save(){localStorage.setItem('fz_v3',JSON.stringify(S));}
+function save(){
+  try{
+    const json=JSON.stringify(S);
+    localStorage.setItem('fz_v3',json);
+    localStorage.setItem('fz_v3_backup',json);
+  }catch(e){
+    console.error('[FinanzasApp] Error al guardar datos:',e);
+  }
+}
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,5);}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 function nextFechaDia(dia){
@@ -2944,21 +2988,27 @@ function updatePresupEstado(){
 
 // ====== BACKUP / RESTORE ======
 function backupData(){
-  const blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
+  const now=new Date();
+  const ts=today()+'-'+String(now.getHours()).padStart(2,'0')+String(now.getMinutes()).padStart(2,'0');
+  const exportObj={...S,_exportedAt:now.toISOString()};
+  const blob=new Blob([JSON.stringify(exportObj,null,2)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);
-  a.download=`finanzas-backup-${today()}.json`;a.click();URL.revokeObjectURL(a.href);
+  a.download=`finanzas-backup-${ts}.json`;a.click();URL.revokeObjectURL(a.href);
 }
 function restoreData(e){
   const file=e.target.files[0];if(!file)return;
   const reader=new FileReader();
   reader.onload=ev=>{
     try{
-      const data=JSON.parse(ev.target.result);
+      const raw=JSON.parse(ev.target.result);
+      delete raw._exportedAt;
+      const data=_applyGuards(raw);
       if(confirm('¿Restaurar backup? Esto reemplaza todos los datos actuales.')){
-        Object.assign(S,data);save();applyTheme();renderSection('dashboard');
-        renderDashboard();alert('✅ Backup restaurado correctamente.');
+        Object.assign(S,data);save();applyTheme();
+        renderSection('dashboard');renderDashboard();
+        alert('✅ Backup restaurado correctamente.');
       }
-    }catch(e){alert('❌ Archivo inválido.');}
+    }catch(e){alert('❌ Archivo inválido o corrupto.');}
     e.target.value='';
   };reader.readAsText(file);
 }
