@@ -2798,9 +2798,9 @@ function renderInversiones(){
   stats.innerHTML=`
     <div class="stat-card c-purple"><div class="icon">💼</div><div class="label">Total invertido</div><div class="value">${$$(totalInvPortfolio)}</div><div class="sub">${nPositions} posicione${nPositions!==1?'s':''}</div></div>
     <div class="stat-card c-green"><div class="icon">📈</div><div class="label">Valor actual</div><div class="value">${$$(valorActualPortfolio)}</div><div class="sub" style="color:${rendColor}">${rendPortfolio>=0?'+':''}${$$(rendPortfolio)} (${totalInvPortfolio?((rendPortfolio/totalInvPortfolio*100).toFixed(1))+'%':'—'})</div></div>
-    <div class="stat-card c-yellow"><div class="icon">📅</div><div class="label">Próx. vencimiento</div><div class="value" id="prox-venc-value" style="font-size:15px">${prox?ff(prox.fechaVencimiento):'⏳'}</div><div class="sub" id="prox-venc-sub">${prox?prox.descripcion:'cargando...'}</div></div>
+    <div class="stat-card c-yellow"><div class="icon">💰</div><div class="label">Próx. dividendo</div><div class="value" id="prox-venc-value" style="font-size:15px">⏳</div><div class="sub" id="prox-venc-sub">cargando...</div></div>
   `;
-  cargarVencimientosCEDEARs();
+  cargarDividendosCEDEARs();
 
   // Banner informativo sobre ratios CEDEAR (colapsable, dismissable)
   const bannerEl=document.getElementById('banner-cedear');
@@ -2998,6 +2998,7 @@ function renderInversiones(){
             <span class="badge b-blue">📡 ${ticker}</span>
             ${firstMoneda==='USD'?'<span class="badge b-yellow">USD</span>':''}
             <span style="font-size:11px;color:var(--text2)">${entries.length} compra${entries.length>1?'s':''}${ventasTicker.length?` · ${ventasTicker.length} venta${ventasTicker.length>1?'s':''}`:''}</span>
+            <span id="div-divbadge-${ticker}">${cedearDividendos[ticker]?(cedearDividendos[ticker].pagaDividendos?'<span class="badge b-green" style="font-size:10px">💰 Paga dividendos</span>':'<span class="badge b-gray" style="font-size:10px">Sin dividendos</span>'):''}</span>
           </div>
           <div style="font-size:16px;font-weight:700">${ticker}</div>
           <div style="font-size:12px;color:var(--text2);margin-top:5px;display:flex;flex-wrap:wrap;gap:10px">
@@ -3021,6 +3022,7 @@ function renderInversiones(){
         ${compraRows}
         ${ventasTicker.length?`<div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin:10px 0 4px;font-weight:600">📤 Ventas</div>${ventaRows}`:''}
       </div>
+      <div id="div-dividendos-${ticker}">${(()=>{const d=cedearDividendos[ticker];if(!d)return'';const meses=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];const fmtDate=iso=>{if(!iso)return'—';const[y,m,dd]=iso.split('-');return`${parseInt(dd)} ${meses[parseInt(m)-1]} ${y}`;};const ccl=dolarRates.ccl?.venta||dolarRates.blue?.venta||null;const misDiv=tenenciaActual>0&&d.ultimoDividendoUSD?tenenciaActual*d.ultimoDividendoUSD:null;const misDivARS=misDiv&&ccl?misDiv*ccl:null;if(!d.pagaDividendos)return`<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)"><div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;font-weight:600">💰 Dividendos</div><p style="font-size:12px;color:var(--text2);margin:0">No paga dividendos · fuente: ${d.fuente||'web search'}</p></div>`;return`<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)"><div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;font-weight:600">💰 Dividendos</div><div style="display:flex;flex-direction:column;gap:5px;font-size:12px">${d.proximaFechaEx?`<div>Próxima fecha ex-dividendo: <strong>${fmtDate(d.proximaFechaEx)}</strong></div>`:''} ${d.proximaFechaPago?`<div>Fecha de pago: <strong>${fmtDate(d.proximaFechaPago)}</strong></div>`:''} ${d.ultimoDividendoUSD?`<div>Último dividendo: <strong>USD ${d.ultimoDividendoUSD.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:4})}</strong> por acción</div>`:''} ${misDiv?`<div>Mis ${tenenciaActual.toLocaleString('es-AR',{maximumFractionDigits:4})} unidades recibirían: <strong>USD ${misDiv.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}${misDivARS?` (~${$$(misDivARS)} al CCL)`:''}</strong></div>`:''}<div style="color:var(--text2)">Frecuencia: <strong style="color:var(--text)">${d.frecuencia||'—'}</strong>${d.dividendYield?` · Yield: <strong style="color:var(--text)">${d.dividendYield.toFixed(1)}% anual</strong>`:''} · <span style="font-size:10px">fuente: ${d.fuente||'web search'}</span></div></div></div>`;})()}</div>
     </div>`;
   }).join('');
 
@@ -3231,6 +3233,7 @@ function renderDashboard(){
           :tickersSinPrecio.length?`<span>⚠️ Actualizar cotizaciones</span>`:`<span>${S.inversiones.length} posiciones</span>`
         }
         <span style="color:var(--text2);font-size:9px">${S.inversiones.length} posicion${S.inversiones.length!==1?'es':''} · Ver detalle →</span>
+        <span id="dash-prox-div" style="color:var(--text2);font-size:9px"></span>
       </div>
     </div>
   `;
@@ -3368,6 +3371,7 @@ let dolarRates={};   // { casa: {compra, venta, nombre} }
 let cotizacionDebug={}; // { ticker: {rawResponse, error, ts} } para diagnóstico
 let lastUpdate=null;
 let cedearVencimientos={}; // { ticker: {fecha, tipo, fuente, timestamp} }
+let cedearDividendos={};  // { ticker: {pagaDividendos, frecuencia, proximaFechaEx, ...} }
 let pricecache=(()=>{try{const d=localStorage.getItem('fz_pricecache');return d?JSON.parse(d):{};}catch(e){return{};}})();
 function savePriceCache(ticker,priceARS){
   console.log('[PriceCache] Guardando:',ticker,'→',priceARS);
@@ -3484,6 +3488,113 @@ function setRatioManual(ticker){
   localStorage.removeItem('precio_'+ticker.toUpperCase());
   delete liveprices[ticker];
   refreshPrices();
+}
+
+async function obtenerDividendoCEDEAR(ticker){
+  const cacheKey='dividendo_'+ticker.toUpperCase();
+  const cached=localStorage.getItem(cacheKey);
+  if(cached){const c=JSON.parse(cached);if((Date.now()-c.timestamp)<24*3600000)return c;}
+  const apiKey=localStorage.getItem('anthropic_api_key')||localStorage.getItem('ai_key');
+  if(!apiKey)return null;
+  try{
+    const r=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-6',
+        max_tokens:300,
+        system:'Respondé ÚNICAMENTE con JSON válido. Sin texto, sin markdown.',
+        tools:[{type:'web_search_20250305',name:'web_search'}],
+        messages:[{role:'user',content:`Buscá información sobre dividendos del ETF ${ticker} (que cotiza como CEDEAR en Argentina).\n\nNecesito:\n1. Si paga dividendos o no\n2. Frecuencia de pago (trimestral, anual, etc.)\n3. Próxima fecha ex-dividendo o fecha de pago\n4. Monto del último dividendo en USD por acción\n5. Dividend yield anual aproximado\n\nBuscá en: dividendhistory.org, stockanalysis.com, etf.com o similar.\n\nDevolvé SOLO este JSON:\n{"pagaDividendos": true, "frecuencia": "trimestral", "proximaFechaEx": "2026-09-19", "proximaFechaPago": "2026-09-30", "ultimoDividendoUSD": 0.45, "dividendYield": 1.2, "fuente": "stockanalysis.com"}`}]
+      })
+    });
+    const data=await r.json();
+    const textBlock=data.content.filter(b=>b.type==='text').pop();
+    if(!textBlock)return null;
+    const match=textBlock.text.match(/\{[\s\S]*\}/);
+    if(!match)return null;
+    const result=JSON.parse(match[0]);
+    localStorage.setItem(cacheKey,JSON.stringify({...result,timestamp:Date.now()}));
+    return result;
+  }catch(e){return null;}
+}
+
+function actualizarCardDividendo(){
+  const valEl=document.getElementById('prox-venc-value');
+  const subEl=document.getElementById('prox-venc-sub');
+  if(!valEl||!subEl)return;
+  const entries=Object.entries(cedearDividendos);
+  if(!entries.length)return;
+  const meses=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  const conDiv=entries.filter(([,v])=>v.pagaDividendos&&v.proximaFechaEx).sort((a,b)=>a[1].proximaFechaEx.localeCompare(b[1].proximaFechaEx));
+  if(!conDiv.length){
+    valEl.textContent='No paga dividendos';valEl.style.fontSize='11px';
+    subEl.textContent=entries.map(([t])=>t).join(', ')+' · ETFs';
+    return;
+  }
+  const [ticker,div]=conDiv[0];
+  const [y,m,d]=div.proximaFechaEx.split('-');
+  valEl.textContent=`${parseInt(d)} ${meses[parseInt(m)-1]} ${y} · ${ticker}`;
+  valEl.style.fontSize='11px';
+  const yieldStr=div.dividendYield?`Yield: ${div.dividendYield.toFixed(1)}% · `:'';
+  const usdStr=div.ultimoDividendoUSD?` · USD ${div.ultimoDividendoUSD.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:4})}`:'';
+  subEl.textContent=`${yieldStr}${div.frecuencia||''}${usdStr}`;
+}
+
+function actualizarDivDividendo(ticker){
+  const div=document.getElementById('div-dividendos-'+ticker);
+  const badgeDiv=document.getElementById('div-divbadge-'+ticker);
+  if(!div)return;
+  const d=cedearDividendos[ticker];
+  if(!d)return;
+  const tickerUpper=ticker.toUpperCase();
+  const entries=S.inversiones.filter(i=>i.ticker&&i.ticker.toUpperCase()===tickerUpper);
+  const totalUnid=entries.reduce((a,e)=>a+(+e.cantidad||0),0);
+  const vendidas=(S.ventas||[]).filter(v=>v.ticker?.trim().toUpperCase()===tickerUpper).reduce((a,v)=>a+(+v.cantidad||0),0);
+  const tenencia=totalUnid-vendidas;
+  const ccl=dolarRates.ccl?.venta||dolarRates.blue?.venta||null;
+  const meses=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  const fmtDate=iso=>{if(!iso)return'—';const[y,m,dd]=iso.split('-');return`${parseInt(dd)} ${meses[parseInt(m)-1]} ${y}`;};
+  if(!d.pagaDividendos){
+    if(badgeDiv)badgeDiv.innerHTML='<span class="badge b-gray" style="font-size:10px">Sin dividendos</span>';
+    div.innerHTML=`<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)"><div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;font-weight:600">💰 Dividendos</div><p style="font-size:12px;color:var(--text2);margin:0">No paga dividendos · fuente: ${d.fuente||'web search'}</p></div>`;
+    return;
+  }
+  if(badgeDiv)badgeDiv.innerHTML='<span class="badge b-green" style="font-size:10px">💰 Paga dividendos</span>';
+  const misDiv=tenencia>0&&d.ultimoDividendoUSD?tenencia*d.ultimoDividendoUSD:null;
+  const misDivARS=misDiv&&ccl?misDiv*ccl:null;
+  div.innerHTML=`<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+    <div style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;font-weight:600">💰 Dividendos</div>
+    <div style="display:flex;flex-direction:column;gap:5px;font-size:12px">
+      ${d.proximaFechaEx?`<div>Próxima fecha ex-dividendo: <strong>${fmtDate(d.proximaFechaEx)}</strong></div>`:''}
+      ${d.proximaFechaPago?`<div>Fecha de pago: <strong>${fmtDate(d.proximaFechaPago)}</strong></div>`:''}
+      ${d.ultimoDividendoUSD?`<div>Último dividendo: <strong>USD ${d.ultimoDividendoUSD.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:4})}</strong> por acción</div>`:''}
+      ${misDiv?`<div>Mis ${tenencia.toLocaleString('es-AR',{maximumFractionDigits:4})} unidades recibirían: <strong>USD ${misDiv.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}${misDivARS?` (~${$$(misDivARS)} al CCL)`:''}</strong></div>`:''}
+      <div style="color:var(--text2)">Frecuencia: <strong style="color:var(--text)">${d.frecuencia||'—'}</strong>${d.dividendYield?` · Yield: <strong style="color:var(--text)">${d.dividendYield.toFixed(1)}% anual</strong>`:''} · <span style="font-size:10px">fuente: ${d.fuente||'web search'}</span></div>
+    </div>
+  </div>`;
+}
+
+async function cargarDividendosCEDEARs(){
+  const tickers=[...new Set(S.inversiones.filter(i=>i.ticker&&!CRYPTO_IDS[i.ticker]&&i.ticker!=='USD').map(i=>i.ticker.toUpperCase()))];
+  if(!tickers.length)return;
+  for(const t of tickers){
+    const result=await obtenerDividendoCEDEAR(t);
+    if(result)cedearDividendos[t]=result;
+    actualizarCardDividendo();
+    actualizarDivDividendo(t);
+  }
+  // Actualizar dashboard
+  const dashDivEl=document.getElementById('dash-prox-div');
+  if(dashDivEl){
+    const conDiv=Object.entries(cedearDividendos).filter(([,v])=>v.pagaDividendos&&v.proximaFechaEx).sort((a,b)=>a[1].proximaFechaEx.localeCompare(b[1].proximaFechaEx));
+    if(conDiv.length){
+      const [ticker,div]=conDiv[0];
+      const meses=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+      const [y,m,d]=div.proximaFechaEx.split('-');
+      dashDivEl.textContent=`💰 Próx. dividendo: ${parseInt(d)} ${meses[parseInt(m)-1]} · ${ticker}`;
+    }
+  }
 }
 
 async function obtenerVencimientoCEDEAR(ticker){
