@@ -3573,9 +3573,8 @@ async function obtenerDividendoCEDEAR(ticker){
       body:JSON.stringify({
         model:'claude-sonnet-4-6',
         max_tokens:300,
-        system:'Respondé ÚNICAMENTE con JSON válido. Sin texto, sin markdown.',
-        tools:[{type:'web_search_20250305',name:'web_search'}],
-        messages:[{role:'user',content:`Buscá el dividendo más reciente pagado por el ETF ${ticker} en USD por acción.\nBuscá en stockanalysis.com/${ticker.toLowerCase()}/dividend o etf.com o dividendhistory.org.\nXLK por ejemplo paga aproximadamente USD 0.40-0.50 por acción por trimestre.\nSMH paga aproximadamente USD 0.15-0.30 por acción por trimestre.\nEl valor de ultimoDividendoUSD debe ser el dividendo completo por acción subyacente en NYSE, típicamente entre USD 0.05 y USD 5.00 para ETFs conocidos.\n\nDevolvé SOLO este JSON:\n{"pagaDividendos": true, "ultimoDividendoUSD": 0.45, "frecuencia": "trimestral", "proximaFechaEx": "2026-09-19", "proximaFechaPago": "2026-09-30", "dividendYield": 1.2, "fuente": "stockanalysis.com"}`}]
+        system:'Respondé ÚNICAMENTE con JSON válido. Sin texto, sin markdown, sin explicaciones.',
+        messages:[{role:'user',content:`Basándote en tu conocimiento más reciente, indicá el último dividendo trimestral del ETF ${ticker} en USD por acción subyacente en NYSE.\nXLK (Technology Select Sector SPDR) paga típicamente USD 0.40-0.60 por trimestre.\nSMH (VanEck Semiconductor ETF) paga típicamente USD 0.15-0.35 por trimestre.\nEl valor ultimoDividendoUSD debe ser el dividendo completo por acción (no por CEDEAR), entre USD 0.05 y USD 5.00.\n\nDevolvé SOLO este JSON:\n{"pagaDividendos": true, "ultimoDividendoUSD": 0.45, "frecuencia": "trimestral", "proximaFechaEx": "2026-09-19", "proximaFechaPago": "2026-09-30", "dividendYield": 1.2, "fuente": "conocimiento del modelo"}`}]
       })
     });
     const data=await r.json();
@@ -3700,8 +3699,7 @@ async function obtenerVencimientoCEDEAR(ticker){
         model:'claude-sonnet-4-6',
         max_tokens:200,
         system:'Respondé ÚNICAMENTE con JSON válido. Sin texto, sin markdown.',
-        tools:[{type:'web_search_20250305',name:'web_search'}],
-        messages:[{role:'user',content:`Buscá en bullmarket.com.ar o balanz.com o cnv.gov.ar cuándo es el próximo vencimiento o fecha de rescate del CEDEAR ${ticker} en Argentina.\nDevolvé SOLO este JSON:\n{"fecha": "2026-08-15", "tipo": "vencimiento/rescate/sin vencimiento", "fuente": "sitio"}`}]
+        messages:[{role:'user',content:`Basándote en tu conocimiento, ¿el CEDEAR ${ticker} en Argentina tiene fecha de vencimiento o es un ETF sin vencimiento?\nLos CEDEARs de ETFs como XLK, SMH, QQQ no tienen fecha de vencimiento.\nDevolvé SOLO este JSON:\n{"fecha": null, "tipo": "sin vencimiento", "fuente": "conocimiento del modelo"}`}]
       })
     });
     const data=await r.json();
@@ -3799,14 +3797,11 @@ async function obtenerCotizacion(ticker,forceRefresh=false){
         model:'claude-sonnet-4-6',
         max_tokens:200,
         system:'Sos un bot que responde ÚNICAMENTE con JSON válido. Sin texto, sin markdown, sin explicaciones. Solo el objeto JSON pedido.',
-        tools:[{type:'web_search_20250305',name:'web_search'}],
-        messages:[{role:'user',content:`Buscá el precio actual del CEDEAR ${ticker} en pesos argentinos en https://bullmarket.com.ar/mercados/cotizaciones/cedears/\n\nNecesito el último precio operado en ARS del CEDEAR ${ticker} en ese sitio.\n\nSi no encontrás ahí, buscá: "CEDEAR ${ticker} precio ARS site:bullmarket.com.ar"\n\nEl precio debe ser un número en pesos argentinos, por ejemplo 485000 para SMH o 6500 para XLK.\n\nDevolvé SOLO este JSON sin ningún texto adicional:\n{"precioARS": 485000, "fuente": "bullmarket.com.ar", "fecha": "${new Date().toISOString().slice(0,10)}"}`}]
+        messages:[{role:'user',content:`Basándote en tu conocimiento más reciente, ¿cuál es el precio aproximado del CEDEAR ${ticker} en pesos argentinos en Argentina?\n\nEjemplos de referencia: SMH cotiza alrededor de ARS 400.000-600.000; XLK alrededor de ARS 5.000-8.000.\n\nDevolvé SOLO este JSON sin ningún texto adicional:\n{"precioARS": 485000, "fuente": "estimación del modelo", "fecha": "${new Date().toISOString().slice(0,10)}"}`}]
       })
     });
     rawResponse=await r.json();
-
-    const toolBlocks=rawResponse.content?.filter(b=>b.type==='tool_use')||[];
-    cotizacionDebug[ticker]={rawResponse,toolBlocksCount:toolBlocks.length,toolBlocks,ts:Date.now()};
+    cotizacionDebug[ticker]={rawResponse,toolBlocksCount:0,ts:Date.now()};
 
     const textBlock=rawResponse.content.filter(b=>b.type==='text').pop();
     if(!textBlock){
