@@ -604,7 +604,7 @@ input[type=checkbox]{width:auto;margin-right:5px}
     <div class="gasto-form-v2">
       <div class="form-group"><label>Descripción</label><input type="text" id="g-desc" placeholder="Ej: Almuerzo, Nafta, Netflix..." autocomplete="off"/></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div class="form-group"><label>Monto (ARS)</label><input type="number" id="g-monto" inputmode="decimal" placeholder="0"/></div>
+        <div class="form-group"><label>Monto (ARS)</label><input type="number" id="g-monto" inputmode="decimal" placeholder="0" oninput="updateGastoCuotasPreview()"/></div>
         <div class="form-group"><label>Fecha</label><input type="date" id="g-fecha"/></div>
       </div>
       <div class="form-group"><label>Categoría</label><select id="g-cat"></select></div>
@@ -626,7 +626,7 @@ input[type=checkbox]{width:auto;margin-right:5px}
         </div>
       </div>
       <div id="g-tarjeta-extra" class="extra-section" style="display:none">
-        <div class="form-group"><label>Tarjeta</label><select id="g-tarjeta"></select></div>
+        <div class="form-group"><label>Tarjeta</label><select id="g-tarjeta" onchange="onGastoTarjetaChange()"></select></div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
           <div class="form-group"><label>Cuotas</label>
             <select id="g-ncuotas-sel" onchange="updateGastoCuotasPreview()">
@@ -1884,6 +1884,20 @@ function updateGastoCuotasPreview(){
   preview.innerHTML=html;
 }
 
+function onGastoTarjetaChange(){
+  const tarjetaId=document.getElementById('g-tarjeta').value;
+  const t=S.tarjetas.find(t=>t.id===tarjetaId);
+  if(t){
+    // Calcular próximo vencimiento desde hoy
+    const hoy=today();
+    const mesActual=hoy.slice(0,7);
+    const fechaVencMes=calcFechaVencTarjeta(t,mesActual);
+    const fechaDefault=fechaVencMes>=hoy?fechaVencMes:calcFechaVencTarjeta(t,addMeses(mesActual,1));
+    const fpInput=document.getElementById('g-fecha-primer-pago');
+    if(fpInput&&!fpInput.value)fpInput.value=fechaDefault;
+  }
+  updateGastoCuotasPreview();
+}
 // ====== FILTROS MES ======
 function buildMesSel(selId,items,dateField='fecha'){
   const sel=document.getElementById(selId);if(!sel)return;
@@ -2074,18 +2088,27 @@ function renderGastos(){
   const mes=document.getElementById('filtro-mes-g').value;
   const cat=document.getElementById('filtro-cat-g').value;
   const tipo=document.getElementById('filtro-tipo-g').value;
-  const buscar=document.getElementById('filtro-buscar-g').value.toLowerCase();
+  const buscarRaw=document.getElementById('filtro-buscar-g').value.trim();
+  const norm=s=>s.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
+  const buscar=norm(buscarRaw);
   let items=S.gastos.filter(g=>{
     if(mes&&!g.fecha.startsWith(mes))return false;
     if(cat&&g.categoria!==cat)return false;
     if(tipo&&g.tipo!==tipo)return false;
-    if(buscar&&!g.descripcion.toLowerCase().includes(buscar))return false;
+    if(buscar&&!norm(g.descripcion||'').includes(buscar))return false;
     return true;
   }).sort((a,b)=>b.fecha.localeCompare(a.fecha));
   const total=items.reduce((a,g)=>a+g.monto,0);
-  document.getElementById('gastos-total-label').textContent=`${items.length} registros · ${$$(total)}`;
+  const labelTxt=buscarRaw
+    ?(items.length?`${items.length} resultado${items.length!==1?'s':''} para "${buscarRaw}"`:`Sin resultados para "${buscarRaw}"`)
+    :`${items.length} registros · ${$$(total)}`;
+  document.getElementById('gastos-total-label').textContent=labelTxt;
   const tbody=document.getElementById('gastos-tbody');
-  if(!items.length){tbody.innerHTML=`<tr><td colspan="8"><div class="empty"><div class="ei">🔍</div><p>Sin gastos para los filtros seleccionados.</p></div></td></tr>`;return;}
+  if(!items.length){
+    const emptyMsg=buscarRaw?`Sin gastos que coincidan con "${esc(buscarRaw)}"`:' Sin gastos para los filtros seleccionados.';
+    tbody.innerHTML=`<tr><td colspan="8"><div class="empty"><div class="ei">🔍</div><p>${emptyMsg}</p></div></td></tr>`;
+    return;
+  }
   const tLabel={efectivo:'💵 Efectivo',debito:'🏦 Débito',tarjeta:'💳 Tarjeta'};
   tbody.innerHTML=items.map(g=>{
     const tar=g.tarjetaId?S.tarjetas.find(t=>t.id===g.tarjetaId):null;
