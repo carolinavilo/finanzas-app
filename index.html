@@ -2812,6 +2812,8 @@ function renderInversiones(){
     <div class="stat-card c-yellow"><div class="icon">💰</div><div class="label">Próx. pago dividendo</div><div class="value" id="prox-venc-value" style="font-size:15px">⏳</div><div class="sub" id="prox-venc-sub">cargando...</div><button onclick="actualizarDividendosForzado()" class="btn btn-ghost btn-xs" style="margin-top:6px;font-size:10px;width:100%">🔄 Actualizar dividendos</button></div>
   `;
   cargarDividendosCEDEARs();
+  // Fallback: si la API no responde en 12s mostrar "No disponible"
+  setTimeout(()=>{const v=document.getElementById('prox-venc-value');if(v&&v.textContent==='⏳'){v.textContent='No disponible';v.style.fontSize='12px';const s=document.getElementById('prox-venc-sub');if(s)s.textContent='API sin respuesta';}},12000);
 
   // Banner informativo sobre ratios CEDEAR (colapsable, dismissable)
   const bannerEl=document.getElementById('banner-cedear');
@@ -3498,6 +3500,7 @@ async function obtenerRatioCEDEAR(ticker){
   try{
     const r=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
+      signal:AbortSignal.timeout(10000),
       headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify({
         model:'claude-sonnet-4-6',
@@ -3569,12 +3572,13 @@ async function obtenerDividendoCEDEAR(ticker){
   try{
     const r=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
+      signal:AbortSignal.timeout(10000),
       headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify({
         model:'claude-sonnet-4-6',
-        max_tokens:300,
-        system:'Respondé ÚNICAMENTE con JSON válido. Sin texto, sin markdown, sin explicaciones.',
-        messages:[{role:'user',content:`Basándote en tu conocimiento más reciente, indicá el último dividendo trimestral del ETF ${ticker} en USD por acción subyacente en NYSE.\nXLK (Technology Select Sector SPDR) paga típicamente USD 0.40-0.60 por trimestre.\nSMH (VanEck Semiconductor ETF) paga típicamente USD 0.15-0.35 por trimestre.\nEl valor ultimoDividendoUSD debe ser el dividendo completo por acción (no por CEDEAR), entre USD 0.05 y USD 5.00.\n\nDevolvé SOLO este JSON:\n{"pagaDividendos": true, "ultimoDividendoUSD": 0.45, "frecuencia": "trimestral", "proximaFechaEx": "2026-09-19", "proximaFechaPago": "2026-09-30", "dividendYield": 1.2, "fuente": "conocimiento del modelo"}`}]
+        max_tokens:200,
+        system:'Respondé ÚNICAMENTE con JSON válido. Sin texto, sin markdown.',
+        messages:[{role:'user',content:`Basándote en tu conocimiento sobre ETFs estadounidenses, dame el dividendo trimestral más reciente del ETF ${ticker} en USD por acción, y la frecuencia de pago. Devolvé SOLO: {"pagaDividendos": true, "ultimoDividendoUSD": 0.45, "frecuencia": "trimestral", "proximaFechaPago": "2026-09-30", "fuente": "conocimiento del modelo"}`}]
       })
     });
     const data=await r.json();
@@ -3694,6 +3698,7 @@ async function obtenerVencimientoCEDEAR(ticker){
   try{
     const r=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
+      signal:AbortSignal.timeout(10000),
       headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify({
         model:'claude-sonnet-4-6',
@@ -3750,25 +3755,7 @@ async function cargarVencimientosCEDEARs(){
   }
 }
 
-async function obtenerCotizacionBullmarket(ticker){
-  try{
-    const r=await fetch(
-      `https://api.allorigins.win/raw?url=${encodeURIComponent('https://bullmarket.com.ar/mercados/cotizaciones/cedears/')}`,
-      {signal:AbortSignal.timeout(8000)}
-    );
-    const html=await r.text();
-    const regex=new RegExp(ticker+'[\\s\\S]{0,200}?([\\d\\.]+,[\\d]{2})','i');
-    const match=html.match(regex);
-    if(match){
-      const precioStr=match[1].replace(/\./g,'').replace(',','.');
-      return{precioARS:parseFloat(precioStr),fuente:'bullmarket.com.ar'};
-    }
-  }catch(e){}
-  return null;
-}
-
 async function obtenerCotizacion(ticker,forceRefresh=false){
-  console.log('obtenerCotizacion llamada para:',ticker,forceRefresh?'(forzado)':'');
   const cacheKey='precio_'+ticker.toUpperCase();
   const cached=localStorage.getItem(cacheKey);
   if(!forceRefresh&&cached){
@@ -3779,25 +3766,17 @@ async function obtenerCotizacion(ticker,forceRefresh=false){
   const apiKey=localStorage.getItem('anthropic_api_key')||localStorage.getItem('ai_key');
   if(!apiKey){cotizacionDebug[ticker]={error:'Sin API key configurada',ts:Date.now()};return cached?JSON.parse(cached):null;}
 
-  // Intentar fetch directo a bullmarket.com.ar primero
-  const bullResult=await obtenerCotizacionBullmarket(ticker);
-  if(bullResult?.precioARS>0){
-    cotizacionDebug[ticker]={fuente:'bullmarket.com.ar (directo)',precioARS:bullResult.precioARS,ts:Date.now()};
-    const entry={precioARS:bullResult.precioARS,precioUSD:null,ratio:null,dolarCCL:null,fuente:bullResult.fuente,mercado:null,fechaPrecio:new Date().toISOString().slice(0,10),timestamp:Date.now()};
-    localStorage.setItem(cacheKey,JSON.stringify(entry));
-    return{...entry,viaWebSearch:false};
-  }
-
   let rawResponse=null;
   try{
     const r=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
+      signal:AbortSignal.timeout(10000),
       headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify({
         model:'claude-sonnet-4-6',
         max_tokens:200,
-        system:'Sos un bot que responde ÚNICAMENTE con JSON válido. Sin texto, sin markdown, sin explicaciones. Solo el objeto JSON pedido.',
-        messages:[{role:'user',content:`Basándote en tu conocimiento más reciente, ¿cuál es el precio aproximado del CEDEAR ${ticker} en pesos argentinos en Argentina?\n\nEjemplos de referencia: SMH cotiza alrededor de ARS 400.000-600.000; XLK alrededor de ARS 5.000-8.000.\n\nDevolvé SOLO este JSON sin ningún texto adicional:\n{"precioARS": 485000, "fuente": "estimación del modelo", "fecha": "${new Date().toISOString().slice(0,10)}"}`}]
+        system:'Respondé ÚNICAMENTE con JSON válido. Sin texto, sin markdown.',
+        messages:[{role:'user',content:`Basándote en tu conocimiento sobre el mercado argentino, ¿cuál es el precio aproximado del CEDEAR ${ticker} en pesos argentinos?\nEjemplos: SMH ~ARS 400.000-600.000, XLK ~ARS 5.000-8.000.\nDevolvé SOLO: {"precioARS": 485000, "fuente": "estimación del modelo", "fecha": "${new Date().toISOString().slice(0,10)}"}`}]
       })
     });
     rawResponse=await r.json();
