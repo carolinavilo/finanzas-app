@@ -196,6 +196,10 @@ input[type=checkbox]{width:auto;margin-right:5px}
 .tipo-btn{border:2px solid var(--border);background:var(--bg2);color:var(--text);border-radius:10px;padding:11px 4px;font-size:13px;font-weight:600;cursor:pointer;transition:.15s;text-align:center;-webkit-tap-highlight-color:transparent}
 .tipo-btn.active{border-color:var(--accent);background:var(--accent-light);color:var(--accent)}
 .cuotas-preview{background:var(--bg2);border-radius:10px;padding:12px;margin-top:8px}
+.subcat-badge{display:inline-block;font-size:10px;color:var(--text2);margin-top:2px}
+.subcat-panel{background:var(--bg2);border-radius:10px;padding:12px;margin-top:8px;border:1px solid var(--border)}
+.subcat-tag{display:inline-flex;align-items:center;gap:4px;background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:12px;margin:3px 2px}
+.subcat-tag button{background:none;border:none;cursor:pointer;color:var(--text2);padding:0;font-size:13px;line-height:1}
 .cuotas-preview-item{display:grid;grid-template-columns:1fr auto auto;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);align-items:center}
 .cuotas-preview-item:last-child{border-bottom:none}
 .cuota-num{text-align:left;color:var(--text2);font-size:14px}
@@ -610,7 +614,8 @@ input[type=checkbox]{width:auto;margin-right:5px}
         <div class="form-group"><label>Monto (ARS)</label><input type="number" id="g-monto" inputmode="decimal" placeholder="0" style="font-size:16px" oninput="updateGastoCuotasPreview()"/></div>
         <div class="form-group"><label>Fecha</label><input type="date" id="g-fecha" style="font-size:16px"/></div>
       </div>
-      <div class="form-group"><label>Categoría</label><select id="g-cat"></select></div>
+      <div class="form-group"><label>Categoría</label><select id="g-cat" onchange="onGastoCatChange()"></select></div>
+      <div class="form-group" id="g-subcat-wrap" style="display:none"><label>Subcategoría</label><select id="g-subcat"><option value="">-- Sin subcategoría --</option></select></div>
       <div class="form-group">
         <label>Medio de pago</label>
         <div class="tipo-pago-selector">
@@ -673,7 +678,8 @@ input[type=checkbox]{width:auto;margin-right:5px}
     <div class="panel-title">Historial de gastos</div>
     <div class="filter-bar">
       <select id="filtro-mes-g" onchange="renderGastos()"></select>
-      <select id="filtro-cat-g" onchange="renderGastos()"><option value="">Todas</option></select>
+      <select id="filtro-cat-g" onchange="onFiltroCatGChange();renderGastos()"><option value="">Todas</option></select>
+      <select id="filtro-subcat-g" onchange="renderGastos()" style="display:none"><option value="">Todas las subcats</option></select>
       <select id="filtro-tipo-g" onchange="renderGastos()">
         <option value="">Todos los medios</option>
         <option value="efectivo">Efectivo</option><option value="debito">Débito</option><option value="tarjeta">Tarjeta</option>
@@ -1130,7 +1136,8 @@ input[type=checkbox]{width:auto;margin-right:5px}
     <div class="form-grid-2">
       <div class="form-group"><label>Fecha</label><input type="date" id="eg-fecha"/></div>
       <div class="form-group" style="grid-column:1/-1"><label>Descripción</label><input id="eg-desc"/></div>
-      <div class="form-group"><label>Categoría</label><select id="eg-cat"></select></div>
+      <div class="form-group"><label>Categoría</label><select id="eg-cat" onchange="onEditGastoCatChange()"></select></div>
+      <div class="form-group" id="eg-subcat-wrap" style="display:none"><label>Subcategoría</label><select id="eg-subcat"><option value="">-- Sin subcategoría --</option></select></div>
       <div class="form-group"><label>Monto (ARS)</label><input type="number" id="eg-monto"/></div>
       <div class="form-group"><label>Medio de pago</label>
         <select id="eg-tipo" onchange="document.getElementById('eg-tarjeta-group').style.display=this.value==='tarjeta'?'flex':'none'">
@@ -1827,6 +1834,92 @@ function confirmEditCat(tipo,idx,oldName){
   }
 }
 
+// ── Subcategorías ──
+function getSubcats(cat){
+  if(!cat)return[];
+  try{return JSON.parse(localStorage.getItem('subcats_'+cat.toUpperCase()))||[];}catch(e){return[];}
+}
+function setSubcats(cat,arr){
+  localStorage.setItem('subcats_'+cat.toUpperCase(),JSON.stringify(arr));
+}
+function seedSubcats(){
+  const defaults={
+    'AUTO':['Nafta','Peajes','Seguro','Patente','Service','Gas GNC','Estacionamiento','Otros'],
+    'SERVICIOS':['Luz','Gas','Internet','Agua','Expensas','Otros'],
+    'SERVICIOS MIRA':['Alquiler','Luz','Internet','Limpieza','Otros']
+  };
+  Object.entries(defaults).forEach(([k,v])=>{
+    if(!localStorage.getItem('subcats_'+k))setSubcats(k,v);
+  });
+}
+function _fillSubcatSel(selId,wrapId,cat,current){
+  const subs=getSubcats(cat);
+  const wrap=document.getElementById(wrapId);const sel=document.getElementById(selId);
+  if(!wrap||!sel)return;
+  if(subs.length){
+    sel.innerHTML='<option value="">-- Sin subcategoría --</option>'+subs.map(s=>`<option value="${s}">${s}</option>`).join('');
+    if(current&&[...sel.options].some(o=>o.value===current))sel.value=current;
+    wrap.style.display='block';
+  }else{wrap.style.display='none';sel.value='';}
+}
+function onGastoCatChange(){
+  _fillSubcatSel('g-subcat','g-subcat-wrap',document.getElementById('g-cat').value,'');
+}
+function onEditGastoCatChange(){
+  _fillSubcatSel('eg-subcat','eg-subcat-wrap',document.getElementById('eg-cat').value,'');
+}
+function onFiltroCatGChange(){
+  const cat=document.getElementById('filtro-cat-g').value;
+  const el=document.getElementById('filtro-subcat-g');if(!el)return;
+  const subs=getSubcats(cat);
+  if(cat&&subs.length){
+    el.innerHTML='<option value="">Todas las subcats</option>'+subs.map(s=>`<option value="${s}">${s}</option>`).join('');
+    el.style.display='';
+  }else{el.style.display='none';el.value='';}
+}
+function toggleSubcatPanel(cat){
+  const id='subcat-panel-'+cat.replace(/\s+/g,'-');
+  const el=document.getElementById(id);if(el){el.style.display=el.style.display==='none'?'block':'none';return;}
+  // create inline
+  const row=document.querySelector(`[data-subcat-cat="${CSS.escape(cat)}"]`);if(!row)return;
+  const panel=document.createElement('div');
+  panel.id=id;panel.className='subcat-panel';
+  renderSubcatPanel(cat,panel);
+  row.parentNode.insertBefore(panel,row.nextSibling);
+}
+function renderSubcatPanel(cat,panel){
+  const subs=getSubcats(cat);
+  const safeId=cat.replace(/\s+/g,'-');
+  panel.innerHTML=`<div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px">Subcategorías de ${cat}</div>
+    <div id="subcat-tags-${safeId}" style="margin-bottom:10px">${
+      subs.length?subs.map(s=>`<span class="subcat-tag">${s}<button onclick="removeSubcat('${cat}','${s}')" title="Eliminar">×</button></span>`).join('')
+      :'<span style="color:var(--text2);font-size:12px">Sin subcategorías</span>'
+    }</div>
+    <div style="display:flex;gap:6px">
+      <input id="subcat-new-${safeId}" type="text" placeholder="Nueva subcategoría" class="input-sm"
+        style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:13px"
+        onkeydown="if(event.key==='Enter')addSubcat('${cat}')"/>
+      <button class="btn btn-primary btn-sm" onclick="addSubcat('${cat}')">+ Agregar</button>
+    </div>`;
+}
+function addSubcat(cat){
+  const safeId=cat.replace(/\s+/g,'-');
+  const inp=document.getElementById('subcat-new-'+safeId);if(!inp)return;
+  const val=inp.value.trim();if(!val)return;
+  const subs=getSubcats(cat);
+  if(subs.includes(val)){inp.style.borderColor='var(--accent4)';return;}
+  subs.push(val);setSubcats(cat,subs);inp.value='';
+  const panel=document.getElementById('subcat-panel-'+safeId);
+  if(panel)renderSubcatPanel(cat,panel);
+}
+function removeSubcat(cat,sub){
+  const subs=getSubcats(cat).filter(s=>s!==sub);
+  setSubcats(cat,subs);
+  const safeId=cat.replace(/\s+/g,'-');
+  const panel=document.getElementById('subcat-panel-'+safeId);
+  if(panel)renderSubcatPanel(cat,panel);
+}
+
 function renderCategorias(){
   const renderList=(id,cats,tipo)=>{
     if(!cats.length){
@@ -2041,6 +2134,8 @@ function resetGastoForm(){
   document.getElementById('g-ncuotas-sel').value='1';
   document.getElementById('g-cuotas-preview').innerHTML='';
   document.getElementById('g-fecha-primer-pago').value='';
+  const gs=document.getElementById('g-subcat');if(gs)gs.value='';
+  const gsw=document.getElementById('g-subcat-wrap');if(gsw)gsw.style.display='none';
   setGastoTipo('efectivo'); // restaura g-fecha-wrap y oculta extras
 }
 function agregarGasto(){
@@ -2053,6 +2148,7 @@ function agregarGasto(){
   const fecha=document.getElementById('g-fecha').value||today();
   const notas=document.getElementById('g-notas').value.trim();
   const cat=document.getElementById('g-cat').value;
+  const subcategoria=document.getElementById('g-subcat')?.value||'';
 
   if(tipo==='tarjeta'){
     const tarjetaId=document.getElementById('g-tarjeta').value;
@@ -2060,14 +2156,14 @@ function agregarGasto(){
     if(ncuotas>1){
       const fechaPrimerPago=document.getElementById('g-fecha-primer-pago').value;
       if(!fechaPrimerPago)return alert('Indicá la fecha del 1er pago');
-      const compra={id:uid(),tarjetaId,fecha,descripcion:desc,categoria:cat,
+      const compra={id:uid(),tarjetaId,fecha,descripcion:desc,categoria:cat,subcategoria,
         montoTotal:monto,cuotas:ncuotas,montoCuota:Math.round(monto/ncuotas),
         cuotasPagadas:0,fechaPrimerPago,notas};
       S.comprasCuotas.push(compra);save();
       resetGastoForm();renderGastos();renderTarjetas();refreshDashIfVisible();
       return;
     }
-    const nuevo={id:uid(),fecha,descripcion:desc,categoria:cat,monto,tipo,tarjetaId,notas,recurrente:false};
+    const nuevo={id:uid(),fecha,descripcion:desc,categoria:cat,subcategoria,monto,tipo,tarjetaId,notas,recurrente:false};
     S.gastos.push(nuevo);
     if(userRole==='usuario'){syncGastoAdd(nuevo);}else{save();}
     resetGastoForm();renderGastos();refreshDashIfVisible();
@@ -2075,7 +2171,7 @@ function agregarGasto(){
   }
 
   const billetera=tipo==='debito'?document.getElementById('g-billetera').value:null;
-  const nuevo={id:uid(),fecha,descripcion:desc,categoria:cat,monto,tipo,
+  const nuevo={id:uid(),fecha,descripcion:desc,categoria:cat,subcategoria,monto,tipo,
     tarjetaId:null,billetera,notas,recurrente:false};
   S.gastos.push(nuevo);
   if(userRole==='usuario'){syncGastoAdd(nuevo);}else{save();}
@@ -2095,6 +2191,7 @@ function editGasto(id){
   document.getElementById('eg-tarjeta').value=g.tarjetaId||'';
   document.getElementById('eg-notas').value=g.notas||'';
   document.getElementById('eg-recurrente').checked=!!g.recurrente;
+  _fillSubcatSel('eg-subcat','eg-subcat-wrap',g.categoria,g.subcategoria||'');
   openModal('modal-edit-gasto');
 }
 
@@ -2109,6 +2206,7 @@ function guardarEditGasto(){
   g.fecha=document.getElementById('eg-fecha').value;
   g.descripcion=document.getElementById('eg-desc').value.trim();
   g.categoria=document.getElementById('eg-cat').value;
+  g.subcategoria=document.getElementById('eg-subcat')?.value||'';
   g.monto=+document.getElementById('eg-monto').value;
   g.tipo=document.getElementById('eg-tipo').value;
   g.tarjetaId=g.tipo==='tarjeta'?document.getElementById('eg-tarjeta').value:null;
@@ -2133,11 +2231,13 @@ function renderGastos(){
   const buscarRaw=document.getElementById('filtro-buscar-g').value.trim();
   const norm=s=>s.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
   const buscar=norm(buscarRaw);
+  const subcat=document.getElementById('filtro-subcat-g')?.value||'';
   let items=S.gastos.filter(g=>{
     if(mes&&!g.fecha.startsWith(mes))return false;
     if(cat&&g.categoria!==cat)return false;
+    if(subcat&&g.subcategoria!==subcat)return false;
     if(tipo&&g.tipo!==tipo)return false;
-    if(buscar&&!norm(g.descripcion||'').includes(buscar))return false;
+    if(buscar&&![g.descripcion,g.categoria,g.subcategoria,g.notas].some(f=>norm(f||'').includes(buscar)))return false;
     return true;
   }).sort((a,b)=>b.fecha.localeCompare(a.fecha));
   const total=items.reduce((a,g)=>a+g.monto,0);
@@ -2157,7 +2257,7 @@ function renderGastos(){
     return`<tr>
       <td>${ff(g.fecha)}</td>
       <td><strong>${esc(g.descripcion)}</strong></td>
-      <td><span class="badge b-purple">${esc(g.categoria)}</span></td>
+      <td><span class="badge b-purple">${esc(g.categoria)}</span>${g.subcategoria?`<div class="subcat-badge">${esc(g.subcategoria)}</div>`:''}</td>
       <td><span class="badge b-gray">${esc(tLabel[g.tipo]||g.tipo)}${tar?` · ${esc(tar.nombre)}`:''}</span></td>
       <td><span class="nota-preview">${esc(g.notas)||'—'}</span></td>
       <td>${g.recurrente?'<span class="badge b-blue">🔄</span>':'—'}</td>
@@ -4076,6 +4176,7 @@ document.addEventListener('click',(e)=>{
 });
 
 function startApp(){
+  seedSubcats();
   const now=new Date();
   document.getElementById('fecha-sb').textContent=now.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});
   document.getElementById('g-fecha').value=today();
