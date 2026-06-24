@@ -2849,9 +2849,15 @@ function renderInversiones(){
     <div class="stat-card c-green"><div class="icon">📈</div><div class="label">Valor actual</div><div class="value">${$$(valorActualPortfolio)}</div><div class="sub" style="color:${rendColor}">${rendPortfolio>=0?'+':''}${$$(rendPortfolio)} (${totalInvPortfolio?((rendPortfolio/totalInvPortfolio*100).toFixed(1))+'%':'—'})</div></div>
     <div class="stat-card c-yellow"><div class="icon">💰</div><div class="label">Próx. pago dividendo</div><div class="value" id="prox-venc-value" style="font-size:15px">⏳</div><div class="sub" id="prox-venc-sub">cargando...</div><button onclick="actualizarDividendosForzado()" class="btn btn-ghost btn-xs" style="margin-top:6px;font-size:10px;width:100%">🔄 Actualizar dividendos</button></div>
   `;
-  cargarDividendosCEDEARs();
-  // Fallback: si la API no responde en 12s mostrar "No disponible"
-  setTimeout(()=>{const v=document.getElementById('prox-venc-value');if(v&&v.textContent==='⏳'){v.textContent='No disponible';v.style.fontSize='12px';const s=document.getElementById('prox-venc-sub');if(s)s.textContent='API sin respuesta';}},12000);
+  // Solo cargar dividendos si no hay caché en memoria — NO en cada render
+  if(!Object.keys(cedearDividendos).length){
+    const v=document.getElementById('prox-venc-value');
+    const s=document.getElementById('prox-venc-sub');
+    if(v)v.textContent='—';
+    if(s)s.textContent='Presioná "Actualizar dividendos" para cargar';
+  }else{
+    actualizarCardDividendo();
+  }
 
   // Banner informativo sobre ratios CEDEAR (colapsable, dismissable)
   const bannerEl=document.getElementById('banner-cedear');
@@ -3598,7 +3604,7 @@ function setRatioManual(ticker){
   localStorage.setItem('ratio_'+ticker.toUpperCase(),JSON.stringify({ratio,timestamp:Date.now(),manual:true}));
   localStorage.removeItem('precio_'+ticker.toUpperCase());
   delete liveprices[ticker];
-  refreshPrices();
+  renderInversiones(); // solo re-render, no re-fetch todos los precios
 }
 
 function dividendoCardHTML(ticker,tenencia){
