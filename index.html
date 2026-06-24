@@ -196,6 +196,11 @@ input[type=checkbox]{width:auto;margin-right:5px}
 .tipo-btn{border:2px solid var(--border);background:var(--bg2);color:var(--text);border-radius:10px;padding:11px 4px;font-size:13px;font-weight:600;cursor:pointer;transition:.15s;text-align:center;-webkit-tap-highlight-color:transparent}
 .tipo-btn.active{border-color:var(--accent);background:var(--accent-light);color:var(--accent)}
 .cuotas-preview{background:var(--bg2);border-radius:10px;padding:12px;margin-top:8px}
+.color-palette{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.color-swatch{width:28px;height:28px;border-radius:50%;border:2px solid transparent;cursor:pointer;transition:.15s;flex-shrink:0}
+.color-swatch.selected{border-color:var(--text);box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--text)}
+.cargo-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px}
+.cargo-row:last-child{border-bottom:none}
 .subcat-badge{display:inline-block;font-size:10px;color:var(--text2);margin-top:2px}
 .subcat-panel{background:var(--bg2);border-radius:10px;padding:12px;margin-top:8px;border:1px solid var(--border)}
 .subcat-tag{display:inline-flex;align-items:center;gap:4px;background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:12px;margin:3px 2px}
@@ -954,11 +959,27 @@ input[type=checkbox]{width:auto;margin-right:5px}
     <input type="hidden" id="t-edit-id"/>
     <div class="form-grid-2">
       <div class="form-group"><label>Nombre / Banco</label><input id="t-nombre" placeholder="Visa Galicia"/></div>
-      <div class="form-group"><label>Color</label><select id="t-color">
-        <option value="#6c63ff">Violeta</option><option value="#4ade80">Verde</option>
-        <option value="#f59e0b">Dorado</option><option value="#f87171">Rojo</option>
-        <option value="#60a5fa">Azul</option><option value="#e879f9">Rosa</option>
-      </select></div>
+      <div class="form-group" style="grid-column:1/-1">
+        <label>Color de la tarjeta</label>
+        <input type="hidden" id="t-color" value="#6c63ff"/>
+        <div class="color-palette" id="t-color-palette">
+          <span class="color-swatch selected" style="background:#6c63ff" onclick="selectTarjetaColor('#6c63ff',this)" title="Violeta"></span>
+          <span class="color-swatch" style="background:#4ade80" onclick="selectTarjetaColor('#4ade80',this)" title="Verde"></span>
+          <span class="color-swatch" style="background:#60a5fa" onclick="selectTarjetaColor('#60a5fa',this)" title="Azul"></span>
+          <span class="color-swatch" style="background:#f87171" onclick="selectTarjetaColor('#f87171',this)" title="Rojo"></span>
+          <span class="color-swatch" style="background:#f59e0b" onclick="selectTarjetaColor('#f59e0b',this)" title="Naranja"></span>
+          <span class="color-swatch" style="background:#e879f9" onclick="selectTarjetaColor('#e879f9',this)" title="Rosa"></span>
+          <span class="color-swatch" style="background:#22d3ee" onclick="selectTarjetaColor('#22d3ee',this)" title="Celeste"></span>
+          <span class="color-swatch" style="background:#fbbf24" onclick="selectTarjetaColor('#fbbf24',this)" title="Amarillo"></span>
+          <span class="color-swatch" style="background:#94a3b8" onclick="selectTarjetaColor('#94a3b8',this)" title="Gris"></span>
+          <span class="color-swatch" style="background:#1e293b" onclick="selectTarjetaColor('#1e293b',this)" title="Negro"></span>
+          <span class="color-swatch" style="background:#9f1239" onclick="selectTarjetaColor('#9f1239',this)" title="Bordó"></span>
+          <span class="color-swatch" style="background:#0d9488" onclick="selectTarjetaColor('#0d9488',this)" title="Turquesa"></span>
+          <label class="color-swatch" style="background:linear-gradient(135deg,#ff6b6b,#4ecdc4,#45b7d1);display:flex;align-items:center;justify-content:center;font-size:14px" title="Color personalizado">
+            🎨<input type="color" style="opacity:0;position:absolute;width:0;height:0" oninput="selectTarjetaColor(this.value,null)"/>
+          </label>
+        </div>
+      </div>
       <div class="form-group"><label>Límite (ARS)</label><input id="t-limite" type="number" placeholder="500000"/></div>
       <div class="form-group"><label>Día de cierre</label><input id="t-cierre" type="number" min="1" max="31" placeholder="5"/></div>
       <div class="form-group"><label>Día de vencimiento</label><input id="t-venc" type="number" min="1" max="31" placeholder="15"/></div>
@@ -1584,6 +1605,8 @@ function _applyGuards(p){
   if(!p.config)p.config={tema:'light',colorTheme:'verde'};
   if(!p.config.colorTheme)p.config.colorTheme='verde';
   if(!p.comprasCuotas)p.comprasCuotas=[];
+  // Migrar: agregar cargos[] a tarjetas existentes
+  if(p.tarjetas)p.tarjetas.forEach(t=>{if(!t.cargos)t.cargos=[];});
   if(!p.gastosFinTarjeta)p.gastosFinTarjeta=[];
   if(!p.ventas)p.ventas=[];
   return p;
@@ -2216,7 +2239,7 @@ function guardarEditGasto(){
 }
 
 function eliminarGasto(id){
-  if(!confirm('¿Eliminar este gasto?'))return;
+  if(!confirm('¿Eliminar este gasto? Esta acción no se puede deshacer.'))return;
   S.gastos=S.gastos.filter(g=>g.id!==id);
   if(userRole==='usuario'){syncGastoDelete(id);}else{save();}
   renderGastos();refreshDashIfVisible();
@@ -2280,16 +2303,25 @@ function openNuevaTarjeta(){
   openModal('modal-tarjeta');
 }
 
+function selectTarjetaColor(color,swatchEl){
+  document.getElementById('t-color').value=color;
+  document.querySelectorAll('#t-color-palette .color-swatch').forEach(s=>s.classList.remove('selected'));
+  if(swatchEl)swatchEl.classList.add('selected');
+}
 function editTarjeta(id){
   const t=S.tarjetas.find(t=>t.id===id);if(!t)return;
   document.getElementById('t-edit-id').value=id;
   document.getElementById('modal-tarjeta-title').textContent='Editar Tarjeta';
   document.getElementById('t-nombre').value=t.nombre;
-  document.getElementById('t-color').value=t.color;
+  document.getElementById('t-color').value=t.color||'#6c63ff';
   document.getElementById('t-limite').value=t.limite;
   document.getElementById('t-cierre').value=t.cierre;
   document.getElementById('t-venc').value=t.vencimiento;
   document.getElementById('t-venc-mes-sig').checked=!!t.vencMesSiguiente;
+  // Resaltar color actual en la paleta
+  document.querySelectorAll('#t-color-palette .color-swatch').forEach(s=>{
+    s.classList.toggle('selected',s.style.background===(t.color||'#6c63ff'));
+  });
   openModal('modal-tarjeta');
 }
 
@@ -2351,6 +2383,39 @@ function calcFechaVencTarjeta(t,mesYYYYMM){
   const[y,m]=mes.split('-').map(Number);
   const maxDia=new Date(y,m,0).getDate();
   return mes+'-'+String(Math.min(vencDia,maxDia)).padStart(2,'0');
+}
+
+// ── Cargos e impuestos de tarjeta ──
+const TIPOS_CARGO=['IVA sobre intereses','Impuesto PAIS','Percepción AFIP','Costo de renovación','Cargo por financiación','Seguro de vida','Otro'];
+
+function toggleCargosForm(tarjetaId){
+  const el=document.getElementById('cargos-form-'+tarjetaId);
+  if(el)el.style.display=el.style.display==='none'?'block':'none';
+}
+
+function agregarCargo(tarjetaId){
+  const t=S.tarjetas.find(t=>t.id===tarjetaId);if(!t)return;
+  const tipo=document.getElementById('cargo-tipo-'+tarjetaId).value;
+  const monto=+document.getElementById('cargo-monto-'+tarjetaId).value;
+  const mes=document.getElementById('cargo-mes-'+tarjetaId).value;
+  if(!monto||monto<=0)return alert('Ingresá un monto');
+  if(!mes)return alert('Seleccioná el mes');
+  if(!t.cargos)t.cargos=[];
+  t.cargos.push({id:uid(),tipo,monto,mes});
+  save();renderTarjetas();
+}
+
+function eliminarCargo(tarjetaId,cargoId){
+  if(!confirm('¿Eliminar este cargo?'))return;
+  const t=S.tarjetas.find(t=>t.id===tarjetaId);if(!t||!t.cargos)return;
+  t.cargos=t.cargos.filter(c=>c.id!==cargoId);
+  save();renderTarjetas();
+}
+
+function getCargosDelMes(tarjetaId,mes){
+  const t=S.tarjetas.find(t=>t.id===tarjetaId);
+  if(!t||!t.cargos)return[];
+  return t.cargos.filter(c=>c.mes===mes);
 }
 
 function getStatementItems(tarjetaId,mes){
@@ -2549,12 +2614,50 @@ function renderTarjetas(){
         <table style="margin-bottom:10px">
           <thead><tr><th>Tipo</th><th>Fecha</th><th>Descripción</th><th style="text-align:right">Monto</th><th></th></tr></thead>
           <tbody>${rows}</tbody>
-          ${items.length?`<tfoot><tr style="border-top:2px solid var(--border)"><td colspan="3" style="font-weight:700;padding-top:8px;font-size:13px">TOTAL ${mesPretty(mes).toUpperCase()}</td><td style="text-align:right;font-weight:700;font-size:15px;color:${t.color};padding-top:8px">${$$(total)}</td><td></td></tr></tfoot>`:''}
+          ${items.length?`<tfoot>
+            <tr style="border-top:1px solid var(--border)"><td colspan="3" style="padding-top:6px;font-size:12px;color:var(--text2)">Subtotal compras</td><td style="text-align:right;font-size:13px;padding-top:6px">${$$(total)}</td><td></td></tr>
+            ${getCargosDelMes(t.id,mes).length?`<tr><td colspan="3" style="font-size:12px;color:var(--accent4)">+ Impuestos y cargos</td><td style="text-align:right;font-size:13px;color:var(--accent4)">$\${getCargosDelMes(t.id,mes).reduce((a,c)=>a+c.monto,0).toLocaleString('es-AR')}</td><td></td></tr>`:''}
+            <tr style="border-top:2px solid var(--border)"><td colspan="3" style="font-weight:700;padding-top:8px;font-size:13px">TOTAL ${mesPretty(mes).toUpperCase()}</td><td style="text-align:right;font-weight:700;font-size:15px;color:${t.color};padding-top:8px">${$$(total+getCargosDelMes(t.id,mes).reduce((a,c)=>a+c.monto,0))}</td><td></td></tr>
+          </tfoot>`:''}
         </table>
       </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
         <button class="btn btn-primary btn-sm" onclick="openCompraCuotas('${esc(t.id)}')">📦 + Compra en cuotas</button>
         <button class="btn btn-ghost btn-sm" onclick="openGastoFin('${esc(t.id)}','${mes}')">🏦 + Gasto financiero</button>
+        <button class="btn btn-ghost btn-sm" onclick="toggleCargosForm('${esc(t.id)}')">⚙️ Impuestos y cargos</button>
+      </div>
+      <div id="cargos-form-${esc(t.id)}" style="display:none">
+        <div style="background:var(--bg2);border-radius:10px;padding:12px;margin-bottom:10px">
+          <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px">Cargos del resumen de ${mesPretty(mes)}</div>
+          ${(t.cargos||[]).filter(c=>c.mes===mes).length?`<div style="margin-bottom:10px">
+            ${(t.cargos||[]).filter(c=>c.mes===mes).map(c=>`<div class="cargo-row">
+              <span>${c.tipo}</span>
+              <span style="display:flex;align-items:center;gap:8px;font-weight:600">
+                ${$$(c.monto)}
+                <button class="btn btn-danger btn-xs" onclick="eliminarCargo('${esc(t.id)}','${c.id}')">✕</button>
+              </span>
+            </div>`).join('')}
+          </div>`:'<p style="font-size:12px;color:var(--text2);margin-bottom:8px">Sin cargos para este mes.</p>'}
+          <div style="display:grid;grid-template-columns:1fr auto auto;gap:6px;align-items:end">
+            <div>
+              <div style="font-size:11px;color:var(--text2);margin-bottom:3px">Tipo de cargo</div>
+              <select id="cargo-tipo-${esc(t.id)}" style="width:100%;padding:7px 8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:13px">
+                ${TIPOS_CARGO.map(tc=>`<option value="${tc}">${tc}</option>`).join('')}
+              </select>
+            </div>
+            <div>
+              <div style="font-size:11px;color:var(--text2);margin-bottom:3px">Monto (ARS)</div>
+              <input id="cargo-monto-${esc(t.id)}" type="number" placeholder="0" min="0"
+                style="width:90px;padding:7px 8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:13px"/>
+            </div>
+            <div>
+              <div style="font-size:11px;color:var(--text2);margin-bottom:3px">Mes</div>
+              <input id="cargo-mes-${esc(t.id)}" type="month" value="${mes}"
+                style="padding:7px 8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:13px"/>
+            </div>
+          </div>
+          <button class="btn btn-primary btn-sm" style="margin-top:8px;width:100%" onclick="agregarCargo('${esc(t.id)}')">+ Agregar cargo</button>
+        </div>
       </div>
     </div>`;
   }).join('');
@@ -2602,7 +2705,7 @@ function pagarCuota(id){
 }
 
 function eliminarCuota(id){
-  if(!confirm('¿Eliminar?'))return;
+  if(!confirm('¿Eliminar esta cuota? Esta acción no se puede deshacer.'))return;
   S.cuotas=S.cuotas.filter(c=>c.id!==id);save();renderCuotas();
 }
 
