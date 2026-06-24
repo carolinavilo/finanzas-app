@@ -2998,8 +2998,8 @@ function renderInversiones(){
         ${lastKnownHtml}
       </div>`;
     }
-    return`<div style="padding-top:10px;margin-top:10px;border-top:1px solid var(--border);font-size:12px;color:var(--text2);display:flex;align-items:center;gap:8px">
-      <span style="animation:spin 1s linear infinite;display:inline-block">⏳</span> Obteniendo cotización de <span class="badge b-blue">${ticker}</span>...
+    return`<div style="padding-top:10px;margin-top:10px;border-top:1px solid var(--border);font-size:12px;color:var(--text2);display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span>Sin precio · Presioná Actualizar para obtener cotización de <span class="badge b-blue">${ticker}</span></span>
       <button class="btn btn-ghost btn-sm btn-actualizar-cot" style="margin-left:auto">🔄 Actualizar</button>
     </div>`;
   }
