@@ -2983,15 +2983,27 @@ function renderInversiones(){
     </div>`;
   }
 
-  // Auto-fetch al primer render: obtener precios para tickers sin caché
-  if(!_autoFetchDone){
-    _autoFetchDone=true;
-    const sin=Object.keys(groups).filter(t=>!CRYPTO_IDS[t]&&t!=='USD'&&!getPrecioManual(t));
-    if(sin.length){
-      (async()=>{
-        for(const t of sin)await obtenerCotizacion(t);
-        renderInversiones();
-      })();
+  // Fetch automático por ticker — dispara solo si el caché expiró o no existe
+  for(const ticker of Object.keys(groups)){
+    if(CRYPTO_IDS[ticker]||ticker==='USD')continue;
+    const cacheKey='cot_'+ticker;
+    const cached=localStorage.getItem(cacheKey);
+    const cachedData=cached?JSON.parse(cached):null;
+    const cacheValido=cachedData&&(Date.now()-cachedData.ts<3600000);
+    if(!cacheValido){
+      fetch('/api/quote?ticker='+ticker,{signal:AbortSignal.timeout(8000)})
+        .then(r=>r.json())
+        .then(async d=>{
+          let precioARS=d.precio;
+          if(d.moneda==='USD'){
+            const dr=await fetch('https://dolarapi.com/v1/dolares/blue');
+            const dd=await dr.json();
+            precioARS=d.precio*dd.venta;
+          }
+          localStorage.setItem(cacheKey,JSON.stringify({precioARS,variacion:d.variacion,ts:Date.now()}));
+          renderInversiones();
+        })
+        .catch(()=>{});
     }
   }
 
@@ -3805,8 +3817,6 @@ function getPrecioManual(ticker){
   return null;
 }
 function setPriceManual(ticker){setPrecioManual(ticker,document.getElementById('mp-'+ticker)?.value);}
-
-let _autoFetchDone=false;
 
 async function obtenerCotizacion(ticker){
   const T=ticker.toUpperCase();
