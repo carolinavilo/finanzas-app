@@ -3615,7 +3615,8 @@ async function obtenerDividendoCEDEAR(ticker){
   if(!apiKey)return null;
   try{
     registrarLlamadaAPI('dividendo');
-    const _reqBody3={model:'claude-sonnet-4-6',max_tokens:200,messages:[{role:'user',content:`Respondé ÚNICAMENTE con JSON válido, sin texto ni markdown.\nBasándote en tu conocimiento sobre ETFs estadounidenses, dame el dividendo trimestral más reciente del ETF ${ticker} en USD por acción, y la frecuencia de pago. Devolvé SOLO: {"pagaDividendos": true, "ultimoDividendoUSD": 0.45, "frecuencia": "trimestral", "proximaFechaPago": "2026-09-30", "fuente": "conocimiento del modelo"}`}]};
+    const _hoy=new Date().toISOString().slice(0,10);
+    const _reqBody3={model:'claude-sonnet-4-6',max_tokens:200,messages:[{role:'user',content:`Respondé ÚNICAMENTE con JSON válido, sin texto ni markdown.\nHoy es ${_hoy}. Basándote en tu conocimiento sobre ETFs estadounidenses, dame el dividendo trimestral más reciente del ETF ${ticker} en USD por acción. La proximaFechaPago debe ser una fecha FUTURA (después de hoy). Devolvé SOLO: {"pagaDividendos": true, "ultimoDividendoUSD": 0.45, "frecuencia": "trimestral", "proximaFechaPago": "2026-09-30", "fuente": "conocimiento del modelo"}`}]};
     console.log('[Anthropic/dividendo] request body:',JSON.stringify(_reqBody3,null,2));
     const r=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
@@ -3632,6 +3633,14 @@ async function obtenerDividendoCEDEAR(ticker){
     const match=textBlock.text.match(/\{[\s\S]*\}/);
     if(!match)return null;
     const result=JSON.parse(match[0]);
+    // Corregir fechas en el pasado: si la IA devolvió año anterior, avanzar al siguiente año
+    const _hoyStr=new Date().toISOString().slice(0,10);
+    for(const campo of ['proximaFechaPago','proximaFechaEx']){
+      if(result[campo]&&result[campo]<_hoyStr){
+        const [fy,fm,fd]=result[campo].split('-');
+        result[campo]=`${parseInt(fy)+1}-${fm}-${fd}`;
+      }
+    }
     // Validar rango razonable para dividendo por acción de ETF
     if(result.pagaDividendos&&result.ultimoDividendoUSD){
       if(result.ultimoDividendoUSD<0.05||result.ultimoDividendoUSD>10){
