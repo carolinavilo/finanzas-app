@@ -1278,8 +1278,8 @@ async function afterLogin() {
   _afterLoginDone = true;
   // Usar función SECURITY DEFINER para bypasear RLS
   let perfil = null;
-  const { data: rpcData, error: rpcErr } = await sb.rpc('get_mi_perfil');
-  // RPC puede devolver array (RETURNS TABLE) u objeto directo — manejar ambos casos
+  let rpcData=null;
+  try{const res=await sb.rpc('get_mi_perfil');rpcData=res.data||null;}catch(e){console.warn('Supabase RPC warning:',e.message);}
   perfil = Array.isArray(rpcData) ? (rpcData[0] || null) : (rpcData || null);
 
   // Fallback: query directa si RPC falla
@@ -3618,8 +3618,7 @@ async function obtenerDividendoCEDEAR(ticker){
       body:JSON.stringify({
         model:'claude-sonnet-4-6',
         max_tokens:200,
-        system:'Respondé ÚNICAMENTE con JSON válido. Sin texto, sin markdown.',
-        messages:[{role:'user',content:`Basándote en tu conocimiento sobre ETFs estadounidenses, dame el dividendo trimestral más reciente del ETF ${ticker} en USD por acción, y la frecuencia de pago. Devolvé SOLO: {"pagaDividendos": true, "ultimoDividendoUSD": 0.45, "frecuencia": "trimestral", "proximaFechaPago": "2026-09-30", "fuente": "conocimiento del modelo"}`}]
+        messages:[{role:'user',content:`Respondé ÚNICAMENTE con JSON válido, sin texto ni markdown.\nBasándote en tu conocimiento sobre ETFs estadounidenses, dame el dividendo trimestral más reciente del ETF ${ticker} en USD por acción, y la frecuencia de pago. Devolvé SOLO: {"pagaDividendos": true, "ultimoDividendoUSD": 0.45, "frecuencia": "trimestral", "proximaFechaPago": "2026-09-30", "fuente": "conocimiento del modelo"}`}]
       })
     });
     const data=await r.json();
@@ -3745,8 +3744,7 @@ async function obtenerVencimientoCEDEAR(ticker){
       body:JSON.stringify({
         model:'claude-sonnet-4-6',
         max_tokens:200,
-        system:'Respondé ÚNICAMENTE con JSON válido. Sin texto, sin markdown.',
-        messages:[{role:'user',content:`Basándote en tu conocimiento, ¿el CEDEAR ${ticker} en Argentina tiene fecha de vencimiento o es un ETF sin vencimiento?\nLos CEDEARs de ETFs como XLK, SMH, QQQ no tienen fecha de vencimiento.\nDevolvé SOLO este JSON:\n{"fecha": null, "tipo": "sin vencimiento", "fuente": "conocimiento del modelo"}`}]
+        messages:[{role:'user',content:`Respondé ÚNICAMENTE con JSON válido, sin texto ni markdown.\nBasándote en tu conocimiento, ¿el CEDEAR ${ticker} en Argentina tiene fecha de vencimiento o es un ETF sin vencimiento?\nLos CEDEARs de ETFs como XLK, SMH, QQQ no tienen fecha de vencimiento.\nDevolvé SOLO este JSON:\n{"fecha": null, "tipo": "sin vencimiento", "fuente": "conocimiento del modelo"}`}]
       })
     });
     const data=await r.json();
@@ -3818,8 +3816,7 @@ async function obtenerCotizacion(ticker,forceRefresh=false){
       body:JSON.stringify({
         model:'claude-sonnet-4-6',
         max_tokens:200,
-        system:'Respondé ÚNICAMENTE con JSON válido. Sin texto, sin markdown.',
-        messages:[{role:'user',content:`Basándote en tu conocimiento sobre el mercado argentino, ¿cuál es el precio aproximado del CEDEAR ${ticker} en pesos argentinos?\nEjemplos: SMH ~ARS 400.000-600.000, XLK ~ARS 5.000-8.000.\nDevolvé SOLO: {"precioARS": 485000, "fuente": "estimación del modelo", "fecha": "${new Date().toISOString().slice(0,10)}"}`}]
+        messages:[{role:'user',content:`Respondé ÚNICAMENTE con JSON válido, sin texto ni markdown.\nBasándote en tu conocimiento sobre el mercado argentino, ¿cuál es el precio aproximado del CEDEAR ${ticker} en pesos argentinos?\nEjemplos: SMH ~ARS 400.000-600.000, XLK ~ARS 5.000-8.000.\nDevolvé SOLO: {"precioARS": 485000, "fuente": "estimación del modelo", "fecha": "${new Date().toISOString().slice(0,10)}"}`}]
       })
     });
     rawResponse=await r.json();
