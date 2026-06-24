@@ -1278,15 +1278,8 @@ async function afterLogin() {
   _afterLoginDone = true;
   // Usar función SECURITY DEFINER para bypasear RLS
   let perfil = null;
-  let rpcData=null;
-  try{const res=await sb.rpc('get_mi_perfil');rpcData=res.data||null;}catch(e){console.warn('Supabase RPC warning:',e.message);}
-  perfil = Array.isArray(rpcData) ? (rpcData[0] || null) : (rpcData || null);
-
-  // Fallback: query directa si RPC falla
-  if (!perfil) {
-    const { data: rows, error: rowsErr } = await sb.from('perfiles').select('rol,nombre,email').eq('id', currentUser.id);
-    perfil = rows?.[0] || null;
-  }
+  const { data: rows } = await sb.from('perfiles').select('rol,nombre,email').eq('id', currentUser.id);
+  perfil = rows?.[0] || null;
 
   // Hardcode admin por email — respaldo confiable para 2 usuarios fijos
   if (currentUser.email === 'carolina.vilo@hotmail.com') {
@@ -1632,6 +1625,7 @@ function mesPretty(m){const[y,mo]=m.split('-');return['Enero','Febrero','Marzo',
 
 // ====== THEME ======
 const ACCENT_THEMES=['verde','azul','indigo','rosa','naranja','teal'];
+const DEFAULT_COLORS = { c2:'#4ade80', c3:'#f59e0b', c4:'#f87171', c5:'#60a5fa' };
 function applyAccent(theme,customColor){
   ACCENT_THEMES.forEach(t=>document.body.classList.remove('ac-'+t));
   document.documentElement.style.removeProperty('--accent');
@@ -4202,7 +4196,6 @@ async function init(){
 init();
 
 // ── COLORES SEMÁNTICOS ──
-const DEFAULT_COLORS = { c2:'#4ade80', c3:'#f59e0b', c4:'#f87171', c5:'#60a5fa' };
 function setSemanticColor(n, val) {
   S.config['color'+n] = val;
   save();
