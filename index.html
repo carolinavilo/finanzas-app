@@ -2792,7 +2792,18 @@ function renderInversiones(){
   Object.keys(localStorage).filter(k=>k.startsWith('dividendo_')).forEach(k=>{
     try{const v=JSON.parse(localStorage.getItem(k));if(!v?.ultimoDividendoUSD||v.ultimoDividendoUSD<0.05){localStorage.removeItem(k);}}catch(e){localStorage.removeItem(k);}
   });
-  loadCacheToLive(); // mostrar precios cacheados inmediatamente — API solo al presionar 🔄
+  // Limpiar una vez precios legacy (precio_*) y estimaciones IA del pricecache
+  if(!localStorage.getItem('cache_limpiado_v3')){
+    Object.keys(localStorage).filter(k=>k.startsWith('precio_')).forEach(k=>localStorage.removeItem(k));
+    Object.keys(pricecache).forEach(k=>{
+      const f=(pricecache[k]?.fuente||'').toLowerCase();
+      if(f.includes('estimaci')||f.includes('estimado')||f==='web search'||f==='')delete pricecache[k];
+    });
+    savePriceCache();
+    localStorage.setItem('cache_limpiado_v3','true');
+    console.log('[PriceCache] Cache de precios IA limpiado (v3)');
+  }
+  loadCacheToLive(); // solo carga fuentes confiables — API solo al presionar 🔄
 
   // Helper: convertir monto a ARS según moneda
   const toARS=(monto,moneda)=>(moneda==='USD'&&dolarRates.blue?.venta)?monto*dolarRates.blue.venta:monto;
@@ -3447,14 +3458,17 @@ function loadCacheToLive(){
   let loaded=0;
   Object.entries(pricecache).forEach(([ticker,c])=>{
     if(!c?.priceARS||!c.ts||now-c.ts>EXPIRY)return;
-    // Overwrite solo si: vacío, fromCache, o failed (nunca borrar datos frescos de API)
+    // Solo cargar precios confiables: manual o crypto — no estimaciones de IA
+    const f=(c.fuente||'').toLowerCase();
+    const esConfiable=f==='manual'||f.includes('crypto')||f.includes('coingecko')||f.includes('bullmarket');
+    if(!esConfiable)return;
     const prev=liveprices[ticker];
     if(!prev||prev.fromCache||prev.failed){
-      liveprices[ticker]={price:c.priceARS,priceARS:c.priceARS,priceUSD:c.priceUSD||null,change:c.change||0,currency:'ARS',fuente:c.fuente||'caché',fromCache:true,ts:c.ts};
+      liveprices[ticker]={price:c.priceARS,priceARS:c.priceARS,priceUSD:c.priceUSD||null,change:c.change||0,currency:'ARS',fuente:c.fuente,fromCache:true,ts:c.ts};
       loaded++;
     }
   });
-  if(loaded)console.log('[PriceCache] Cargados',loaded,'ticker(s) desde cache:',Object.keys(pricecache));
+  if(loaded)console.log('[PriceCache] Cargados',loaded,'ticker(s) confiables desde cache:',Object.keys(pricecache).filter(k=>{const f=(pricecache[k]?.fuente||'').toLowerCase();return f==='manual'||f.includes('crypto');}));
 }
 
 // ── Contador de llamadas a la API de Anthropic ──
