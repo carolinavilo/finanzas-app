@@ -603,9 +603,9 @@ input[type=checkbox]{width:auto;margin-right:5px}
     <div class="panel-title">Nuevo gasto</div>
     <div class="gasto-form-v2">
       <div class="form-group"><label>Descripción</label><input type="text" id="g-desc" placeholder="Ej: Almuerzo, Nafta, Netflix..." autocomplete="off"/></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div class="form-group"><label>Monto (ARS)</label><input type="number" id="g-monto" inputmode="decimal" placeholder="0" oninput="updateGastoCuotasPreview()"/></div>
-        <div class="form-group"><label>Fecha</label><input type="date" id="g-fecha"/></div>
+      <div id="g-fecha-wrap" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="form-group"><label>Monto (ARS)</label><input type="number" id="g-monto" inputmode="decimal" placeholder="0" style="font-size:16px" oninput="updateGastoCuotasPreview()"/></div>
+        <div class="form-group"><label>Fecha</label><input type="date" id="g-fecha" style="font-size:16px"/></div>
       </div>
       <div class="form-group"><label>Categoría</label><select id="g-cat"></select></div>
       <div class="form-group">
@@ -626,24 +626,41 @@ input[type=checkbox]{width:auto;margin-right:5px}
         </div>
       </div>
       <div id="g-tarjeta-extra" class="extra-section" style="display:none">
-        <div class="form-group"><label>Tarjeta</label><select id="g-tarjeta" onchange="onGastoTarjetaChange()"></select></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-          <div class="form-group"><label>Cuotas</label>
-            <select id="g-ncuotas-sel" onchange="updateGastoCuotasPreview()">
-              <option value="1">1 · pago único</option>
-              <option value="2">2 cuotas</option><option value="3">3 cuotas</option>
-              <option value="6">6 cuotas</option><option value="9">9 cuotas</option>
-              <option value="12">12 cuotas</option><option value="18">18 cuotas</option>
-              <option value="24">24 cuotas</option><option value="36">36 cuotas</option>
-              <option value="48">48 cuotas</option>
-            </select>
+        <div class="form-group">
+          <label>¿Qué tarjeta?</label>
+          <select id="g-tarjeta" style="font-size:16px;padding:12px" onchange="onGastoTarjetaChange()"></select>
+        </div>
+        <div class="form-group">
+          <label>Monto total de la compra (ARS)</label>
+          <input type="number" id="g-monto-tarjeta" inputmode="decimal" placeholder="0" style="font-size:16px;padding:12px" oninput="document.getElementById('g-monto').value=this.value;updateGastoCuotasPreview()"/>
+        </div>
+        <div class="form-group">
+          <label>Cantidad de cuotas</label>
+          <select id="g-ncuotas-sel" style="font-size:16px;padding:12px" onchange="updateGastoCuotasPreview()">
+            <option value="1">1 cuota — pago único</option>
+            <option value="2">2 cuotas</option><option value="3">3 cuotas</option>
+            <option value="6">6 cuotas</option><option value="9">9 cuotas</option>
+            <option value="12">12 cuotas</option><option value="18">18 cuotas</option>
+            <option value="24">24 cuotas</option><option value="36">36 cuotas</option>
+            <option value="48">48 cuotas</option>
+          </select>
+        </div>
+        <!-- 1 cuota: solo fecha de pago -->
+        <div class="form-group" id="g-fecha-pago-unico-wrap">
+          <label>Fecha de pago</label>
+          <input type="date" id="g-fecha-pago-unico" style="font-size:16px;padding:12px" oninput="document.getElementById('g-fecha').value=this.value"/>
+        </div>
+        <!-- >1 cuotas: valor calculado + fecha 1er pago + preview -->
+        <div id="g-multicuota-section" style="display:none">
+          <div id="g-cuota-valor-display" style="background:var(--bg2);border-radius:10px;padding:12px 16px;margin-bottom:12px;font-size:15px">
+            Valor por cuota: <strong id="g-cuota-valor-num" style="font-size:17px">—</strong>
           </div>
-          <div class="form-group"><label>Por cuota</label><input id="g-cuota-calc" readonly placeholder="—" style="background:var(--bg2)"/></div>
+          <div class="form-group">
+            <label>Fecha del primer pago</label>
+            <input type="date" id="g-fecha-primer-pago" style="font-size:16px;padding:12px" onchange="updateGastoCuotasPreview()"/>
+          </div>
+          <div id="g-cuotas-preview"></div>
         </div>
-        <div class="form-group" id="g-fecha-primer-pago-wrap" style="display:none">
-          <label>Fecha 1er pago</label><input type="date" id="g-fecha-primer-pago" onchange="updateGastoCuotasPreview()"/>
-        </div>
-        <div id="g-cuotas-preview"></div>
       </div>
       <div class="form-group"><label style="color:var(--text2);font-size:12px">Notas <span style="font-weight:400">(opcional)</span></label><input type="text" id="g-notas" placeholder=""/></div>
       <button class="btn btn-primary" style="width:100%;padding:13px;font-size:15px" onclick="agregarGasto()">+ Agregar gasto</button>
@@ -1860,24 +1877,50 @@ function setGastoTipo(tipo){
   document.querySelectorAll('.tipo-btn').forEach(b=>b.classList.toggle('active',b.dataset.tipo===tipo));
   document.getElementById('g-debito-extra').style.display=tipo==='debito'?'block':'none';
   document.getElementById('g-tarjeta-extra').style.display=tipo==='tarjeta'?'block':'none';
-  if(tipo==='tarjeta') updateGastoCuotasPreview();
+  // Ocultar fila monto+fecha normal cuando es tarjeta (tiene sus propios campos)
+  const fechaWrap=document.getElementById('g-fecha-wrap');
+  if(fechaWrap)fechaWrap.style.display=tipo==='tarjeta'?'none':'grid';
+  if(tipo==='tarjeta'){
+    document.getElementById('g-fecha').value=today();
+    // Sincronizar monto si ya había algo escrito
+    const mt=document.getElementById('g-monto-tarjeta');
+    if(mt&&!mt.value&&document.getElementById('g-monto').value)
+      mt.value=document.getElementById('g-monto').value;
+    updateGastoCuotasPreview();
+  }
 }
 function updateGastoCuotasPreview(){
   const monto=+document.getElementById('g-monto').value||0;
   const ncuotas=+document.getElementById('g-ncuotas-sel').value||1;
+  const uniWrap=document.getElementById('g-fecha-pago-unico-wrap');
+  const multiSec=document.getElementById('g-multicuota-section');
+  if(!uniWrap||!multiSec)return;
+  if(ncuotas<=1){
+    uniWrap.style.display='block';
+    multiSec.style.display='none';
+    document.getElementById('g-cuotas-preview').innerHTML='';
+    return;
+  }
+  uniWrap.style.display='none';
+  multiSec.style.display='block';
+  const montoCuota=monto>0?Math.round(monto/ncuotas):0;
+  document.getElementById('g-cuota-valor-num').textContent=
+    montoCuota>0?'$'+montoCuota.toLocaleString('es-AR'):'—';
   const fechaPrimer=document.getElementById('g-fecha-primer-pago').value;
-  const wrap=document.getElementById('g-fecha-primer-pago-wrap');
-  wrap.style.display=ncuotas>1?'block':'none';
-  const montoCuota=ncuotas>0?Math.round(monto/ncuotas):monto;
-  document.getElementById('g-cuota-calc').value=ncuotas>1?'$'+montoCuota.toLocaleString('es-AR'):'—';
   const preview=document.getElementById('g-cuotas-preview');
-  if(ncuotas<=1||!fechaPrimer){preview.innerHTML='';return;}
+  if(!fechaPrimer||!monto){preview.innerHTML='';return;}
+  const MESES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
   let html='<div class="cuotas-preview">';
   const mostrar=Math.min(ncuotas,12);
   for(let i=0;i<mostrar;i++){
     const f=addMesesAFecha(fechaPrimer,i);
-    const[yy,mm,dd]=f.split('-');
-    html+=`<div class="cuotas-preview-item"><span style="color:var(--text2)">Cuota ${i+1}/${ncuotas}</span><span>${dd}/${mm}/${yy}</span><span style="font-weight:600">$${montoCuota.toLocaleString('es-AR')}</span></div>`;
+    const[yy,mm]=f.split('-');
+    const label=`${MESES[+mm-1]} ${yy}`;
+    html+=`<div class="cuotas-preview-item">
+      <span style="color:var(--text2)">Cuota ${i+1}/${ncuotas}</span>
+      <span style="font-weight:600">$${montoCuota.toLocaleString('es-AR')}</span>
+      <span style="color:var(--text2)">${label}</span>
+    </div>`;
   }
   if(ncuotas>12)html+=`<div style="font-size:11px;color:var(--text2);padding-top:6px">...y ${ncuotas-12} cuotas más</div>`;
   html+='</div>';
@@ -1994,12 +2037,12 @@ function resetGastoForm(){
   document.getElementById('g-monto').value='';
   document.getElementById('g-notas').value='';
   document.getElementById('g-fecha').value=today();
-  setGastoTipo('efectivo');
+  const mt=document.getElementById('g-monto-tarjeta');if(mt)mt.value='';
+  const fpu=document.getElementById('g-fecha-pago-unico');if(fpu)fpu.value='';
   document.getElementById('g-ncuotas-sel').value='1';
-  document.getElementById('g-cuota-calc').value='';
   document.getElementById('g-cuotas-preview').innerHTML='';
   document.getElementById('g-fecha-primer-pago').value='';
-  document.getElementById('g-fecha-primer-pago-wrap').style.display='none';
+  setGastoTipo('efectivo'); // restaura g-fecha-wrap y oculta extras
 }
 function agregarGasto(){
   if(!currentUser)return;
