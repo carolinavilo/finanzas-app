@@ -2792,10 +2792,13 @@ function renderInversiones(){
   Object.keys(localStorage).filter(k=>k.startsWith('dividendo_')).forEach(k=>{
     try{const v=JSON.parse(localStorage.getItem(k));if(!v?.ultimoDividendoUSD||v.ultimoDividendoUSD<0.05){localStorage.removeItem(k);}}catch(e){localStorage.removeItem(k);}
   });
-  // Limpiar caché de precios legacy una sola vez
-  if(!localStorage.getItem('precios_legacy_cleared')){
-    Object.keys(localStorage).filter(k=>k.startsWith('precio_')||k==='fz_pricecache'||k==='cache_limpiado_v3').forEach(k=>localStorage.removeItem(k));
-    localStorage.setItem('precios_legacy_cleared','true');
+  // Limpiar precios legacy y manuales incorrectos una sola vez
+  if(!localStorage.getItem('precios_v2_cleared')){
+    Object.keys(localStorage).filter(k=>
+      k.startsWith('precio_')||k.startsWith('precioManual_')||k.startsWith('precioCache_')||
+      k==='fz_pricecache'||k==='cache_limpiado_v3'||k==='precios_legacy_cleared'
+    ).forEach(k=>localStorage.removeItem(k));
+    localStorage.setItem('precios_v2_cleared','true');
   }
 
   // Helper: convertir monto a ARS según moneda
@@ -2870,9 +2873,9 @@ function renderInversiones(){
       const manual=parseFloat(localStorage.getItem('precioManual_'+ticker.toUpperCase()));
       if(manual>0)return{price:manual,priceARS:manual,priceUSD:dolarRates.blue?.venta?manual/dolarRates.blue.venta:null,change:0,fuente:'manual',ts:Date.now()};
       try{
-        const c=JSON.parse(localStorage.getItem('precioCache_'+ticker.toUpperCase()));
-        if(c?.precio>0&&(Date.now()-c.ts)<3600000)
-          return{price:c.precio,priceARS:c.precio,priceUSD:dolarRates.blue?.venta?c.precio/dolarRates.blue.venta:null,change:c.variacion||0,fuente:'Yahoo Finance',ts:c.ts};
+        const c=JSON.parse(localStorage.getItem('cot_'+ticker.toUpperCase()));
+        if(c?.precioARS>0&&(Date.now()-c.ts)<3600000)
+          return{price:c.precioARS,priceARS:c.precioARS,priceUSD:dolarRates.blue?.venta?c.precioARS/dolarRates.blue.venta:null,change:c.variacion||0,fuente:'Yahoo Finance',ts:c.ts};
       }catch(e){}
       return null;
     })();
@@ -2972,7 +2975,7 @@ function renderInversiones(){
           style="width:150px;padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:13px"
           onkeydown="if(event.key==='Enter')setPriceManual('${ticker}',document.getElementById('mp-${ticker}')?.value)"/>
         <button class="btn btn-primary btn-sm btn-aplicar-precio">✓ Aplicar</button>
-        <button class="btn btn-ghost btn-sm" onclick="obtenerCotizacion('${ticker}').then(p=>{if(p)renderInversiones();})">🔄 Obtener</button>
+        <button class="btn btn-ghost btn-sm" onclick="obtenerCotizacion('${ticker}').then(c=>{if(c)renderInversiones();})">🔄 Obtener</button>
       </div>
     </div>`;
   }
@@ -2983,7 +2986,6 @@ function renderInversiones(){
     const sin=Object.keys(groups).filter(t=>!CRYPTO_IDS[t]&&t!=='USD'&&!getPrecioManual(t));
     if(sin.length){
       (async()=>{
-        await fetchDolar();
         for(const t of sin)await obtenerCotizacion(t);
         renderInversiones();
       })();
@@ -3040,8 +3042,8 @@ function renderInversiones(){
       const live=_lv||(()=>{
         const manual=parseFloat(localStorage.getItem('precioManual_'+ticker.toUpperCase()));
         if(manual>0)return{price:manual,priceARS:manual,change:0,fuente:'manual',ts:Date.now()};
-        try{const c=JSON.parse(localStorage.getItem('precioCache_'+ticker.toUpperCase()));
-          if(c?.precio>0&&(Date.now()-c.ts)<3600000)return{price:c.precio,priceARS:c.precio,change:c.variacion||0,fuente:'Yahoo Finance',ts:c.ts};}catch(e){}
+        try{const c=JSON.parse(localStorage.getItem('cot_'+ticker.toUpperCase()));
+          if(c?.precioARS>0&&(Date.now()-c.ts)<3600000)return{price:c.precioARS,priceARS:c.precioARS,change:c.variacion||0,fuente:'Yahoo Finance',ts:c.ts};}catch(e){}
         return null;
       })();
       if(!live)return`<span style="font-size:11px;color:var(--text2)">Sin precio</span>`;
@@ -3792,42 +3794,42 @@ function getPrecioManual(ticker){
   // Precio manual tiene prioridad (sin expiración)
   const manual=parseFloat(localStorage.getItem('precioManual_'+ticker.toUpperCase()));
   if(manual>0)return manual;
-  // Fallback: cache de API (expira en 1h)
+  // Fallback: caché API cot_ (expira en 1h)
   try{
-    const c=JSON.parse(localStorage.getItem('precioCache_'+ticker.toUpperCase()));
-    if(c?.precio>0&&(Date.now()-c.ts)<3600000)return c.precio;
+    const c=JSON.parse(localStorage.getItem('cot_'+ticker.toUpperCase()));
+    if(c?.precioARS>0&&(Date.now()-c.ts)<3600000)return c.precioARS;
   }catch(e){}
   return null;
 }
 function setPriceManual(ticker){setPrecioManual(ticker,document.getElementById('mp-'+ticker)?.value);}
 
-// Caché de API: 1h por defecto
-const PRECIO_CACHE_TTL=3600000;
 let _autoFetchDone=false;
 
 async function obtenerCotizacion(ticker){
   const T=ticker.toUpperCase();
-  // No buscar crypto ni USD
   if(CRYPTO_IDS[T]||T==='USD')return null;
-  // Devolver caché si es fresco
-  try{
-    const c=JSON.parse(localStorage.getItem('precioCache_'+T));
-    if(c?.precio>0&&(Date.now()-c.ts)<PRECIO_CACHE_TTL)return c.precio;
-  }catch(e){}
+  const cacheKey='cot_'+T;
+  const cached=localStorage.getItem(cacheKey);
+  if(cached){
+    const c=JSON.parse(cached);
+    if(Date.now()-c.ts<3600000)return c;
+  }
   try{
     const r=await fetch('/api/quote?ticker='+T,{signal:AbortSignal.timeout(8000)});
-    if(!r.ok)throw new Error('api '+r.status);
+    if(!r.ok)throw new Error('sin datos');
     const d=await r.json();
-    let precio=d.precio;
+    let precioARS=d.precio;
     if(d.moneda==='USD'){
-      if(!dolarRates.blue?.venta)await fetchDolar();
-      precio=d.precio*(dolarRates.blue?.venta||1);
+      const dr=await fetch('https://dolarapi.com/v1/dolares/blue');
+      const dd=await dr.json();
+      precioARS=d.precio*dd.venta;
     }
-    localStorage.setItem('precioCache_'+T,JSON.stringify({precio,ts:Date.now(),variacion:d.variacion||0,fuente:'Yahoo Finance'}));
-    return precio;
+    const result={precioARS,variacion:d.variacion,ts:Date.now()};
+    localStorage.setItem(cacheKey,JSON.stringify(result));
+    return result;
   }catch(e){
     console.warn('[quote]',T,e.message);
-    return null;
+    return cached?JSON.parse(cached):null;
   }
 }
 
@@ -3838,9 +3840,7 @@ async function refreshAllPrices(){
     S.inversiones.filter(i=>i.ticker&&!CRYPTO_IDS[i.ticker.toUpperCase()]&&i.ticker.toUpperCase()!=='USD')
     .map(i=>i.ticker.toUpperCase())
   )];
-  // Borrar caché para forzar refresh
-  tickers.forEach(t=>localStorage.removeItem('precioCache_'+t));
-  await fetchDolar();
+  tickers.forEach(t=>localStorage.removeItem('cot_'+t));
   for(const t of tickers)await obtenerCotizacion(t);
   renderInversiones();
   if(btn){btn.textContent='🔄 Actualizar';btn.disabled=false;}
@@ -3973,10 +3973,18 @@ function registerPWA(){
 
 // ====== INIT ======
 function verCacheInversiones(){
-  const keys=Object.keys(localStorage).filter(k=>k.startsWith('precioManual_'));
-  if(!keys.length){alert('No hay precios manuales guardados.');return;}
-  const lines=keys.map(k=>`${k.replace('precioManual_','')}: $${parseFloat(localStorage.getItem(k)).toLocaleString('es-AR')}`);
-  alert('Precios manuales guardados:\n\n'+lines.join('\n'));
+  const manual=Object.keys(localStorage).filter(k=>k.startsWith('precioManual_'))
+    .map(k=>`[manual] ${k.replace('precioManual_','')}: $${parseFloat(localStorage.getItem(k)).toLocaleString('es-AR')}`);
+  const api=Object.keys(localStorage).filter(k=>k.startsWith('cot_')).map(k=>{
+    try{const c=JSON.parse(localStorage.getItem(k));
+      const age=Math.round((Date.now()-c.ts)/60000);
+      const t=k.replace('cot_','');
+      return`[Yahoo] ${t}: $${c.precioARS.toLocaleString('es-AR',{maximumFractionDigits:0})} (hace ${age} min${age>=60?' ⚠️':''})`;
+    }catch(e){return k;}
+  });
+  const all=[...manual,...api];
+  if(!all.length){alert('No hay precios guardados.');return;}
+  alert('Precios en caché:\n\n'+all.join('\n'));
 }
 
 // Delegación global — botones de cards de inversión
