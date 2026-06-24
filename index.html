@@ -196,8 +196,11 @@ input[type=checkbox]{width:auto;margin-right:5px}
 .tipo-btn{border:2px solid var(--border);background:var(--bg2);color:var(--text);border-radius:10px;padding:11px 4px;font-size:13px;font-weight:600;cursor:pointer;transition:.15s;text-align:center;-webkit-tap-highlight-color:transparent}
 .tipo-btn.active{border-color:var(--accent);background:var(--accent-light);color:var(--accent)}
 .cuotas-preview{background:var(--bg2);border-radius:10px;padding:12px;margin-top:8px}
-.cuotas-preview-item{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px}
+.cuotas-preview-item{display:grid;grid-template-columns:1fr auto auto;gap:8px;padding:5px 0;border-bottom:1px solid var(--border);align-items:center}
 .cuotas-preview-item:last-child{border-bottom:none}
+.cuota-num{text-align:left;color:var(--text2);font-size:14px}
+.cuota-monto{text-align:right;font-weight:600;min-width:80px}
+.cuota-mes{text-align:right;color:var(--text2);font-size:13px;min-width:100px}
 .gasto-form-v2 .form-group{margin-bottom:14px}
 .gasto-form-v2 input,.gasto-form-v2 select{font-size:16px}
 .gasto-form-v2 .extra-section{margin-top:2px}
@@ -1916,11 +1919,7 @@ function updateGastoCuotasPreview(){
     const f=addMesesAFecha(fechaPrimer,i);
     const[yy,mm]=f.split('-');
     const label=`${MESES[+mm-1]} ${yy}`;
-    html+=`<div class="cuotas-preview-item">
-      <span style="color:var(--text2)">Cuota ${i+1}/${ncuotas}</span>
-      <span style="font-weight:600">$${montoCuota.toLocaleString('es-AR')}</span>
-      <span style="color:var(--text2)">${label}</span>
-    </div>`;
+    html+=`<div class="cuotas-preview-item"><span class="cuota-num">Cuota ${i+1}/${ncuotas}</span><span class="cuota-monto">$${montoCuota.toLocaleString('es-AR')}</span><span class="cuota-mes">${label}</span></div>`;
   }
   if(ncuotas>12)html+=`<div style="font-size:11px;color:var(--text2);padding-top:6px">...y ${ncuotas-12} cuotas más</div>`;
   html+='</div>';
