@@ -1440,14 +1440,15 @@ async function doLogout() {
 
 // ── SYNC GASTOS (para usuario) ──
 async function loadGastosFromSupabase() {
-  if (!currentUser) return;
+  if (!currentUser || userRole !== 'usuario') return;
   let data, error;
   try {
     ({ data, error } = await sb.from('gastos_sync')
       .select('*').eq('user_id', currentUser.id)
       .order('fecha', { ascending: false }));
-  } catch(e) { return; }
-  if (!error && data) {
+  } catch(e) { console.warn('gastos_sync excepción:', e.message); return; }
+  if (error) { console.warn('gastos_sync no accesible:', error.message); return; }
+  if (data) {
     S.gastos = data.map(g => ({
       id: g.id, fecha: g.fecha, descripcion: g.descripcion,
       monto: Number(g.monto), categoria: g.categoria || 'Otros',
