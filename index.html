@@ -1278,8 +1278,7 @@ async function afterLogin() {
   _afterLoginDone = true;
   // Usar función SECURITY DEFINER para bypasear RLS
   let perfil = null;
-  const { data: rows } = await sb.from('perfiles').select('rol,nombre,email').eq('id', currentUser.id);
-  perfil = rows?.[0] || null;
+  try{const{data:rows,error:perfilErr}=await sb.from('perfiles').select('rol,nombre,email').eq('id',currentUser.id);if(perfilErr){console.warn('perfiles no accesible:',perfilErr.message);}else{perfil=rows?.[0]||null;}}catch(e){console.warn('Error al cargar perfil:',e.message);}
 
   // Hardcode admin por email — respaldo confiable para 2 usuarios fijos
   if (currentUser.email === 'carolina.vilo@hotmail.com') {
@@ -1287,8 +1286,9 @@ async function afterLogin() {
   } else {
     userRole = perfil?.rol || 'usuario';
   }
-  const nombre = perfil?.nombre || perfil?.email || currentUser.email;
-  currentNombre = nombre;
+  const nombreRaw = perfil?.nombre || currentUser?.user_metadata?.full_name || currentUser.email || '';
+  const nombreLimpio = nombreRaw.split(/[@._]/)[0].replace(/^\w/,c=>c.toUpperCase()) || 'Usuario';
+  currentNombre = nombreLimpio;
 
   // Ocultar pantalla de login
   document.getElementById('login-screen').classList.add('hidden');
