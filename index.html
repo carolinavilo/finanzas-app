@@ -1369,6 +1369,9 @@ async function afterLogin() {
   const mhTitle = document.querySelector('#mobile-header .mh-logo h1');
   if (mhTitle) mhTitle.textContent = userRole === 'admin' ? 'FinanzasApp' : currentNombre;
 
+  // Sincronizar categorías desde Supabase (ambos roles)
+  await syncCatsFromSupabase();
+
   if (userRole === 'admin') {
     // ADMIN: app completa con datos de localStorage
     load(); applyTheme();
@@ -1782,6 +1785,58 @@ function renderSection(id){
 function getCatsGasto(){return S.catsGasto||DEFAULT_CATS_GASTO;}
 function getCatsIngreso(){return S.catsIngreso||DEFAULT_CATS_INGRESO;}
 
+// ── Sincronización de categorías con Supabase ──
+async function syncCatsFromSupabase(){
+  if(!currentUser)return;
+  try{
+    const {data,error}=await supabase.from('categorias').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:true});
+    if(error){
+      // Tabla no existe todavía — usar localStorage como fallback silencioso
+      if(error.code==='42P01'||error.message?.includes('does not exist'))return;
+      console.warn('[cats] Supabase error:',error.message);return;
+    }
+    if(data&&data.length>0){
+      // Supabase es fuente de verdad
+      S.catsGasto=data.filter(c=>c.tipo==='gasto').map(c=>c.nombre);
+      S.catsIngreso=data.filter(c=>c.tipo==='ingreso').map(c=>c.nombre);
+      if(!S.catsGasto.length)S.catsGasto=[...DEFAULT_CATS_GASTO];
+      if(!S.catsIngreso.length)S.catsIngreso=[...DEFAULT_CATS_INGRESO];
+      save();
+    }else{
+      // Sin datos en Supabase → migrar las de localStorage a Supabase
+      const rows=[
+        ...S.catsGasto.map(n=>({user_id:currentUser.id,nombre:n,tipo:'gasto'})),
+        ...S.catsIngreso.map(n=>({user_id:currentUser.id,nombre:n,tipo:'ingreso'}))
+      ];
+      if(rows.length){
+        const {error:insErr}=await supabase.from('categorias').insert(rows);
+        if(insErr)console.warn('[cats] migración fallida:',insErr.message);
+      }
+    }
+  }catch(e){console.warn('[cats] syncCatsFromSupabase:',e.message);}
+}
+
+async function _catSupabaseAdd(nombre,tipo){
+  if(!currentUser)return;
+  try{
+    await supabase.from('categorias').insert({user_id:currentUser.id,nombre,tipo});
+  }catch(e){console.warn('[cats] insert:',e.message);}
+}
+
+async function _catSupabaseRemove(nombre,tipo){
+  if(!currentUser)return;
+  try{
+    await supabase.from('categorias').delete().eq('user_id',currentUser.id).eq('nombre',nombre).eq('tipo',tipo);
+  }catch(e){console.warn('[cats] delete:',e.message);}
+}
+
+async function _catSupabaseRename(oldName,newName,tipo){
+  if(!currentUser)return;
+  try{
+    await supabase.from('categorias').update({nombre:newName}).eq('user_id',currentUser.id).eq('nombre',oldName).eq('tipo',tipo);
+  }catch(e){console.warn('[cats] update:',e.message);}
+}
+
 function showCatMsg(text, isError=false){
   const el=document.getElementById('cat-msg');if(!el)return;
   el.textContent=text;
@@ -1801,6 +1856,7 @@ function addCat(tipo){
   try{
     arr.push(v);
     save();
+    _catSupabaseAdd(v,tipo);
     inp.value='';
     renderCategorias();populateCatSelects();
     showCatMsg('✅ Categoría agregada');
@@ -1816,6 +1872,7 @@ function removeCat(tipo,cat){
     if(tipo==='gasto')S.catsGasto=S.catsGasto.filter(c=>c!==cat);
     else S.catsIngreso=S.catsIngreso.filter(c=>c!==cat);
     save();
+    _catSupabaseRemove(cat,tipo);
     renderCategorias();populateCatSelects();
     showCatMsg('✅ Categoría eliminada');
   }catch(e){
@@ -1858,6 +1915,7 @@ function confirmEditCat(tipo,idx,oldName){
     if(tipo==='gasto')S.gastos.filter(g=>g.categoria===oldName).forEach(g=>g.categoria=newName);
     else S.ingresos.filter(i=>i.categoria===oldName).forEach(i=>i.categoria=newName);
     save();
+    _catSupabaseRename(oldName,newName,tipo);
     populateCatSelects();renderCategorias();
     showCatMsg('✅ Categoría renombrada');
   }catch(e){
