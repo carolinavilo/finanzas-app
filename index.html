@@ -3918,32 +3918,41 @@ function renderCotizacionesPanel(){
   if(cntEl)cntEl.textContent=tickerList.length?`· ${tickerList.length} ticker${tickerList.length!==1?'s':''}`:' ';
   if(!tickerList.length){el.innerHTML='<p style="color:var(--text2);font-size:12px">Editá una inversión y agregá su ticker para ver precios aquí.</p>';return;}
 
+  // Helper: precio efectivo desde liveprices (crypto) o cot_ (proxy)
+  const getPrecioEfectivo=tk=>{
+    const lv=liveprices[tk];
+    if(lv&&!lv.failed&&(lv.priceARS||lv.price))return{precio:lv.priceARS||lv.price,chg:lv.change||0};
+    const p=getPrecioManual(tk);
+    if(p>0){
+      try{const c=JSON.parse(localStorage.getItem('cot_'+tk));return{precio:p,chg:c?.variacion||0};}
+      catch(e){return{precio:p,chg:0};}
+    }
+    return null;
+  };
   // Calcular valor total para el resumen
   let valorTotal=0;let nConPrecio=0;
   tickerList.forEach(t=>{
-    const live=liveprices[t.ticker];
+    const pe=getPrecioEfectivo(t.ticker);
     const tots=t.entries.reduce((a,e)=>({u:a.u+(+e.cantidad||0)}),{u:0});
     const vendidas=(S.ventas||[]).filter(v=>v.ticker?.trim().toUpperCase()===t.ticker).reduce((a,v)=>a+(+v.cantidad||0),0);
     const tenencia=tots.u-vendidas;
-    if(live&&!live.failed&&(live.priceARS||live.price)){
-      valorTotal+=(live.priceARS||live.price)*tenencia;nConPrecio++;
-    }
+    if(pe){valorTotal+=pe.precio*tenencia;nConPrecio++;}
   });
   const isExp=localStorage.getItem('inv_cot_expandido')!=='0';
   const listaHtml=tickerList.map(t=>{
-    const live=liveprices[t.ticker];
+    const pe=getPrecioEfectivo(t.ticker);
     const tots=t.entries.reduce((a,e)=>({u:a.u+(+e.cantidad||0),inv:a.inv+toARS(+e.montoInvertido||0,e.moneda)}),{u:0,inv:0});
     const vendidas=(S.ventas||[]).filter(v=>v.ticker?.trim().toUpperCase()===t.ticker).reduce((a,v)=>a+(+v.cantidad||0),0);
     const tenencia=tots.u-vendidas;
-    if(!live||live.failed){
+    if(!pe){
       return`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(128,128,128,.07)">
         <span style="font-size:13px">${t.desc||t.ticker} <span class="badge b-gray">${t.ticker}</span></span>
-        <span style="color:var(--text2);font-size:12px">${live?.failed?'sin datos':'—'}</span>
+        <span style="color:var(--text2);font-size:12px">—</span>
       </div>`;
     }
-    const precioARS=live.priceARS||live.price;
+    const precioARS=pe.precio;
     const valorMisUnidades=precioARS*tenencia;
-    const chg=live.change||0;
+    const chg=pe.chg;
     return`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(128,128,128,.07)">
       <div>
         <div style="font-size:13px;font-weight:500">${t.desc||t.ticker} <span class="badge b-blue">${t.ticker}</span></div>
