@@ -1445,9 +1445,12 @@ async function doLogout() {
 // ── SYNC GASTOS (para usuario) ──
 async function loadGastosFromSupabase() {
   if (!currentUser) return;
-  const { data, error } = await sb.from('gastos_sync')
-    .select('*').eq('user_id', currentUser.id)
-    .order('fecha', { ascending: false });
+  let data, error;
+  try {
+    ({ data, error } = await sb.from('gastos_sync')
+      .select('*').eq('user_id', currentUser.id)
+      .order('fecha', { ascending: false }));
+  } catch(e) { return; }
   if (!error && data) {
     S.gastos = data.map(g => ({
       id: g.id, fecha: g.fecha, descripcion: g.descripcion,
@@ -3279,7 +3282,7 @@ function renderDashboard(){
       data:{labels:cats,datasets:[{data:vals,backgroundColor:cols,borderWidth:0}]},
       options:{plugins:{legend:{position:'right',labels:{color:getComputedStyle(document.body).getPropertyValue('--text').trim()||'#e2e8f0',font:{size:11},boxWidth:10}}},cutout:'65%',maintainAspectRatio:false}
     });
-  } else {document.getElementById('chartCat').parentElement.innerHTML='<div class="empty"><p>Sin gastos este mes</p></div>';}
+  } else {const cc=document.getElementById('chartCat');if(cc&&cc.parentElement)cc.parentElement.innerHTML='<div class="empty"><p>Sin gastos este mes</p></div>';}
 
   // CHART mensual (ingresos vs gastos)
   const meses6=[];for(let i=5;i>=0;i--){const d=new Date();d.setMonth(d.getMonth()-i);meses6.push(d.toISOString().slice(0,7));}
@@ -3525,7 +3528,8 @@ function dividendoCardHTML(ticker,tenencia){
   const d=cedearDividendos[ticker];
   if(!d)return'';
   const ccl=dolarRates.ccl?.venta||dolarRates.blue?.venta||null;
-  const ratio=getRatioCached(ticker)||1;
+  // Solo ratio manual; AI-estimado puede ser incorrecto (ej: 46 → resultado ~0.01)
+  const ratio=(()=>{try{const c=localStorage.getItem('ratio_'+ticker.toUpperCase());if(!c)return 1;const p=JSON.parse(c);return(p.manual&&p.ratio)?p.ratio:1;}catch(e){return 1;}})();
   const meses=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
   const fmtDate=iso=>{if(!iso)return'—';const[y,m,dd]=iso.split('-');return`${parseInt(dd)}/${meses[parseInt(m)-1]}/${y}`;};
   if(!d.pagaDividendos){
@@ -3609,7 +3613,8 @@ function actualizarCardDividendo(){
   const [ticker,div]=conDiv[0];
   const fechaUsar=div.proximaFechaPago||div.proximaFechaEx;
   const [y,m,d]=fechaUsar.split('-');
-  const ratio=getRatioCached(ticker)||1;
+  // Solo ratio manual; AI-estimado puede ser incorrecto (ej: 46 → resultado ~0.01)
+  const ratio=(()=>{try{const c=localStorage.getItem('ratio_'+ticker.toUpperCase());if(!c)return 1;const p=JSON.parse(c);return(p.manual&&p.ratio)?p.ratio:1;}catch(e){return 1;}})();
   const ccl=dolarRates.ccl?.venta||dolarRates.blue?.venta||null;
   const tickerUpper=ticker.toUpperCase();
   const invEntries=S.inversiones.filter(i=>i.ticker&&i.ticker.toUpperCase()===tickerUpper);
