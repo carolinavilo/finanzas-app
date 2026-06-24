@@ -1276,19 +1276,15 @@ async function doLogin() {
 
 async function afterLogin() {
   _afterLoginDone = true;
-  // Usar función SECURITY DEFINER para bypasear RLS
-  let perfil = null;
-  try{const{data:rows,error:perfilErr}=await sb.from('perfiles').select('rol,nombre,email').eq('id',currentUser.id);if(perfilErr){console.warn('perfiles no accesible:',perfilErr.message);}else{perfil=rows?.[0]||null;}}catch(e){console.warn('Error al cargar perfil:',e.message);}
-
-  // Hardcode admin por email — respaldo confiable para 2 usuarios fijos
-  if (currentUser.email === 'carolina.vilo@hotmail.com') {
+  // Rol: hardcode por email — sin llamadas a tabla perfiles
+  if (currentUser.email === 'carolina.vilo@hotmail.com' || currentUser.email === 'carolinav.longo@hotmail.com') {
     userRole = 'admin';
   } else {
-    userRole = perfil?.rol || 'usuario';
+    userRole = 'usuario';
   }
-  const nombreRaw = perfil?.nombre || currentUser?.user_metadata?.full_name || currentUser.email || '';
-  const nombreLimpio = nombreRaw.split(/[@._]/)[0].replace(/^\w/,c=>c.toUpperCase()) || 'Usuario';
-  currentNombre = nombreLimpio;
+  // Nombre: solo user_metadata, sin Supabase
+  const _nRaw = currentUser?.user_metadata?.full_name?.split(' ')[0] || currentUser.email?.split('@')[0].split('.')[0] || 'Usuario';
+  currentNombre = _nRaw.charAt(0).toUpperCase() + _nRaw.slice(1);
 
   // Ocultar pantalla de login
   document.getElementById('login-screen').classList.add('hidden');
@@ -1470,7 +1466,7 @@ async function syncGastoAdd(gasto) {
     moneda: gasto.moneda || 'ARS', notas: gasto.notas || '',
     recurrente: gasto.recurrente || false, tipo: gasto.tipo || 'efectivo',
     updated_at: new Date().toISOString()
-  });
+  }).catch(e=>console.warn('Supabase syncAdd:',e.message));
 }
 
 async function syncGastoUpdate(gasto) {
@@ -1480,12 +1476,14 @@ async function syncGastoUpdate(gasto) {
     monto: gasto.monto, categoria: gasto.categoria,
     notas: gasto.notas || '', recurrente: gasto.recurrente || false,
     tipo: gasto.tipo || 'efectivo', updated_at: new Date().toISOString()
-  }).eq('id', gasto.id).eq('user_id', currentUser.id);
+  }).eq('id', gasto.id).eq('user_id', currentUser.id)
+    .catch(e=>console.warn('Supabase syncUpdate:',e.message));
 }
 
 async function syncGastoDelete(gastoId) {
   if (userRole !== 'usuario' || !currentUser) return;
-  await sb.from('gastos_sync').delete().eq('id', gastoId).eq('user_id', currentUser.id);
+  await sb.from('gastos_sync').delete().eq('id', gastoId).eq('user_id', currentUser.id)
+    .catch(e=>console.warn('Supabase syncDelete:',e.message));
 }
 
 // ── ADMIN: ver gastos de todos los usuarios ──
@@ -1496,7 +1494,7 @@ async function loadCristianGastos() {
   panel.innerHTML = '<p style="color:var(--text2);font-size:12px">Cargando...</p>';
 
   const { data, error } = await sb.from('gastos_sync')
-    .select('*, perfiles(email, nombre)')
+    .select('*')
     .order('fecha', { ascending: false });
 
   if (error || !data || !data.length) {
@@ -1508,7 +1506,7 @@ async function loadCristianGastos() {
   const byUser = {};
   data.forEach(g => {
     const uid = g.user_id;
-    if (!byUser[uid]) byUser[uid] = { email: g.perfiles?.email, nombre: g.perfiles?.nombre, gastos: [] };
+    if (!byUser[uid]) byUser[uid] = { email: g.user_id, nombre: null, gastos: [] };
     byUser[uid].gastos.push(g);
   });
 
