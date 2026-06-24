@@ -1304,7 +1304,7 @@ async function afterLogin() {
 
   // Mostrar info de usuario en sidebar (desktop)
   const ubar = document.getElementById('user-info-bar');
-  if (ubar) { ubar.style.display = 'flex'; ubar.innerHTML = `<span>👤 ${nombre}</span> &nbsp;·&nbsp; <span style="text-transform:capitalize">${userRole}</span>`; }
+  if (ubar) { ubar.style.display = 'flex'; ubar.innerHTML = `<span>👤 ${currentNombre}</span> &nbsp;·&nbsp; <span style="text-transform:capitalize">${userRole}</span>`; }
 
   // Agregar botón logout al mobile header si no existe
   const mhActions = document.querySelector('#mobile-header .mh-actions');
@@ -1319,7 +1319,7 @@ async function afterLogin() {
   }
   // Actualizar título del mobile header
   const mhTitle = document.querySelector('#mobile-header .mh-logo h1');
-  if (mhTitle) mhTitle.textContent = userRole === 'admin' ? 'FinanzasApp' : nombre;
+  if (mhTitle) mhTitle.textContent = userRole === 'admin' ? 'FinanzasApp' : currentNombre;
 
   if (userRole === 'admin') {
     // ADMIN: app completa con datos de localStorage
@@ -1363,7 +1363,7 @@ async function afterLogin() {
     // Ocultar color picker
     const cp = document.querySelector('.color-picker-wrap'); if (cp) cp.style.display = 'none';
     // Cambiar logo (desktop)
-    const logoH1 = document.querySelector('.logo h1'); if (logoH1) logoH1.textContent = nombre;
+    const logoH1 = document.querySelector('.logo h1'); if (logoH1) logoH1.textContent = currentNombre;
     const logoP = document.querySelector('.logo p'); if (logoP) logoP.textContent = 'Mis gastos';
     // Cargar gastos de Supabase
     await loadGastosFromSupabase();
