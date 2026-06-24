@@ -852,6 +852,13 @@ input[type=checkbox]{width:auto;margin-right:5px}
       <p style="font-size:11px;font-weight:600;margin-bottom:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px">🤖 Asistente IA</p>
       <div id="mob-ai-key-container"></div>
     </div>
+    <div class="bs-sep"></div>
+    <p style="font-size:11px;font-weight:600;margin-bottom:8px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px">📊 Uso de API</p>
+    <div id="api-stats-display" style="font-size:12px;color:var(--text2);line-height:1.6">—</div>
+    <div style="display:flex;gap:8px;margin-top:6px">
+      <button onclick="renderAPIStats()" class="btn btn-ghost btn-xs" style="font-size:10px">🔄 Actualizar</button>
+      <button onclick="if(confirm('¿Borrar historial?')){localStorage.removeItem('fz_api_calls');renderAPIStats();}" class="btn btn-ghost btn-xs" style="font-size:10px;color:var(--accent4)">🗑 Limpiar</button>
+    </div>
     <button class="btn btn-neutral" style="width:100%;margin-top:8px;padding:12px" onclick="closeSheet('sheet-settings')">Cerrar</button>
   </div>
 </div>
@@ -1670,7 +1677,16 @@ function closeModal(id){document.getElementById(id).classList.remove('open');}
 document.querySelectorAll('.modal-overlay').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');}));
 
 // ====== SHEETS ======
-function openSheet(id){document.getElementById(id).classList.add('open');document.body.style.overflow='hidden';}
+function renderAPIStats(){
+  const el=document.getElementById('api-stats-display');if(!el)return;
+  const s=getAPICallStats();
+  const det=Object.entries(s.detalle).map(([k,v])=>`${k}: ${v}`).join(' · ')||'—';
+  el.innerHTML=`<div>Hoy: <strong>${s.hoy}</strong> llamada${s.hoy!==1?'s':''} · ~USD ${s.costoHoy}</div>
+<div>Esta semana: <strong>${s.semana}</strong> · ~USD ${s.costoSemana}</div>
+<div style="font-size:10px;margin-top:3px;color:var(--text2)">Tipos hoy: ${det}</div>
+<div style="font-size:9px;margin-top:2px;color:var(--text2)">Caché: cotiz. 6h · dividendos 7d · ratios 30d</div>`;
+}
+function openSheet(id){document.getElementById(id).classList.add('open');document.body.style.overflow='hidden';if(id==='sheet-settings')renderAPIStats();}
 function closeSheet(id){document.getElementById(id).classList.remove('open');document.body.style.overflow='';}
 
 // ====== NAV ======
@@ -2760,12 +2776,7 @@ function renderInversiones(){
   Object.keys(localStorage).filter(k=>k.startsWith('dividendo_')).forEach(k=>{
     try{const v=JSON.parse(localStorage.getItem(k));if(!v?.ultimoDividendoUSD||v.ultimoDividendoUSD<0.05){localStorage.removeItem(k);}}catch(e){localStorage.removeItem(k);}
   });
-  loadCacheToLive(); // mostrar precios cacheados inmediatamente antes de cualquier fetch
-  // Auto-fetch precios si hay tickers y no hay datos recientes
-  const hasTickers=S.inversiones.some(i=>i.ticker&&i.ticker!=='USD');
-  if(hasTickers&&(!lastUpdate||Date.now()-lastUpdate>4*60*1000)){
-    setTimeout(()=>refreshPrices(),200);
-  }
+  loadCacheToLive(); // mostrar precios cacheados inmediatamente — API solo al presionar 🔄
 
   // Helper: convertir monto a ARS según moneda
   const toARS=(monto,moneda)=>(moneda==='USD'&&dolarRates.blue?.venta)?monto*dolarRates.blue.venta:monto;
@@ -3430,11 +3441,39 @@ function loadCacheToLive(){
   if(loaded)console.log('[PriceCache] Cargados',loaded,'ticker(s) desde cache:',Object.keys(pricecache));
 }
 
+// ── Contador de llamadas a la API de Anthropic ──
+function registrarLlamadaAPI(tipo=''){
+  try{
+    const hoy=new Date().toISOString().slice(0,10);
+    const raw=localStorage.getItem('fz_api_calls');
+    const data=raw?JSON.parse(raw):{};
+    if(!data[hoy])data[hoy]={total:0,tipos:{}};
+    data[hoy].total++;
+    if(tipo)data[hoy].tipos[tipo]=(data[hoy].tipos[tipo]||0)+1;
+    // Mantener solo los últimos 7 días
+    Object.keys(data).sort().slice(0,-7).forEach(k=>delete data[k]);
+    localStorage.setItem('fz_api_calls',JSON.stringify(data));
+  }catch(e){}
+}
+function getAPICallStats(){
+  try{
+    const hoy=new Date().toISOString().slice(0,10);
+    const data=JSON.parse(localStorage.getItem('fz_api_calls')||'{}');
+    const hoyCount=data[hoy]?.total||0;
+    const semanaCount=Object.values(data).reduce((a,d)=>a+(d.total||0),0);
+    // Estimación de costo: sonnet-4-6 ~$0.003 por llamada (500 in + 150 out tokens promedio)
+    const costoHoy=(hoyCount*0.003).toFixed(3);
+    const costoSemana=(semanaCount*0.003).toFixed(3);
+    return{hoy:hoyCount,semana:semanaCount,costoHoy,costoSemana,detalle:data[hoy]?.tipos||{}};
+  }catch(e){return{hoy:0,semana:0,costoHoy:'0.000',costoSemana:'0.000',detalle:{}};}
+}
+
 // Cotización vía Claude API como fallback cuando las APIs externas fallan
 async function obtenerCotizacionViaIA(ticker){
   const apiKey=localStorage.getItem('anthropic_api_key')||localStorage.getItem('ai_key');
   if(!apiKey)return null;
   try{
+    registrarLlamadaAPI('cotizacion');
     const r=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
       headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
@@ -3491,13 +3530,14 @@ async function obtenerRatioCEDEAR(ticker){
   if(cached){
     const c=JSON.parse(cached);
     if(c.manual)return c.ratio; // ratio manual: sin expiración
-    if((Date.now()-c.timestamp)<7*24*3600000)return c.ratio;
+    if((Date.now()-c.timestamp)<30*24*3600000)return c.ratio;
   }
 
   const apiKey=localStorage.getItem('anthropic_api_key')||localStorage.getItem('ai_key');
   if(!apiKey)return null;
 
   try{
+    registrarLlamadaAPI('ratio');
     const r=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
       signal:AbortSignal.timeout(10000),
@@ -3564,12 +3604,13 @@ async function obtenerDividendoCEDEAR(ticker){
     try{
       const c=JSON.parse(cached);
       if(!c.ultimoDividendoUSD||c.ultimoDividendoUSD<0.05){localStorage.removeItem(cacheKey);}
-      else if((Date.now()-c.timestamp)<24*3600000)return c;
+      else if((Date.now()-c.timestamp)<7*24*3600000)return c;
     }catch(e){localStorage.removeItem(cacheKey);}
   }
   const apiKey=localStorage.getItem('anthropic_api_key')||localStorage.getItem('ai_key');
   if(!apiKey)return null;
   try{
+    registrarLlamadaAPI('dividendo');
     const r=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
       signal:AbortSignal.timeout(10000),
@@ -3691,11 +3732,12 @@ async function obtenerVencimientoCEDEAR(ticker){
   const cached=localStorage.getItem(cacheKey);
   if(cached){
     const c=JSON.parse(cached);
-    if((Date.now()-c.timestamp)<24*3600000)return c;
+    if((Date.now()-c.timestamp)<7*24*3600000)return c;
   }
   const apiKey=localStorage.getItem('anthropic_api_key')||localStorage.getItem('ai_key');
   if(!apiKey)return null;
   try{
+    registrarLlamadaAPI('vencimiento');
     const r=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
       signal:AbortSignal.timeout(10000),
@@ -3760,7 +3802,7 @@ async function obtenerCotizacion(ticker,forceRefresh=false){
   const cached=localStorage.getItem(cacheKey);
   if(!forceRefresh&&cached){
     const c=JSON.parse(cached);
-    if((Date.now()-c.timestamp)<3600000)return{...c,desdeCache:true};
+    if((Date.now()-c.timestamp)<6*3600000)return{...c,desdeCache:true};
   }
 
   const apiKey=localStorage.getItem('anthropic_api_key')||localStorage.getItem('ai_key');
@@ -3768,6 +3810,7 @@ async function obtenerCotizacion(ticker,forceRefresh=false){
 
   let rawResponse=null;
   try{
+    registrarLlamadaAPI('cotizacion');
     const r=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
       signal:AbortSignal.timeout(10000),
