@@ -3474,15 +3474,18 @@ async function obtenerCotizacionViaIA(ticker){
   if(!apiKey)return null;
   try{
     registrarLlamadaAPI('cotizacion');
+    const _reqBody1={model:'claude-sonnet-4-6',max_tokens:200,messages:[{role:'user',content:`¿Cuál es el precio actual del CEDEAR ${ticker} en pesos argentinos (ARS) en el mercado de Buenos Aires? Respondé ÚNICAMENTE con un JSON así, sin texto adicional: {"precioARS": 287264, "precioUSD": 192.15, "fuente": "estimado"}`}]};
+    console.log('[Anthropic/cotizacion-via-ia] request body:',JSON.stringify(_reqBody1,null,2));
     const r=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
       headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:200,messages:[{role:'user',
-        content:`¿Cuál es el precio actual del CEDEAR ${ticker} en pesos argentinos (ARS) en el mercado de Buenos Aires? Respondé ÚNICAMENTE con un JSON así, sin texto adicional: {"precioARS": 287264, "precioUSD": 192.15, "fuente": "estimado"}`
-      }]}),
+      body:JSON.stringify(_reqBody1),
       signal:AbortSignal.timeout(20000)
     });
-    const data=await r.json();
+    const _respText=await r.text();
+    console.log('[Anthropic/cotizacion] status:', r.status, '| body:', _respText.slice(0,400));
+    if(!r.ok)throw new Error('HTTP '+r.status+': '+_respText.slice(0,200));
+    const data=JSON.parse(_respText);
     const text=data?.content?.[0]?.text;
     if(!text)return null;
     const parsed=JSON.parse(text.replace(/```json|```/g,'').trim());
@@ -3538,17 +3541,18 @@ async function obtenerRatioCEDEAR(ticker){
 
   try{
     registrarLlamadaAPI('ratio');
+    const _reqBody2={model:'claude-sonnet-4-6',max_tokens:100,messages:[{role:'user',content:`¿Cuál es el ratio de conversión oficial del CEDEAR ${ticker} en Argentina según BYMA o CNV? El ratio indica cuántos CEDEARs equivalen a 1 acción subyacente. Respondé ÚNICAMENTE con este JSON sin texto adicional: {"ratio": 2, "fuente": "BYMA"}`}]};
+    console.log('[Anthropic/ratio] request body:',JSON.stringify(_reqBody2,null,2));
     const r=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
       signal:AbortSignal.timeout(10000),
       headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({
-        model:'claude-sonnet-4-6',
-        max_tokens:100,
-        messages:[{role:'user',content:`¿Cuál es el ratio de conversión oficial del CEDEAR ${ticker} en Argentina según BYMA o CNV? El ratio indica cuántos CEDEARs equivalen a 1 acción subyacente. Respondé ÚNICAMENTE con este JSON sin texto adicional: {"ratio": 2, "fuente": "BYMA"}`}]
-      })
+      body:JSON.stringify(_reqBody2)
     });
-    const data=await r.json();
+    const _respText=await r.text();
+    console.log('[Anthropic/ratio] status:', r.status, '| body:', _respText.slice(0,400));
+    if(!r.ok)throw new Error('HTTP '+r.status+': '+_respText.slice(0,200));
+    const data=JSON.parse(_respText);
     const text=data.content[0].text.replace(/```json|```/g,'').trim();
     const result=JSON.parse(text);
     localStorage.setItem(cacheKey,JSON.stringify({ratio:result.ratio,timestamp:Date.now()}));
@@ -3611,17 +3615,18 @@ async function obtenerDividendoCEDEAR(ticker){
   if(!apiKey)return null;
   try{
     registrarLlamadaAPI('dividendo');
+    const _reqBody3={model:'claude-sonnet-4-6',max_tokens:200,messages:[{role:'user',content:`Respondé ÚNICAMENTE con JSON válido, sin texto ni markdown.\nBasándote en tu conocimiento sobre ETFs estadounidenses, dame el dividendo trimestral más reciente del ETF ${ticker} en USD por acción, y la frecuencia de pago. Devolvé SOLO: {"pagaDividendos": true, "ultimoDividendoUSD": 0.45, "frecuencia": "trimestral", "proximaFechaPago": "2026-09-30", "fuente": "conocimiento del modelo"}`}]};
+    console.log('[Anthropic/dividendo] request body:',JSON.stringify(_reqBody3,null,2));
     const r=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
       signal:AbortSignal.timeout(10000),
       headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({
-        model:'claude-sonnet-4-6',
-        max_tokens:200,
-        messages:[{role:'user',content:`Respondé ÚNICAMENTE con JSON válido, sin texto ni markdown.\nBasándote en tu conocimiento sobre ETFs estadounidenses, dame el dividendo trimestral más reciente del ETF ${ticker} en USD por acción, y la frecuencia de pago. Devolvé SOLO: {"pagaDividendos": true, "ultimoDividendoUSD": 0.45, "frecuencia": "trimestral", "proximaFechaPago": "2026-09-30", "fuente": "conocimiento del modelo"}`}]
-      })
+      body:JSON.stringify(_reqBody3)
     });
-    const data=await r.json();
+    const _respText=await r.text();
+    console.log('[Anthropic/dividendo] status:', r.status, '| body:', _respText.slice(0,400));
+    if(!r.ok)throw new Error('HTTP '+r.status+': '+_respText.slice(0,200));
+    const data=JSON.parse(_respText);
     const textBlock=data.content.filter(b=>b.type==='text').pop();
     if(!textBlock)return null;
     const match=textBlock.text.match(/\{[\s\S]*\}/);
@@ -3737,17 +3742,18 @@ async function obtenerVencimientoCEDEAR(ticker){
   if(!apiKey)return null;
   try{
     registrarLlamadaAPI('vencimiento');
+    const _reqBody4={model:'claude-sonnet-4-6',max_tokens:200,messages:[{role:'user',content:`Respondé ÚNICAMENTE con JSON válido, sin texto ni markdown.\nBasándote en tu conocimiento, ¿el CEDEAR ${ticker} en Argentina tiene fecha de vencimiento o es un ETF sin vencimiento?\nLos CEDEARs de ETFs como XLK, SMH, QQQ no tienen fecha de vencimiento.\nDevolvé SOLO este JSON:\n{"fecha": null, "tipo": "sin vencimiento", "fuente": "conocimiento del modelo"}`}]};
+    console.log('[Anthropic/vencimiento] request body:',JSON.stringify(_reqBody4,null,2));
     const r=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
       signal:AbortSignal.timeout(10000),
       headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({
-        model:'claude-sonnet-4-6',
-        max_tokens:200,
-        messages:[{role:'user',content:`Respondé ÚNICAMENTE con JSON válido, sin texto ni markdown.\nBasándote en tu conocimiento, ¿el CEDEAR ${ticker} en Argentina tiene fecha de vencimiento o es un ETF sin vencimiento?\nLos CEDEARs de ETFs como XLK, SMH, QQQ no tienen fecha de vencimiento.\nDevolvé SOLO este JSON:\n{"fecha": null, "tipo": "sin vencimiento", "fuente": "conocimiento del modelo"}`}]
-      })
+      body:JSON.stringify(_reqBody4)
     });
-    const data=await r.json();
+    const _respText=await r.text();
+    console.log('[Anthropic/vencimiento] status:', r.status, '| body:', _respText.slice(0,400));
+    if(!r.ok)throw new Error('HTTP '+r.status+': '+_respText.slice(0,200));
+    const data=JSON.parse(_respText);
     const textBlock=data.content.filter(b=>b.type==='text').pop();
     if(!textBlock)return null;
     const match=textBlock.text.match(/\{[\s\S]*\}/);
@@ -3809,17 +3815,18 @@ async function obtenerCotizacion(ticker,forceRefresh=false){
   let rawResponse=null;
   try{
     registrarLlamadaAPI('cotizacion');
+    const _reqBody5={model:'claude-sonnet-4-6',max_tokens:200,messages:[{role:'user',content:`Respondé ÚNICAMENTE con JSON válido, sin texto ni markdown.\nBasándote en tu conocimiento sobre el mercado argentino, ¿cuál es el precio aproximado del CEDEAR ${ticker} en pesos argentinos?\nEjemplos: SMH ~ARS 400.000-600.000, XLK ~ARS 5.000-8.000.\nDevolvé SOLO: {"precioARS": 485000, "fuente": "estimación del modelo", "fecha": "${new Date().toISOString().slice(0,10)}"}`}]};
+    console.log('[Anthropic/cotizacion] request body:',JSON.stringify(_reqBody5,null,2));
     const r=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
       signal:AbortSignal.timeout(10000),
       headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({
-        model:'claude-sonnet-4-6',
-        max_tokens:200,
-        messages:[{role:'user',content:`Respondé ÚNICAMENTE con JSON válido, sin texto ni markdown.\nBasándote en tu conocimiento sobre el mercado argentino, ¿cuál es el precio aproximado del CEDEAR ${ticker} en pesos argentinos?\nEjemplos: SMH ~ARS 400.000-600.000, XLK ~ARS 5.000-8.000.\nDevolvé SOLO: {"precioARS": 485000, "fuente": "estimación del modelo", "fecha": "${new Date().toISOString().slice(0,10)}"}`}]
-      })
+      body:JSON.stringify(_reqBody5)
     });
-    rawResponse=await r.json();
+    const _respText=await r.text();
+    console.log('[Anthropic/cotizacion] status:', r.status, '| body:', _respText.slice(0,400));
+    if(!r.ok)throw new Error('HTTP '+r.status+': '+_respText.slice(0,200));
+    const rawResponse=JSON.parse(_respText);
     cotizacionDebug[ticker]={rawResponse,toolBlocksCount:0,ts:Date.now()};
 
     const textBlock=rawResponse.content.filter(b=>b.type==='text').pop();
