@@ -2792,16 +2792,12 @@ function renderInversiones(){
   Object.keys(localStorage).filter(k=>k.startsWith('dividendo_')).forEach(k=>{
     try{const v=JSON.parse(localStorage.getItem(k));if(!v?.ultimoDividendoUSD||v.ultimoDividendoUSD<0.05){localStorage.removeItem(k);}}catch(e){localStorage.removeItem(k);}
   });
-  // Limpiar precios incorrectos al activar proxy — una sola vez
-  if(!localStorage.getItem('proxy_activo_v1')){
-    Object.keys(localStorage).filter(k=>
-      k.startsWith('precio_')||k.startsWith('precioManual_')||
-      k.startsWith('precioCache_')||k.startsWith('cot_')||
-      k==='fz_pricecache'||k==='cache_limpiado_v3'||
-      k==='precios_legacy_cleared'||k==='precios_v2_cleared'
-    ).forEach(k=>localStorage.removeItem(k));
-    localStorage.setItem('proxy_activo_v1','true');
-    _autoFetchDone=false; // forzar re-fetch tras limpieza
+  // Limpiar caché de precios incorrectos — una sola vez por versión
+  if(!localStorage.getItem('proxy_v2_cleared')){
+    Object.keys(localStorage)
+      .filter(k=>k.startsWith('cot_')||k.startsWith('precioManual_')||k.startsWith('precio_'))
+      .forEach(k=>localStorage.removeItem(k));
+    localStorage.setItem('proxy_v2_cleared','true');
   }
 
   // Helper: convertir monto a ARS según moneda
@@ -3837,7 +3833,7 @@ async function obtenerCotizacion(ticker){
       const dd=await dr.json();
       precioARS=d.precio*dd.venta;
     }
-    const result={precioARS,variacion:d.variacion,ts:Date.now()};
+    const result={precioARS,variacion:d.variacion||0,ts:Date.now(),fuente:'proxy'};
     localStorage.setItem(cacheKey,JSON.stringify(result));
     return result;
   }catch(e){
