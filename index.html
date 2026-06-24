@@ -699,7 +699,7 @@ input[type=checkbox]{width:auto;margin-right:5px}
     </div>
     <div class="panel">
       <div class="panel-title">📡 Cotizaciones del portfolio <span id="inv-cot-count" style="font-weight:400;font-size:11px;color:var(--text2)"></span>
-        <a href="https://bullmarket.com.ar/mercados/cotizaciones/cedears/" target="_blank" rel="noopener" class="btn btn-ghost btn-sm">🔗 Ver cotizaciones</a>
+        <button id="btn-refresh-prices" class="btn btn-ghost btn-sm" onclick="refreshAllPrices()">🔄 Actualizar</button>
       </div>
       <div id="inv-cotizaciones"><p style="color:var(--text2);font-size:12px">Agregá un ticker a tus inversiones y presioná Actualizar.</p></div>
     </div>
@@ -2865,8 +2865,17 @@ function renderInversiones(){
   // ── Render helper: bloque de cotización live con 4 líneas estructuradas
   function liveBlockFor(ticker,tenenciaActual,ppm,costoBasis){
     if(!ticker)return'';
-    const _livRaw=liveprices[ticker];const _mp=getPrecioManual(ticker);
-    const live=_livRaw||(_mp?{price:_mp,priceARS:_mp,priceUSD:dolarRates.blue?.venta?_mp/dolarRates.blue.venta:null,change:0,fuente:'manual',ts:Date.now()}:null);
+    const _livRaw=liveprices[ticker];
+    const live=_livRaw||(()=>{
+      const manual=parseFloat(localStorage.getItem('precioManual_'+ticker.toUpperCase()));
+      if(manual>0)return{price:manual,priceARS:manual,priceUSD:dolarRates.blue?.venta?manual/dolarRates.blue.venta:null,change:0,fuente:'manual',ts:Date.now()};
+      try{
+        const c=JSON.parse(localStorage.getItem('precioCache_'+ticker.toUpperCase()));
+        if(c?.precio>0&&(Date.now()-c.ts)<3600000)
+          return{price:c.precio,priceARS:c.precio,priceUSD:dolarRates.blue?.venta?c.precio/dolarRates.blue.venta:null,change:c.variacion||0,fuente:'Yahoo Finance',ts:c.ts};
+      }catch(e){}
+      return null;
+    })();
     const dolarLive=ticker==='USD'?dolarRates:null;
     if(live&&live.price!==undefined){
       const precioARS=live.priceARS||live.price;
@@ -2963,9 +2972,22 @@ function renderInversiones(){
           style="width:150px;padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:13px"
           onkeydown="if(event.key==='Enter')setPriceManual('${ticker}',document.getElementById('mp-${ticker}')?.value)"/>
         <button class="btn btn-primary btn-sm btn-aplicar-precio">✓ Aplicar</button>
-        <a href="https://bullmarket.com.ar/mercados/cotizaciones/cedears/" target="_blank" rel="noopener" class="btn btn-ghost btn-sm">🔗 Bull Market</a>
+        <button class="btn btn-ghost btn-sm" onclick="obtenerCotizacion('${ticker}').then(p=>{if(p)renderInversiones();})">🔄 Obtener</button>
       </div>
     </div>`;
+  }
+
+  // Auto-fetch al primer render: obtener precios para tickers sin caché
+  if(!_autoFetchDone){
+    _autoFetchDone=true;
+    const sin=Object.keys(groups).filter(t=>!CRYPTO_IDS[t]&&t!=='USD'&&!getPrecioManual(t));
+    if(sin.length){
+      (async()=>{
+        await fetchDolar();
+        for(const t of sin)await obtenerCotizacion(t);
+        renderInversiones();
+      })();
+    }
   }
 
   // ── Render inversiones agrupadas por ticker
@@ -3014,8 +3036,14 @@ function renderInversiones(){
     // Compact price line for the collapsed header
     const isExp=localStorage.getItem('inv_expandido_'+ticker)==='1';
     const compactPrecioHtml=(()=>{
-      const _lv=liveprices[ticker];const _mp=getPrecioManual(ticker);
-      const live=_lv||(_mp?{price:_mp,priceARS:_mp,priceUSD:dolarRates.blue?.venta?_mp/dolarRates.blue.venta:null,change:0,fuente:'manual',ts:Date.now()}:null);
+      const _lv=liveprices[ticker];
+      const live=_lv||(()=>{
+        const manual=parseFloat(localStorage.getItem('precioManual_'+ticker.toUpperCase()));
+        if(manual>0)return{price:manual,priceARS:manual,change:0,fuente:'manual',ts:Date.now()};
+        try{const c=JSON.parse(localStorage.getItem('precioCache_'+ticker.toUpperCase()));
+          if(c?.precio>0&&(Date.now()-c.ts)<3600000)return{price:c.precio,priceARS:c.precio,change:c.variacion||0,fuente:'Yahoo Finance',ts:c.ts};}catch(e){}
+        return null;
+      })();
       if(!live)return`<span style="font-size:11px;color:var(--text2)">Sin precio</span>`;
       if(live.price===undefined)return`<span style="font-size:11px;color:var(--text2)">Sin precio</span>`;
       const p=live.priceARS||live.price;
@@ -3761,9 +3789,62 @@ function setPrecioManual(ticker,valor){
   renderInversiones();
 }
 function getPrecioManual(ticker){
-  return parseFloat(localStorage.getItem('precioManual_'+ticker.toUpperCase()))||null;
+  // Precio manual tiene prioridad (sin expiración)
+  const manual=parseFloat(localStorage.getItem('precioManual_'+ticker.toUpperCase()));
+  if(manual>0)return manual;
+  // Fallback: cache de API (expira en 1h)
+  try{
+    const c=JSON.parse(localStorage.getItem('precioCache_'+ticker.toUpperCase()));
+    if(c?.precio>0&&(Date.now()-c.ts)<3600000)return c.precio;
+  }catch(e){}
+  return null;
 }
 function setPriceManual(ticker){setPrecioManual(ticker,document.getElementById('mp-'+ticker)?.value);}
+
+// Caché de API: 1h por defecto
+const PRECIO_CACHE_TTL=3600000;
+let _autoFetchDone=false;
+
+async function obtenerCotizacion(ticker){
+  const T=ticker.toUpperCase();
+  // No buscar crypto ni USD
+  if(CRYPTO_IDS[T]||T==='USD')return null;
+  // Devolver caché si es fresco
+  try{
+    const c=JSON.parse(localStorage.getItem('precioCache_'+T));
+    if(c?.precio>0&&(Date.now()-c.ts)<PRECIO_CACHE_TTL)return c.precio;
+  }catch(e){}
+  try{
+    const r=await fetch('/api/quote?ticker='+T,{signal:AbortSignal.timeout(8000)});
+    if(!r.ok)throw new Error('api '+r.status);
+    const d=await r.json();
+    let precio=d.precio;
+    if(d.moneda==='USD'){
+      if(!dolarRates.blue?.venta)await fetchDolar();
+      precio=d.precio*(dolarRates.blue?.venta||1);
+    }
+    localStorage.setItem('precioCache_'+T,JSON.stringify({precio,ts:Date.now(),variacion:d.variacion||0,fuente:'Yahoo Finance'}));
+    return precio;
+  }catch(e){
+    console.warn('[quote]',T,e.message);
+    return null;
+  }
+}
+
+async function refreshAllPrices(){
+  const btn=document.getElementById('btn-refresh-prices');
+  if(btn){btn.textContent='⏳ Actualizando...';btn.disabled=true;}
+  const tickers=[...new Set(
+    S.inversiones.filter(i=>i.ticker&&!CRYPTO_IDS[i.ticker.toUpperCase()]&&i.ticker.toUpperCase()!=='USD')
+    .map(i=>i.ticker.toUpperCase())
+  )];
+  // Borrar caché para forzar refresh
+  tickers.forEach(t=>localStorage.removeItem('precioCache_'+t));
+  await fetchDolar();
+  for(const t of tickers)await obtenerCotizacion(t);
+  renderInversiones();
+  if(btn){btn.textContent='🔄 Actualizar';btn.disabled=false;}
+}
 
 function renderDolarWidget(){
   const el=document.getElementById('inv-dolar');if(!el)return;
