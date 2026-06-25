@@ -466,13 +466,10 @@ input[type=checkbox]{width:auto;margin-right:5px}
 
 <div id="sidebar">
   <div class="logo">
-    <div style="display:flex;align-items:center;gap:10px;flex:1">
+    <div style="display:flex;align-items:center;gap:10px">
       <svg width="30" height="30" viewBox="0 0 30 30" fill="none"><rect width="30" height="30" rx="9" fill="var(--accent)"/><path d="M8 20l4.5-5 3.5 3 5.5-8" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       <div><h1 style="font-size:15px;font-weight:700;letter-spacing:-.2px">FinanzasApp</h1><p style="font-size:10px;color:var(--text2);margin-top:1px">Gestión financiera personal</p></div>
     </div>
-    <button id="btn-refresh-header" onclick="location.reload()" title="Actualizar"
-      style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text2);padding:4px;border-radius:6px;line-height:1;flex-shrink:0"
-      onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text2)'">🔄</button>
   </div>
   <nav>
     <div class="nav-item active" onclick="nav('dashboard',this)">
@@ -1229,10 +1226,11 @@ let userRole = null;
 let currentNombre = '';
 let _afterLoginDone = false;
 
-// Listener de auth: maneja INITIAL_SESSION (recarga de página) y TOKEN_REFRESHED
+// onAuthStateChange: solo maneja login en vivo (form submit) y logout.
+// La restauración de sesión al recargar la página (F5) la maneja checkSession()
+// con getSession() para evitar condiciones de carrera con INITIAL_SESSION.
 sb.auth.onAuthStateChange(async (event, session) => {
-if (event === 'INITIAL_SESSION' && session && !_afterLoginDone) {
-    // Sesión recuperada al recargar — iniciar app directamente desde aquí
+  if (event === 'SIGNED_IN' && session && !_afterLoginDone) {
     currentUser = session.user;
     _afterLoginDone = true;
     await afterLogin();
@@ -1247,23 +1245,23 @@ if (event === 'INITIAL_SESSION' && session && !_afterLoginDone) {
 });
 
 async function checkSession() {
+  // Manejar links de invitación / recovery que llegan por URL hash
   const hash = window.location.hash;
   const params = new URLSearchParams(hash.replace('#', ''));
   const type = params.get('type');
   const accessToken = params.get('access_token');
-
   if ((type === 'invite' || type === 'recovery' || type === 'signup') && accessToken) {
     showSetPasswordScreen();
     return;
   }
 
+  // Camino principal: getSession() es la fuente de verdad al cargar/recargar
   const { data: { session } } = await sb.auth.getSession();
-  if (session && !_afterLoginDone) {
-    // Fallback: INITIAL_SESSION no disparó (navegador sin soporte de eventos)
+  if (session) {
     currentUser = session.user;
     _afterLoginDone = true;
     await afterLogin();
-  } else if (!session && !_afterLoginDone) {
+  } else {
     showLogin();
   }
 }
