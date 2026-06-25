@@ -2018,11 +2018,13 @@ function renderCategorias(){
     }
     document.getElementById(id).innerHTML=cats.map((c,i)=>{
       const safe=c.replace(/'/g,"\\'").replace(/</g,'&lt;').replace(/>/g,'&gt;');
-      return `<div class="cat-row">
+      const nsubs=getSubcats(c).length;
+      return `<div class="cat-row" data-subcat-cat="${c.replace(/"/g,'&quot;')}">
         <div class="cat-row-dot"></div>
         <div class="cat-row-name" id="catname-${tipo}-${i}">${c}</div>
         <div class="cat-row-actions" id="catact-${tipo}-${i}">
-          <button class="btn btn-xs btn-ghost" onclick="startEditCat('${tipo}',${i},'${safe}')" title="Editar" style="padding:6px 10px;font-size:12px">✏️ Editar</button>
+          <button class="btn btn-xs btn-ghost" onclick="toggleSubcatPanel('${safe}')" title="Subcategorías" style="padding:6px 10px;font-size:12px">⊕ Subcats${nsubs?` (${nsubs})`:''}  </button>
+          <button class="btn btn-xs btn-ghost" onclick="startEditCat('${tipo}',${i},'${safe}')" title="Editar" style="padding:6px 10px;font-size:12px">✏️</button>
           <button class="btn btn-xs btn-danger" onclick="removeCat('${tipo}','${safe}')" title="Eliminar" style="padding:6px 10px;font-size:12px">✕</button>
         </div>
       </div>`;
@@ -4156,15 +4158,20 @@ async function obtenerCotizacion(ticker){
 
 async function refreshAllPrices(){
   const btn=document.getElementById('btn-refresh-prices');
-  if(btn){btn.textContent='⏳ Actualizando...';btn.disabled=true;}
-  const tickers=[...new Set(
-    S.inversiones.filter(i=>i.ticker&&!CRYPTO_IDS[i.ticker.toUpperCase()]&&i.ticker.toUpperCase()!=='USD')
-    .map(i=>i.ticker.toUpperCase())
-  )];
-  tickers.forEach(t=>localStorage.removeItem('cot_'+t));
-  for(const t of tickers)await obtenerCotizacion(t);
-  renderInversiones();
-  if(btn){btn.textContent='🔄 Actualizar';btn.disabled=false;}
+  if(btn){btn.innerHTML='⏳ Actualizando...';btn.disabled=true;}
+  try{
+    const tickers=[...new Set(
+      S.inversiones.filter(i=>i.ticker&&!CRYPTO_IDS[i.ticker.toUpperCase()]&&i.ticker.toUpperCase()!=='USD')
+      .map(i=>i.ticker.toUpperCase())
+    )];
+    tickers.forEach(t=>localStorage.removeItem('cot_'+t));
+    await Promise.all(tickers.map(t=>obtenerCotizacion(t)));
+    renderInversiones();
+    renderCotizacionesPanel();
+  }catch(e){console.warn('[refreshAllPrices]',e);}
+  finally{
+    if(btn){btn.innerHTML='🔄 Actualizar';btn.disabled=false;}
+  }
 }
 
 function renderDolarWidget(){
