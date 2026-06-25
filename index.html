@@ -515,47 +515,7 @@ input[type=checkbox]{width:auto;margin-right:5px}
     <div class="sidebar-actions">
       <button class="toggle-btn" onclick="doLogout()" style="color:var(--accent4);border-color:rgba(248,113,113,.3)">🚪 Salir</button>
     </div>
-    <!-- Ajustes avanzados colapsable -->
-    <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px">
-      <button id="btn-ajustes-adv" onclick="toggleAjustesAvanzados()"
-        style="width:100%;background:none;border:none;cursor:pointer;color:var(--text2);font-size:11px;font-weight:600;text-align:left;padding:4px 0;display:flex;justify-content:space-between;align-items:center;text-transform:uppercase;letter-spacing:.5px">
-        <span>⚙️ Ajustes avanzados</span><span id="ajustes-adv-arrow">▼</span>
-      </button>
-      <div id="ajustes-adv-panel" style="display:none;margin-top:10px">
-        <!-- Backup / Restaurar / Caché / Tema -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:12px">
-          <button class="toggle-btn" onclick="backupData()" id="btn-backup">💾 Backup</button>
-          <button class="toggle-btn" onclick="document.getElementById('restore-input').click()" id="btn-restore">📂 Restaurar</button>
-          <button class="toggle-btn" onclick="toggleTheme()" id="theme-btn" style="grid-column:1/-1">🌙 Oscuro</button>
-        </div>
-        <input type="file" id="restore-input" accept=".json" style="display:none" onchange="restoreData(event)"/>
-        <!-- Color de acento -->
-        <div class="color-picker-wrap">
-          <p class="nav-label" style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px;color:var(--text2)">Color de acento</p>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-            <div class="color-swatch" id="sw-verde"   style="background:#3a6338" onclick="setAccent('verde')"   title="Verde"></div>
-            <div class="color-swatch" id="sw-azul"    style="background:#1a5eb5" onclick="setAccent('azul')"    title="Azul"></div>
-            <div class="color-swatch" id="sw-indigo"  style="background:#4338ca" onclick="setAccent('indigo')"  title="Índigo"></div>
-            <div class="color-swatch" id="sw-rosa"    style="background:#9d174d" onclick="setAccent('rosa')"    title="Rosa"></div>
-            <div class="color-swatch" id="sw-naranja" style="background:#c2410c" onclick="setAccent('naranja')" title="Naranja"></div>
-            <div class="color-swatch" id="sw-teal"    style="background:#0f766e" onclick="setAccent('teal')"    title="Teal"></div>
-            <input type="color" id="sw-custom" value="#6c63ff" title="Color personalizado"
-              onchange="setAccentCustom(this.value)"
-              style="width:22px;height:22px;border-radius:50%;cursor:pointer;border:2px solid transparent;padding:1px;background:none;-webkit-appearance:none"/>
-          </div>
-          <p class="nav-label" style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;margin:10px 0 8px;color:var(--text2)">Colores semánticos</p>
-          <div class="color-row-pick"><label>🟢 Ingresos / OK</label><input type="color" id="sb-color2" oninput="setSemanticColor(2,this.value)"/></div>
-          <div class="color-row-pick"><label>🟡 Advertencia</label><input type="color" id="sb-color3" oninput="setSemanticColor(3,this.value)"/></div>
-          <div class="color-row-pick"><label>🔴 Peligro / Gasto</label><input type="color" id="sb-color4" oninput="setSemanticColor(4,this.value)"/></div>
-          <div class="color-row-pick"><label>🔵 Info</label><input type="color" id="sb-color5" oninput="setSemanticColor(5,this.value)"/></div>
-          <button onclick="resetSemanticColors()" style="font-size:10px;color:var(--text2);background:none;border:none;cursor:pointer;padding:4px 0;text-decoration:underline">Restaurar colores</button>
-        </div>
-      </div>
-    </div>
-    <div id="sb-ai-key-section" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
-      <p style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px;color:var(--text2)">🤖 Asistente IA</p>
-      <div id="sb-ai-key-status"></div>
-    </div>
+    <!-- Sidebar limpio: solo nav + usuario + salir -->
   </div>
 </div>
 
@@ -783,6 +743,16 @@ input[type=checkbox]{width:auto;margin-right:5px}
 <!-- PRESUPUESTO -->
 <div id="section-presupuesto" class="section">
   <div class="page-header"><div class="page-header-left"><h2>🎯 Presupuesto</h2><p>Límites por categoría y control mensual</p></div></div>
+  <div id="presup-copy-banner" style="display:none;margin-bottom:14px;padding:12px 16px;background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.25);border-radius:10px;display:none;align-items:center;gap:10px;flex-wrap:wrap">
+    <span id="presup-copy-msg" style="font-size:13px;flex:1"></span>
+    <button class="btn btn-primary btn-sm" onclick="copiarPresupuestoMesAnterior()">Sí, copiar</button>
+    <button class="btn btn-ghost btn-sm" onclick="document.getElementById('presup-copy-banner').style.display='none'">No</button>
+  </div>
+  <div style="margin-bottom:14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+    <span style="font-size:13px;color:var(--text2)">Configurando presupuesto para:</span>
+    <select id="presup-mes-sel" onchange="onPresupMesChange()"
+      style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:13px;font-weight:600"></select>
+  </div>
   <div class="two-col">
     <div class="panel"><div class="panel-title">Configurar límites <span class="sub" id="presup-mes-label"></span></div><div id="presup-form"></div></div>
     <div class="panel"><div class="panel-title">Estado del mes</div><div id="presup-estado"></div></div>
@@ -1436,8 +1406,7 @@ async function afterLogin() {
     if (aiKeySep) aiKeySep.style.display = '';
     const aiKeySection = document.getElementById('ai-key-section');
     if (aiKeySection) { aiKeySection.style.display = ''; renderKeyWidget('mob-ai-key-container'); }
-    const sbAiKeySection = document.getElementById('sb-ai-key-section');
-    if (sbAiKeySection) { sbAiKeySection.style.display = 'block'; renderSbAiKeyStatus(); }
+    // sb-ai-key-section eliminado del sidebar
   } else {
     // USUARIO: solo sección de gastos
     // Solo mostrar sidebar en desktop
@@ -1454,7 +1423,7 @@ async function afterLogin() {
       const el = document.getElementById(id); if (el) el.style.display = 'none';
     });
     // Ocultar ajustes avanzados para usuario no-admin
-    const advPanel = document.getElementById('btn-ajustes-adv'); if (advPanel) advPanel.style.display = 'none';
+    // btn-ajustes-adv eliminado del sidebar
     // Cambiar logo (desktop)
     const logoH1 = document.querySelector('.logo h1'); if (logoH1) logoH1.textContent = currentNombre;
     const logoP = document.querySelector('.logo p'); if (logoP) logoP.textContent = 'Mis gastos';
@@ -2236,12 +2205,13 @@ function onGastoTarjetaChange(){
   updateGastoCuotasPreview();
 }
 // ====== FILTROS MES ======
-function buildMesSel(selId,items,dateField='fecha'){
+function buildMesSel(selId,items,dateField='fecha',futureMeses=0){
   const sel=document.getElementById(selId);if(!sel)return;
   const meses=new Set(items.map(i=>i[dateField].slice(0,7)));
   const actual=today().slice(0,7);meses.add(actual);
+  for(let i=1;i<=futureMeses;i++) meses.add(addMeses(actual,i));
   const arr=[...meses].sort().reverse();
-  const cur=sel.value||actual;
+  const cur=sel.value&&arr.includes(sel.value)?sel.value:actual;
   sel.innerHTML=arr.map(m=>`<option value="${m}" ${m===cur?'selected':''}>${mesPretty(m)}</option>`).join('');
 }
 
@@ -2464,7 +2434,7 @@ function labelPagoCuotas(c){
 }
 
 function renderGastos(){
-  buildMesSel('filtro-mes-g',S.gastos);populateCatSelects();populateTarjetaSels();
+  buildMesSel('filtro-mes-g',S.gastos,'fecha',3);populateCatSelects();populateTarjetaSels();
   if(!document.getElementById('g-fecha').value)document.getElementById('g-fecha').value=today();
   const mes=document.getElementById('filtro-mes-g').value;
   const cat=document.getElementById('filtro-cat-g').value;
@@ -3715,34 +3685,90 @@ function renderInversiones(){
 }
 
 // ====== PRESUPUESTO ======
+let _presupMesSel = '';
+
+function getPresupuestoForMes(mes){
+  if(mes===today().slice(0,7)) return S.presupuesto||{};
+  try{ return JSON.parse(localStorage.getItem('pres_'+mes)||'{}'); }catch(e){return{};}
+}
+function setPresupuestoForMes(mes, data){
+  if(mes===today().slice(0,7)){ S.presupuesto=data; save(); }
+  else { localStorage.setItem('pres_'+mes, JSON.stringify(data)); }
+}
+function buildPresupMesSel(){
+  const sel=document.getElementById('presup-mes-sel'); if(!sel)return;
+  const actual=today().slice(0,7);
+  if(!_presupMesSel) _presupMesSel=actual;
+  const opts=[];
+  for(let i=0;i<12;i++){
+    const m=addMeses(actual,i);
+    opts.push(`<option value="${m}" ${m===_presupMesSel?'selected':''}>${mesPretty(m)}${i===0?' (actual)':''}</option>`);
+  }
+  sel.innerHTML=opts.join('');
+}
+function onPresupMesChange(){
+  _presupMesSel=document.getElementById('presup-mes-sel').value;
+  renderPresupuesto();
+}
+function copiarPresupuestoMesAnterior(){
+  const mesAnt=addMeses(_presupMesSel,-1);
+  const anterior=getPresupuestoForMes(mesAnt);
+  setPresupuestoForMes(_presupMesSel,{...anterior});
+  document.getElementById('presup-copy-banner').style.display='none';
+  renderPresupuesto();
+  showToast('✅ Presupuesto copiado');
+}
 function renderPresupuesto(){
-  const mes=today().slice(0,7);
+  buildPresupMesSel();
+  const mes=_presupMesSel||today().slice(0,7);
+  const actual=today().slice(0,7);
   document.getElementById('presup-mes-label').textContent=mesPretty(mes);
+  // Banner "¿copiar del mes anterior?" si el mes tiene presupuesto vacío y el anterior tiene
+  const banner=document.getElementById('presup-copy-banner');
+  const presup=getPresupuestoForMes(mes);
+  const tienePresup=Object.values(presup).some(v=>v>0);
+  const mesAnt=addMeses(mes,-1);
+  const tieneAnt=Object.values(getPresupuestoForMes(mesAnt)).some(v=>v>0);
+  if(!tienePresup&&tieneAnt&&banner){
+    document.getElementById('presup-copy-msg').textContent=`¿Copiar presupuesto de ${mesPretty(mesAnt)}?`;
+    banner.style.display='flex';
+  } else if(banner){
+    banner.style.display='none';
+  }
   const gastosMes=S.gastos.filter(g=>g.fecha.startsWith(mes));
   const cats=getCatsGasto();
   document.getElementById('presup-form').innerHTML=cats.map(c=>`
     <div class="form-group" style="margin-bottom:10px">
-      <label>${c}</label>
-      <input type="number" placeholder="Sin límite" value="${S.presupuesto[c]||''}"
-        oninput="S.presupuesto['${c}']=+this.value||0;save();updatePresupEstado()" style="width:100%"/>
+      <label>${esc(c)}</label>
+      <input type="number" placeholder="Sin límite" value="${presup[c]||''}"
+        oninput="updatePresupuestoField('${c.replace(/'/g,"\\'")}',+this.value||0)"
+        style="width:100%"/>
     </div>`).join('');
-  updatePresupEstado();
+  updatePresupEstado(mes);
+}
+function updatePresupuestoField(cat,val){
+  const mes=_presupMesSel||today().slice(0,7);
+  const presup=getPresupuestoForMes(mes);
+  presup[cat]=val;
+  setPresupuestoForMes(mes,presup);
+  updatePresupEstado(mes);
 }
 
-function updatePresupEstado(){
-  const mes=today().slice(0,7);
+function updatePresupEstado(mesParam){
+  const mes=mesParam||_presupMesSel||today().slice(0,7);
+  const presup=getPresupuestoForMes(mes);
   const gastosMes=S.gastos.filter(g=>g.fecha.startsWith(mes));
-  const cats=getCatsGasto().filter(c=>S.presupuesto[c]>0);
+  const cats=getCatsGasto().filter(c=>presup[c]>0);
   const el=document.getElementById('presup-estado');
   if(!cats.length){el.innerHTML='<p style="color:var(--text2);font-size:13px">Configurá un límite para al menos una categoría.</p>';return;}
 
-  const totalLim=cats.reduce((a,c)=>a+(S.presupuesto[c]||0),0);
+  const totalLim=cats.reduce((a,c)=>a+(presup[c]||0),0);
   const totalGast=cats.reduce((a,c)=>a+gastosMes.filter(g=>g.categoria===c).reduce((b,g)=>b+g.monto,0),0);
   const totalPct=totalLim?Math.round(totalGast/totalLim*100):0;
   const totalColor=totalPct>=100?'var(--accent4)':totalPct>=80?'var(--accent3)':'var(--accent2)';
 
   const rows=cats.map(cat=>{
-    const lim=S.presupuesto[cat]||0;
+    const lim=presup[cat]||0;
     const gastado=gastosMes.filter(g=>g.categoria===cat).reduce((a,g)=>a+g.monto,0);
     const pct=lim?Math.round(gastado/lim*100):0;
     const pctBar=Math.min(100,pct);
@@ -3866,8 +3892,9 @@ function renderDashboard(){
   // ALERTS presupuesto 80%
   const alertsDiv=document.getElementById('dash-alerts');
   const alertas80=[];
+  const _presMes=getPresupuestoForMes(mes);
   getCatsGasto().forEach(cat=>{
-    const lim=S.presupuesto[cat];if(!lim)return;
+    const lim=_presMes[cat];if(!lim)return;
     const g=gMes.filter(g=>g.categoria===cat).reduce((a,g)=>a+g.monto,0);
     const pct=g/lim*100;
     if(pct>=80&&pct<100)alertas80.push(`<strong>${cat}</strong>: ${Math.round(pct)}% del presupuesto usado`);
@@ -4798,7 +4825,7 @@ function resetSemanticColors() {
 function syncColorPickers() {
   [2,3,4,5].forEach(n=>{
     const val = S.config['color'+n] || DEFAULT_COLORS['c'+n];
-    ['sb-color'+n,'mob-color'+n].forEach(id=>{const el=document.getElementById(id);if(el)el.value=val;});
+    ['mob-color'+n,'cfg-color'+n].forEach(id=>{const el=document.getElementById(id);if(el)el.value=val;});
   });
 }
 
