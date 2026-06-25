@@ -553,8 +553,8 @@ input[type=checkbox]{width:auto;margin-right:5px}
       </div>
     </div>
     <div id="sb-ai-key-section" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
-      <p style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px;color:var(--text2)">🤖 Asistente IA</p>
-      <div id="sb-ai-key-container"></div>
+      <p style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px;color:var(--text2)">🤖 Asistente IA</p>
+      <div id="sb-ai-key-status"></div>
     </div>
   </div>
 </div>
@@ -1429,7 +1429,7 @@ async function afterLogin() {
     const aiKeySection = document.getElementById('ai-key-section');
     if (aiKeySection) { aiKeySection.style.display = ''; renderKeyWidget('mob-ai-key-container'); }
     const sbAiKeySection = document.getElementById('sb-ai-key-section');
-    if (sbAiKeySection) { sbAiKeySection.style.display = 'block'; renderKeyWidget('sb-ai-key-container'); }
+    if (sbAiKeySection) { sbAiKeySection.style.display = 'block'; renderSbAiKeyStatus(); }
   } else {
     // USUARIO: solo sección de gastos
     // Solo mostrar sidebar en desktop
@@ -3837,14 +3837,16 @@ function renderDashboard(){
   const activosEl=document.getElementById('dash-activos-vivo');
   const dolarRow=document.getElementById('dash-dolar-row');
   const conTicker=S.inversiones.filter(i=>i.ticker&&i.ticker!=='USD');
-  if(activosPanel){activosPanel.style.display=conTicker.length?'':'none';}
-  if(dolarRow){dolarRow.className=conTicker.length?'two-col':'one-col';}
-  if(activosEl&&conTicker.length){
-    activosEl.innerHTML=conTicker.map(inv=>{
+  // Deduplicar por ticker único
+  const tickersUnicos=[...new Map(conTicker.map(i=>[i.ticker,i])).values()];
+  if(activosPanel){activosPanel.style.display=tickersUnicos.length?'':'none';}
+  if(dolarRow){dolarRow.className=tickersUnicos.length?'two-col':'one-col';}
+  if(activosEl&&tickersUnicos.length){
+    activosEl.innerHTML=tickersUnicos.map(inv=>{
       const _p=liveprices[inv.ticker]?.priceARS||getPrecioManual(inv.ticker)||null;
       const chg=liveprices[inv.ticker]?.change||0;
       return`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(128,128,128,.07)">
-        <div><div style="font-size:13px;font-weight:500">${inv.descripcion}</div><div style="font-size:10px;color:var(--text2)">${inv.ticker}</div></div>
+        <div><div style="font-size:13px;font-weight:500">${inv.ticker}</div><div style="font-size:10px;color:var(--text2)">${inv.descripcion||''}</div></div>
         <div style="text-align:right">
           ${_p?`<div style="font-size:13px;font-weight:700">${$$(_p)}</div>
           <div style="font-size:11px;color:${chg>=0?'var(--accent2)':'var(--accent4)'}">${chg>=0?'▲':'▼'} ${Math.abs(chg).toFixed(2)}%</div>`
@@ -4739,14 +4741,29 @@ function toggleAIPanel() {
 }
 
 // ── API KEY WIDGET (reutilizable en panel IA, sidebar y ajustes mobile) ──
+function renderSbAiKeyStatus() {
+  const el = document.getElementById('sb-ai-key-status');
+  if (!el) return;
+  const key = localStorage.getItem('anthropic_api_key') || localStorage.getItem('ai_key') || '';
+  if (key) {
+    el.innerHTML = `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span style="font-size:12px;color:var(--accent2)">✅ API key configurada</span>
+      <button class="btn btn-ghost btn-sm" onclick="nav('configuracion',document.getElementById('nav-configuracion'))">Cambiar</button>
+    </div>`;
+  } else {
+    el.innerHTML = `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span style="font-size:12px;color:var(--text2)">Sin configurar</span>
+      <button class="btn btn-primary btn-sm" onclick="nav('configuracion',document.getElementById('nav-configuracion'))">Configurar</button>
+    </div>`;
+  }
+}
 function renderKeyWidget(cid) {
   const el = document.getElementById(cid);
   if (!el) return;
   const key = localStorage.getItem('anthropic_api_key') || localStorage.getItem('ai_key') || '';
   if (key) {
-    const preview = key.slice(0, 8) + '...' + key.slice(-4);
     el.innerHTML = `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
-      <span style="font-size:12px;color:var(--accent2)">✅ ${preview}</span>
+      <span style="font-size:12px;color:var(--accent2)">✅ Configurada</span>
       <button class="btn btn-ghost btn-sm" onclick="showKeyWidgetInput('${cid}')">Cambiar</button>
     </div>
     <a href="https://console.anthropic.com" target="_blank" rel="noopener" style="font-size:11px;color:var(--accent);text-decoration:underline">Obtener API key →</a>`;
@@ -4776,9 +4793,10 @@ function saveKeyWidget(cid) {
   if (!val) { if (msg) msg.textContent = '⚠️ Pegá tu API key primero.'; return; }
   localStorage.setItem('anthropic_api_key', val);
   if (msg) { msg.style.color = 'var(--accent2)'; msg.textContent = '✅ Guardada'; }
-  ['ai-key-config', 'sb-ai-key-container', 'mob-ai-key-container'].forEach(id => {
+  ['ai-key-config', 'mob-ai-key-container', 'cfg-ai-key-container'].forEach(id => {
     if (id !== cid) renderKeyWidget(id);
   });
+  renderSbAiKeyStatus();
   setTimeout(() => renderKeyWidget(cid), 1200);
 }
 
