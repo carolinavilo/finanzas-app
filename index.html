@@ -449,7 +449,7 @@ input[type=checkbox]{width:auto;margin-right:5px}
     <h1>FinanzasApp</h1>
   </div>
   <div class="mh-actions">
-    <button class="mh-btn" id="btn-refresh" onclick="refreshApp()" title="Actualizar">🔄</button>
+    <button class="mh-btn" id="btn-refresh" onclick="location.reload()" title="Actualizar">🔄</button>
     <button class="mh-btn" onclick="toggleTheme()" id="theme-btn-mob">🌙</button>
     <button class="mh-btn" onclick="openSheet('sheet-settings')">
       <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
@@ -459,10 +459,13 @@ input[type=checkbox]{width:auto;margin-right:5px}
 
 <div id="sidebar">
   <div class="logo">
-    <div style="display:flex;align-items:center;gap:10px">
+    <div style="display:flex;align-items:center;gap:10px;flex:1">
       <svg width="30" height="30" viewBox="0 0 30 30" fill="none"><rect width="30" height="30" rx="9" fill="var(--accent)"/><path d="M8 20l4.5-5 3.5 3 5.5-8" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       <div><h1 style="font-size:15px;font-weight:700;letter-spacing:-.2px">FinanzasApp</h1><p style="font-size:10px;color:var(--text2);margin-top:1px">Gestión financiera personal</p></div>
     </div>
+    <button id="btn-refresh-header" onclick="location.reload()" title="Actualizar"
+      style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--text2);padding:4px;border-radius:6px;line-height:1;flex-shrink:0"
+      onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text2)'">🔄</button>
   </div>
   <nav>
     <div class="nav-item active" onclick="nav('dashboard',this)">
