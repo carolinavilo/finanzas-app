@@ -1850,7 +1850,7 @@ async function syncCatsFromSupabase(){
   if(!currentUser)return;
   console.log('[cats] Sincronizando para user:', currentUser.id);
   try{
-    const {data,error}=await supabase.from('categorias').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:true});
+    const {data,error}=await sb.from('categorias').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:true});
     console.log('[cats] Respuesta Supabase — data:', data, '| error:', error);
     if(error){
       if(error.code==='42P01'||error.message?.includes('does not exist')){
@@ -1874,7 +1874,7 @@ async function syncCatsFromSupabase(){
         ...S.catsIngreso.map(n=>({user_id:currentUser.id,nombre:n,tipo:'ingreso'}))
       ];
       if(rows.length){
-        const {error:insErr}=await supabase.from('categorias').insert(rows);
+        const {error:insErr}=await sb.from('categorias').insert(rows);
         if(insErr) console.warn('[cats] Migración fallida:', insErr.message);
         else console.log('[cats] Migración OK —', rows.length, 'categorías subidas');
       }
@@ -1884,19 +1884,19 @@ async function syncCatsFromSupabase(){
 
 async function _catSupabaseAdd(nombre,tipo){
   if(!currentUser)return;
-  const {error}=await supabase.from('categorias').insert({user_id:currentUser.id,nombre,tipo});
+  const {error}=await sb.from('categorias').insert({user_id:currentUser.id,nombre,tipo});
   if(error) throw new Error(error.message);
 }
 
 async function _catSupabaseRemove(nombre,tipo){
   if(!currentUser)return;
-  const {error}=await supabase.from('categorias').delete().eq('user_id',currentUser.id).eq('nombre',nombre).eq('tipo',tipo);
+  const {error}=await sb.from('categorias').delete().eq('user_id',currentUser.id).eq('nombre',nombre).eq('tipo',tipo);
   if(error) throw new Error(error.message);
 }
 
 async function _catSupabaseRename(oldName,newName,tipo){
   if(!currentUser)return;
-  const {error}=await supabase.from('categorias').update({nombre:newName}).eq('user_id',currentUser.id).eq('nombre',oldName).eq('tipo',tipo);
+  const {error}=await sb.from('categorias').update({nombre:newName}).eq('user_id',currentUser.id).eq('nombre',oldName).eq('tipo',tipo);
   if(error) throw new Error(error.message);
 }
 
