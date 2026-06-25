@@ -44,7 +44,11 @@ html{overflow-x:clip;width:100%;overscroll-behavior-y:none}
 body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;display:flex;min-height:100vh;font-size:14px;transition:background .25s,color .25s;overflow-x:clip;width:100%;overscroll-behavior-y:none}
 
 /* ── SIDEBAR ── */
-#sidebar{width:230px;min-height:100vh;background:var(--sidebar);border-right:2px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;z-index:100;transition:background .25s}
+#sidebar{width:230px;height:100vh;background:var(--sidebar);border-right:2px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;z-index:100;transition:background .25s;overflow-y:auto;overflow-x:hidden}
+#sidebar::-webkit-scrollbar{width:4px}
+#sidebar::-webkit-scrollbar-track{background:transparent}
+#sidebar::-webkit-scrollbar-thumb{background:rgba(128,128,128,.25);border-radius:2px}
+#sidebar::-webkit-scrollbar-thumb:hover{background:rgba(128,128,128,.45)}
 .logo{padding:24px 18px 16px;border-bottom:1px solid var(--border)}
 .logo h1{font-size:15px;font-weight:700;letter-spacing:-.2px}
 .logo p{font-size:10px;color:var(--text2);margin-top:2px}
@@ -206,6 +210,9 @@ input[type=checkbox]{width:auto;margin-right:5px}
 .color-swatch.selected{border-color:var(--text);box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--text)}
 .cargo-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px}
 .cargo-row:last-child{border-bottom:none}
+.btn-editar-gasto,.btn-eliminar-gasto,.btn-eliminar-cuota{background:none;border:none;cursor:pointer;padding:4px 8px;border-radius:6px;font-size:15px;min-width:32px;min-height:32px;display:inline-flex;align-items:center;justify-content:center;transition:.15s}
+.btn-eliminar-gasto:hover,.btn-eliminar-cuota:hover{background:rgba(248,113,113,.15)}
+.btn-editar-gasto:hover{background:rgba(96,165,250,.15)}
 .subcat-badge{display:inline-block;font-size:10px;color:var(--text2);margin-top:2px}
 .subcat-panel{background:var(--bg2);border-radius:10px;padding:12px;margin-top:8px;border:1px solid var(--border)}
 .subcat-tag{display:inline-flex;align-items:center;gap:4px;background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:12px;margin:3px 2px}
@@ -2430,8 +2437,8 @@ function renderGastos(){
       <td>${g.recurrente?'<span class="badge b-blue">🔄</span>':'—'}</td>
       <td style="text-align:right;font-weight:700">${$$(g.monto)}</td>
       <td style="white-space:nowrap">
-        <button class="btn btn-ghost btn-xs" onclick="editGasto('${esc(g.id)}')">✏️</button>
-        <button class="btn btn-danger btn-xs" onclick="eliminarGasto('${esc(g.id)}')">✕</button>
+        <button class="btn-editar-gasto" onclick="editGasto('${esc(g.id)}')" title="Editar">✏️</button>
+        <button class="btn-eliminar-gasto" onclick="eliminarGasto('${esc(g.id)}')" title="Eliminar">🗑️</button>
       </td>
     </tr>`;
   }).join('');
@@ -2947,9 +2954,10 @@ function renderCuotas(){
           <div class="cuota-item-desc">${esc(item.desc)}</div>
           <div class="cuota-item-sub">Cuota ${item.cuotaNum}/${item.totalCuotas}</div>
         </div>
-        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+        <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">
           <div class="cuota-item-monto">${$$(item.monto)}</div>
-          <button class="btn btn-ghost btn-xs" onclick="editCompraCuotas('${item.id}')">✏️</button>
+          <button class="btn-editar-gasto" onclick="editCompraCuotas('${item.id}')" title="Editar">✏️</button>
+          <button class="btn-eliminar-cuota" onclick="if(confirm('¿Eliminar esta compra en cuotas?')){S.comprasCuotas=S.comprasCuotas.filter(c=>c.id!=='${item.id}');save();renderCuotas();renderTarjetas();showToast('Cuota eliminada')}" title="Eliminar">🗑️</button>
         </div>
       </div>`).join('');
       return`<div class="tarjeta-grupo">
