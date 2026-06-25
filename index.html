@@ -1386,8 +1386,8 @@ async function afterLogin() {
   const mhTitle = document.querySelector('#mobile-header .mh-logo h1');
   if (mhTitle) mhTitle.textContent = userRole === 'admin' ? 'FinanzasApp' : currentNombre;
 
-  // Sincronizar categorías para TODOS los roles (debe ir después de load)
-  load(); applyTheme();
+  // Sincronizar datos desde Supabase (fuente de verdad única)
+  await load(); applyTheme();
   await syncCatsFromSupabase();
 
   if (userRole === 'admin') {
@@ -1649,28 +1649,59 @@ let S=(()=>{
   return _defaultS();
 })();
 
-function load(){
-  // Llamado desde afterLogin() para asegurar datos frescos post-login.
-  // Con la inicialización eager arriba, este paso es redundante en la mayoría de los casos.
+async function load(){
+  // 1. Intentar Supabase como fuente de verdad
+  if(currentUser){
+    try{
+      const {data,error}=await sb.from('user_data').select('data,updated_at').eq('user_id',currentUser.id).single();
+      if(!error&&data?.data){
+        console.log('[sync] Cargado desde Supabase, updated_at:', data.updated_at);
+        Object.assign(S,_applyGuards(data.data));
+        // Mantener localStorage en sync
+        const json=JSON.stringify(S);
+        localStorage.setItem('fz_v3',json);localStorage.setItem('fz_v3_backup',json);
+        return;
+      }
+    }catch(e){console.warn('[sync] Error cargando desde Supabase:', e.message);}
+  }
+  // 2. Fallback: localStorage
   try{
     const d=localStorage.getItem('fz_v3');
-    if(d)Object.assign(S,_applyGuards(JSON.parse(d)));
+    if(d){ Object.assign(S,_applyGuards(JSON.parse(d))); console.log('[sync] Cargado desde localStorage'); }
   }catch(e){
-    console.error('[FinanzasApp] Error en load():',e);
+    console.error('[sync] Error en load():', e);
     try{
       const b=localStorage.getItem('fz_v3_backup');
-      if(b){console.warn('[FinanzasApp] load() usando backup.');Object.assign(S,_applyGuards(JSON.parse(b)));}
+      if(b) Object.assign(S,_applyGuards(JSON.parse(b)));
     }catch(e2){}
   }
+  // 3. Si se cargó desde localStorage, subir a Supabase para que otros dispositivos lo tengan
+  if(currentUser) await _saveToSupabase();
 }
+
+let _saveTimer=null;
 function save(){
+  // Siempre sincrónico en localStorage
   try{
     const json=JSON.stringify(S);
     localStorage.setItem('fz_v3',json);
     localStorage.setItem('fz_v3_backup',json);
-  }catch(e){
-    console.error('[FinanzasApp] Error al guardar datos:',e);
-  }
+  }catch(e){console.error('[sync] Error guardando localStorage:',e);}
+  // Supabase con debounce de 1.5s para no spamear requests
+  clearTimeout(_saveTimer);
+  _saveTimer=setTimeout(_saveToSupabase, 1500);
+}
+
+async function _saveToSupabase(){
+  if(!currentUser)return;
+  try{
+    const {error}=await sb.from('user_data').upsert(
+      {user_id:currentUser.id, data:S, updated_at:new Date().toISOString()},
+      {onConflict:'user_id'}
+    );
+    if(error) console.warn('[sync] Error guardando en Supabase:', error.message);
+    else console.log('[sync] Guardado en Supabase OK');
+  }catch(e){console.warn('[sync] _saveToSupabase excepción:', e.message);}
 }
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,5);}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
@@ -1688,8 +1719,8 @@ function showToast(msg,duration=2500){
   t._tid=setTimeout(()=>{t.style.opacity='0';t.style.transform='translateX(-50%) translateY(20px)';},duration);
 }
 
-function refreshApp(){
-  load();
+async function refreshApp(){
+  await load();
   const secId=document.querySelector('.section.active')?.id||'inicio';
   const navEl=document.querySelector(`.nav-item[onclick*="'${secId}'"]`)||document.querySelector(`.nav-item.active`);
   nav(secId,navEl);
