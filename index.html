@@ -701,7 +701,15 @@ input[type=checkbox]{width:auto;margin-right:5px}
     </div>
   </div>
   <div class="panel">
-    <div class="panel-title">Historial de gastos</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+      <div class="panel-title" style="margin-bottom:0">Historial de gastos</div>
+      <div style="display:flex;gap:4px;background:var(--bg2);border-radius:10px;padding:3px">
+        <button id="modo-compra-btn" onclick="setHistorialModo('compra')"
+          style="padding:5px 12px;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;background:var(--accent);color:#fff;transition:.15s">📅 Por fecha de compra</button>
+        <button id="modo-pago-btn" onclick="setHistorialModo('pago')"
+          style="padding:5px 12px;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;background:transparent;color:var(--text2);transition:.15s">💳 Por fecha de pago</button>
+      </div>
+    </div>
     <div class="filter-bar">
       <select id="filtro-mes-g" onchange="renderGastos()"></select>
       <select id="filtro-cat-g" onchange="onFiltroCatGChange();renderGastos()"><option value="">Todas</option></select>
@@ -2416,6 +2424,45 @@ function eliminarGasto(id){
   renderGastos();refreshDashIfVisible();
 }
 
+function setHistorialModo(modo){
+  historialModo=modo;
+  const bc=document.getElementById('modo-compra-btn');
+  const bp=document.getElementById('modo-pago-btn');
+  if(bc&&bp){
+    if(modo==='compra'){
+      bc.style.background='var(--accent)';bc.style.color='#fff';
+      bp.style.background='transparent';bp.style.color='var(--text2)';
+    } else {
+      bp.style.background='var(--accent)';bp.style.color='#fff';
+      bc.style.background='transparent';bc.style.color='var(--text2)';
+    }
+  }
+  renderGastos();
+}
+
+// Devuelve las cuotas de S.comprasCuotas cuya fecha de pago cae en el mes YYYY-MM dado
+function getCuotasDueInMonth(mes){
+  const due=[];
+  S.comprasCuotas.forEach(c=>{
+    for(let i=0;i<c.cuotas;i++){
+      const fechaPago=addMesesAFecha(c.fechaPrimerPago,i);
+      if(fechaPago.startsWith(mes)){
+        due.push({compra:c,cuotaNum:i+1,monto:c.montoCuota,fecha:fechaPago});
+      }
+    }
+  });
+  return due;
+}
+
+// Calcula el label "ago 2026 – oct 2026" para una compra en cuotas
+function labelPagoCuotas(c){
+  const MESES_SHORT=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  const primerMes=c.fechaPrimerPago.slice(0,7);
+  const ultimoMes=addMeses(primerMes,c.cuotas-1);
+  const fmt=ym=>{const[y,m]=ym.split('-');return MESES_SHORT[+m-1]+' '+y;};
+  return primerMes===ultimoMes?fmt(primerMes):`${fmt(primerMes)} – ${fmt(ultimoMes)}`;
+}
+
 function renderGastos(){
   buildMesSel('filtro-mes-g',S.gastos);populateCatSelects();populateTarjetaSels();
   if(!document.getElementById('g-fecha').value)document.getElementById('g-fecha').value=today();
@@ -2426,6 +2473,78 @@ function renderGastos(){
   const norm=s=>s.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
   const buscar=norm(buscarRaw);
   const subcat=document.getElementById('filtro-subcat-g')?.value||'';
+  const tLabel={efectivo:'💵 Efectivo',debito:'🏦 Débito',tarjeta:'💳 Tarjeta'};
+  const tbody=document.getElementById('gastos-tbody');
+
+  if(historialModo==='pago'){
+    // ── MODO FECHA DE PAGO ──
+    // Gastos normales (no multi-cuota) que caen en el mes
+    let gastosMes=S.gastos.filter(g=>{
+      if(mes&&!g.fecha.startsWith(mes))return false;
+      if(cat&&g.categoria!==cat)return false;
+      if(subcat&&g.subcategoria!==subcat)return false;
+      if(tipo&&g.tipo!==tipo)return false;
+      if(buscar&&![g.descripcion,g.categoria,g.subcategoria,g.notas].some(f=>norm(f||'').includes(buscar)))return false;
+      return true;
+    });
+    // Cuotas de comprasCuotas que vencen este mes
+    let cuotasDue=(!tipo||tipo==='tarjeta')
+      ? getCuotasDueInMonth(mes).filter(d=>{
+          if(cat&&d.compra.categoria!==cat)return false;
+          if(subcat&&d.compra.subcategoria!==subcat)return false;
+          if(buscar&&!norm(d.compra.descripcion||'').includes(buscar))return false;
+          return true;
+        })
+      : [];
+    const totalG=gastosMes.reduce((a,g)=>a+g.monto,0);
+    const totalC=cuotasDue.reduce((a,d)=>a+d.monto,0);
+    const totalPago=totalG+totalC;
+    const nTotal=gastosMes.length+cuotasDue.length;
+    document.getElementById('gastos-total-label').textContent=
+      buscarRaw?(nTotal?`${nTotal} resultado${nTotal!==1?'s':''} para "${buscarRaw}"`:`Sin resultados para "${buscarRaw}"`)
+      :`${nTotal} registros · ${$$(totalPago)}`;
+    if(!nTotal){
+      tbody.innerHTML=`<tr><td colspan="8"><div class="empty"><div class="ei">💳</div><p>${buscarRaw?`Sin resultados para "${esc(buscarRaw)}"`:' Sin pagos para este mes.'}</p></div></td></tr>`;
+      return;
+    }
+    // Unificar y ordenar
+    const filas=[];
+    gastosMes.forEach(g=>{
+      const tar=g.tarjetaId?S.tarjetas.find(t=>t.id===g.tarjetaId):null;
+      filas.push({fecha:g.fecha,html:`<tr>
+        <td>${ff(g.fecha)}</td>
+        <td><strong>${esc(g.descripcion)}</strong></td>
+        <td><span class="badge b-purple">${esc(g.categoria)}</span>${g.subcategoria?`<div class="subcat-badge">${esc(g.subcategoria)}</div>`:''}</td>
+        <td><span class="badge b-gray">${esc(tLabel[g.tipo]||g.tipo)}${tar?` · ${esc(tar.nombre)}`:''}</span></td>
+        <td><span class="nota-preview">${esc(g.notas)||'—'}</span></td>
+        <td>${g.recurrente?'<span class="badge b-blue">🔄</span>':'—'}</td>
+        <td style="text-align:right;font-weight:700">${$$(g.monto)}</td>
+        <td style="white-space:nowrap">
+          <button class="btn-editar-gasto" data-id="${esc(g.id)}" title="Editar">✏️</button>
+          <button class="btn-eliminar-gasto" data-id="${esc(g.id)}" title="Eliminar">🗑️</button>
+        </td></tr>`});
+    });
+    cuotasDue.forEach(d=>{
+      const c=d.compra;
+      const tar=c.tarjetaId?S.tarjetas.find(t=>t.id===c.tarjetaId):null;
+      filas.push({fecha:d.fecha,html:`<tr style="background:rgba(99,102,241,.04)">
+        <td>${ff(d.fecha)}</td>
+        <td><strong>${esc(c.descripcion)}</strong><div style="font-size:10px;color:var(--text2);margin-top:2px">Cuota ${d.cuotaNum}/${c.cuotas}</div></td>
+        <td><span class="badge b-purple">${esc(c.categoria)}</span>${c.subcategoria?`<div class="subcat-badge">${esc(c.subcategoria)}</div>`:''}</td>
+        <td><span class="badge b-blue">💳 Cuota${tar?` · ${esc(tar.nombre)}`:''}</span></td>
+        <td><span class="nota-preview">${esc(c.notas)||'—'}</span></td>
+        <td>—</td>
+        <td style="text-align:right;font-weight:700">${$$(d.monto)}</td>
+        <td style="white-space:nowrap">
+          <button class="btn-editar-gasto" data-cuota-id="${esc(c.id)}" title="Editar compra">✏️</button>
+        </td></tr>`});
+    });
+    filas.sort((a,b)=>b.fecha.localeCompare(a.fecha));
+    tbody.innerHTML=filas.map(f=>f.html).join('');
+    return;
+  }
+
+  // ── MODO FECHA DE COMPRA (default) ──
   let items=S.gastos.filter(g=>{
     if(mes&&!g.fecha.startsWith(mes))return false;
     if(cat&&g.categoria!==cat)return false;
@@ -2434,21 +2553,36 @@ function renderGastos(){
     if(buscar&&![g.descripcion,g.categoria,g.subcategoria,g.notas].some(f=>norm(f||'').includes(buscar)))return false;
     return true;
   }).sort((a,b)=>b.fecha.localeCompare(a.fecha));
-  const total=items.reduce((a,g)=>a+g.monto,0);
+
+  // Compras en cuotas compradas en el mes seleccionado
+  const cuotasMes=(!tipo||tipo==='tarjeta')
+    ? S.comprasCuotas.filter(c=>{
+        if(mes&&!c.fecha.startsWith(mes))return false;
+        if(cat&&c.categoria!==cat)return false;
+        if(subcat&&c.subcategoria!==subcat)return false;
+        if(buscar&&!norm(c.descripcion||'').includes(buscar))return false;
+        return true;
+      })
+    : [];
+
+  const totalGastos=items.reduce((a,g)=>a+g.monto,0);
+  const totalCuotasMes=cuotasMes.reduce((a,c)=>a+c.montoTotal,0);
+  const nTotal=items.length+cuotasMes.length;
+  const total=totalGastos+totalCuotasMes;
   const labelTxt=buscarRaw
-    ?(items.length?`${items.length} resultado${items.length!==1?'s':''} para "${buscarRaw}"`:`Sin resultados para "${buscarRaw}"`)
-    :`${items.length} registros · ${$$(total)}`;
+    ?(nTotal?`${nTotal} resultado${nTotal!==1?'s':''} para "${buscarRaw}"`:`Sin resultados para "${buscarRaw}"`)
+    :`${nTotal} registros · ${$$(total)}`;
   document.getElementById('gastos-total-label').textContent=labelTxt;
-  const tbody=document.getElementById('gastos-tbody');
-  if(!items.length){
+
+  if(!nTotal){
     const emptyMsg=buscarRaw?`Sin gastos que coincidan con "${esc(buscarRaw)}"`:' Sin gastos para los filtros seleccionados.';
     tbody.innerHTML=`<tr><td colspan="8"><div class="empty"><div class="ei">🔍</div><p>${emptyMsg}</p></div></td></tr>`;
     return;
   }
-  const tLabel={efectivo:'💵 Efectivo',debito:'🏦 Débito',tarjeta:'💳 Tarjeta'};
-  tbody.innerHTML=items.map(g=>{
+
+  const filasGastos=items.map(g=>{
     const tar=g.tarjetaId?S.tarjetas.find(t=>t.id===g.tarjetaId):null;
-    return`<tr>
+    return{fecha:g.fecha,html:`<tr>
       <td>${ff(g.fecha)}</td>
       <td><strong>${esc(g.descripcion)}</strong></td>
       <td><span class="badge b-purple">${esc(g.categoria)}</span>${g.subcategoria?`<div class="subcat-badge">${esc(g.subcategoria)}</div>`:''}</td>
@@ -2459,9 +2593,28 @@ function renderGastos(){
       <td style="white-space:nowrap">
         <button class="btn-editar-gasto" data-id="${esc(g.id)}" title="Editar">✏️</button>
         <button class="btn-eliminar-gasto" data-id="${esc(g.id)}" title="Eliminar">🗑️</button>
-      </td>
-    </tr>`;
-  }).join('');
+      </td></tr>`};
+  });
+
+  const filasCuotas=cuotasMes.map(c=>{
+    const tar=c.tarjetaId?S.tarjetas.find(t=>t.id===c.tarjetaId):null;
+    const badgePago=labelPagoCuotas(c);
+    return{fecha:c.fecha,html:`<tr style="background:rgba(99,102,241,.04)">
+      <td>${ff(c.fecha)}</td>
+      <td><strong>${esc(c.descripcion)}</strong><div style="margin-top:3px"><span style="font-size:10px;background:rgba(99,102,241,.15);color:#818cf8;padding:2px 6px;border-radius:4px;font-weight:600">💳 ${c.cuotas} cuotas · pago ${esc(badgePago)}</span></div></td>
+      <td><span class="badge b-purple">${esc(c.categoria)}</span>${c.subcategoria?`<div class="subcat-badge">${esc(c.subcategoria)}</div>`:''}</td>
+      <td><span class="badge b-blue">💳 Cuotas${tar?` · ${esc(tar.nombre)}`:''}</span></td>
+      <td><span class="nota-preview">${esc(c.notas)||'—'}</span></td>
+      <td>—</td>
+      <td style="text-align:right;font-weight:700">${$$(c.montoTotal)}</td>
+      <td style="white-space:nowrap">
+        <button class="btn-editar-gasto" data-cuota-id="${esc(c.id)}" title="Editar">✏️</button>
+        <button class="btn-eliminar-cuota" data-id="${esc(c.id)}" title="Eliminar">🗑️</button>
+      </td></tr>`};
+  });
+
+  const todasFilas=[...filasGastos,...filasCuotas].sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  tbody.innerHTML=todasFilas.map(f=>f.html).join('');
 }
 
 // ====== TARJETAS ======
@@ -2534,6 +2687,7 @@ function guardarFechasTarjeta(){
 
 // ====== COMPRAS EN CUOTAS + GASTOS FINANCIEROS ======
 let tarjetaMesSelected={};
+let historialModo='compra'; // 'compra' | 'pago'
 
 function addMeses(ym,n){
   const[y,m]=ym.split('-').map(Number);
@@ -3680,6 +3834,10 @@ function renderDashboard(){
   const iMes=S.ingresos.filter(i=>i.fecha.startsWith(mes));
   const totalG=gMes.reduce((a,g)=>a+g.monto,0);
   const totalI=iMes.reduce((a,i)=>a+i.monto,0);
+  // "A pagar este mes": gastos tarjeta del mes + cuotas de comprasCuotas que vencen este mes
+  const tarjetaDirectaMes=gMes.filter(g=>g.tipo==='tarjeta').reduce((a,g)=>a+g.monto,0);
+  const cuotasDueMes=getCuotasDueInMonth(mes).reduce((a,d)=>a+d.monto,0);
+  const totalAPagar=tarjetaDirectaMes+cuotasDueMes;
   const cuotasAct=S.cuotas.filter(c=>c.cuotasPagadas<c.cuotasTotal);
   const totalCuotas=cuotasAct.reduce((a,c)=>a+c.montoCuota,0);
   const balance=totalI-totalG-totalCuotas;
@@ -3720,8 +3878,8 @@ function renderDashboard(){
   // STAT CARDS
   document.getElementById('dash-cards').innerHTML=`
     <div class="stat-card c-green"><div class="icon">🟢</div><div class="label">Ingresos del mes</div><div class="value">${$$(totalI)}</div><div class="sub">${iMes.length} registros</div></div>
-    <div class="stat-card c-red"><div class="icon">💸</div><div class="label">Gastos del mes</div><div class="value">${$$(totalG)}</div><div class="sub">${gMes.length} transacciones</div></div>
-    <div class="stat-card c-yellow"><div class="icon">📅</div><div class="label">Cuotas este mes</div><div class="value">${$$(totalCuotas)}</div><div class="sub">${cuotasAct.length} cuotas activas</div></div>
+    <div class="stat-card c-red"><div class="icon">💸</div><div class="label">Gastos del mes</div><div class="value">${$$(totalG)}</div><div class="sub">${gMes.length} transacciones · fecha de compra</div></div>
+    <div class="stat-card c-yellow"><div class="icon">💳</div><div class="label">A pagar este mes</div><div class="value">${$$(totalAPagar)}</div><div class="sub">Tarjeta + cuotas que vencen</div></div>
     <div class="stat-card ${balance>=0?'c-green':'c-red'}"><div class="icon">⚖️</div><div class="label">Balance neto</div><div class="value ${balance>=0?'pos':'neg'}">${balance>=0?'+':''}${$$(balance)}</div><div class="sub">Ingresos − gastos − cuotas</div></div>
     <div class="stat-card c-blue" onclick="navMob('inversiones')" style="cursor:pointer" title="Ver detalle de inversiones">
       <div class="icon">📈</div>
