@@ -1141,7 +1141,7 @@ input[type=checkbox]{width:auto;margin-right:5px}
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
         <div class="form-group"><label>Monto objetivo ($)</label><input type="number" id="obj-meta" placeholder="0" inputmode="decimal"/></div>
-        <div class="form-group"><label>Monto ahorrado ($)</label><input type="number" id="obj-actual" placeholder="0" inputmode="decimal"/></div>
+        <div class="form-group"><label>Monto ahorrado inicial ($) <span style="font-weight:400;font-size:10px">si no usás instrumentos</span></label><input type="number" id="obj-actual" placeholder="0" inputmode="decimal"/></div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
         <div class="form-group"><label>Fecha límite</label><input type="date" id="obj-fecha"/></div>
@@ -1150,16 +1150,63 @@ input[type=checkbox]{width:auto;margin-right:5px}
             style="width:48px;height:38px;border-radius:8px;cursor:pointer;border:2px solid var(--border);padding:2px;background:none;-webkit-appearance:none"/>
         </div>
       </div>
-      <div class="form-group"><label>Vincular a cuenta <span style="font-weight:400;font-size:11px">(el saldo se lee automáticamente)</span></label>
-        <select id="obj-cuenta"><option value="">— Sin vincular —</option></select>
-      </div>
-      <div class="form-group"><label>Vincular a cartera de inversión</label>
-        <select id="obj-cartera"><option value="">— Sin vincular —</option></select>
-      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-neutral" onclick="closeModal('modal-objetivo')">Cancelar</button>
       <button class="btn btn-primary" onclick="guardarObjetivo()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: INSTRUMENTO DE AHORRO -->
+<div class="modal-overlay" id="modal-instrumento">
+  <div class="modal">
+    <div class="modal-header"><h3 id="modal-inst-title">Instrumento de ahorro</h3><button class="modal-close" onclick="closeModal('modal-instrumento')">×</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="inst-obj-id"/>
+      <input type="hidden" id="inst-id"/>
+      <div class="form-group"><label>Tipo</label>
+        <select id="inst-tipo" onchange="onInstTipoChange()" style="font-size:15px;padding:11px">
+          <option value="efectivo">💵 Efectivo</option>
+          <option value="caja_ahorro">🏦 Caja de ahorro</option>
+          <option value="plazo_fijo">📅 Plazo fijo</option>
+          <option value="cedear">📈 CEDEAR / Acción</option>
+          <option value="cripto">₿ Cripto</option>
+          <option value="fci">📊 FCI</option>
+          <option value="otro">📌 Otro</option>
+        </select>
+      </div>
+      <div id="inst-ticker-section" style="display:none">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="form-group"><label>Ticker / Símbolo</label><input type="text" id="inst-ticker" placeholder="XLK, BTC, ETH..." oninput="onInstTickerInput(this.value)"/></div>
+          <div class="form-group"><label>Cantidad de unidades</label><input type="number" id="inst-cantidad" step="any" placeholder="Ej: 3"/></div>
+        </div>
+        <div id="inst-cot-info" style="font-size:11px;color:var(--accent);padding:4px 0;min-height:16px"></div>
+      </div>
+      <div class="form-group"><label>Descripción</label><input type="text" id="inst-desc" placeholder="Ej: XLK en Balanz, Plazo fijo Galicia"/></div>
+      <div class="form-group"><label>Cuenta / Broker / Donde está</label><input type="text" id="inst-cuenta-nombre" placeholder="Ej: Balanz, Galicia, Binance"/></div>
+      <div id="inst-monto-section">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="form-group"><label id="inst-monto-label">Monto</label><input type="number" id="inst-monto" placeholder="0" inputmode="decimal"/></div>
+          <div class="form-group"><label>Moneda</label>
+            <select id="inst-moneda">
+              <option value="ARS">🇦🇷 ARS</option>
+              <option value="USD">🇺🇸 USD</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <details style="margin-top:8px">
+        <summary style="font-size:12px;color:var(--text2);cursor:pointer">🔗 Vincular a cuenta o cartera existente (saldo automático)</summary>
+        <div style="margin-top:8px">
+          <div class="form-group"><label>Vincular a cuenta</label><select id="inst-cuenta-id"><option value="">— Sin vincular —</option></select></div>
+          <div class="form-group"><label>Vincular a cartera</label><select id="inst-cartera-id"><option value="">— Sin vincular —</option></select></div>
+        </div>
+      </details>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-neutral" onclick="closeModal('modal-instrumento')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarInstrumento()">Guardar</button>
     </div>
   </div>
 </div>
@@ -1836,6 +1883,7 @@ function _applyGuards(p){
   if(!p.comprasCuotas)p.comprasCuotas=[];
   if(!p.cuentas)p.cuentas=[];
   if(!p.objetivos)p.objetivos=[];
+  p.objetivos.forEach(o=>{if(!o.instrumentos)o.instrumentos=[];if(!o.historial_aportes)o.historial_aportes=[];});
   if(!p.carteras)p.carteras=[];
   // Migrar inversiones existentes a cartera "Principal"
   if(p.inversiones&&p.inversiones.length&&!p.carteras.length){
@@ -2094,19 +2142,50 @@ function renderConfiguracion(){
 }
 
 // ====== OBJETIVOS ======
-function _getObjetivoSaldoVinculado(obj){
-  // Si tiene cuenta vinculada, leer saldo de esa cuenta
-  if(obj.cuenta_id){
-    const c=S.cuentas.find(c=>c.id===obj.cuenta_id);
-    if(c)return +c.saldo||0;
+const INST_ICONOS={efectivo:'💵',caja_ahorro:'🏦',plazo_fijo:'📅',cedear:'📈',accion:'📈',cripto:'₿',fci:'📊',otro:'📌'};
+const INST_LABELS={efectivo:'Efectivo',caja_ahorro:'Caja de ahorro',plazo_fijo:'Plazo fijo',cedear:'CEDEAR',accion:'Acción',cripto:'Cripto',fci:'FCI',otro:'Otro'};
+
+function _instrMontoARS(inst){
+  // Si está vinculado a cuenta → usar saldo de esa cuenta
+  if(inst.cuenta_id){
+    const c=(S.cuentas||[]).find(c=>c.id===inst.cuenta_id);
+    if(c){
+      const s=+c.saldo||0;
+      if(c.moneda==='USD')return (dolarRates.blue?.venta?s*dolarRates.blue.venta:s);
+      return s;
+    }
   }
-  // Si tiene cartera vinculada, calcular valor total de inversiones de esa cartera
-  if(obj.cartera_id){
+  // Si está vinculado a cartera → sumar valor de inversiones de esa cartera
+  if(inst.cartera_id){
     const toARS=(m,mon)=>(mon==='USD'&&dolarRates.blue?.venta)?m*dolarRates.blue.venta:m;
-    return S.inversiones.filter(i=>i.carteraId===obj.cartera_id)
+    return (S.inversiones||[]).filter(i=>i.carteraId===inst.cartera_id)
       .reduce((a,i)=>a+toARS(+i.montoInvertido||0,i.moneda),0);
   }
-  return null; // no vinculado — usar monto_actual manual
+  // Si tiene ticker → intentar usar cotización live
+  if(inst.ticker){
+    const tk=inst.ticker.trim().toUpperCase();
+    const precio=liveprices[tk]?.priceARS||getPrecioManual(tk)||null;
+    if(precio&&inst.cantidad){
+      const montoARS=precio*(+inst.cantidad||0);
+      return montoARS;
+    }
+  }
+  // Monto manual
+  const monto=+inst.monto||0;
+  if(inst.moneda==='USD')return (dolarRates.blue?.venta?monto*dolarRates.blue.venta:monto);
+  return monto;
+}
+
+function _calcMontoActualObjetivo(obj){
+  const insts=obj.instrumentos||[];
+  if(insts.length) return insts.reduce((a,i)=>a+_instrMontoARS(i),0);
+  // Backward compat: cuenta o cartera vinculada al objetivo directamente
+  if(obj.cuenta_id){const c=(S.cuentas||[]).find(c=>c.id===obj.cuenta_id);if(c)return +c.saldo||0;}
+  if(obj.cartera_id){
+    const toARS=(m,mon)=>(mon==='USD'&&dolarRates.blue?.venta)?m*dolarRates.blue.venta:m;
+    return (S.inversiones||[]).filter(i=>i.carteraId===obj.cartera_id).reduce((a,i)=>a+toARS(+i.montoInvertido||0,i.moneda),0);
+  }
+  return null; // monto_actual manual
 }
 
 function renderObjetivos(){
@@ -2114,17 +2193,13 @@ function renderObjetivos(){
   const grid=document.getElementById('obj-grid');
   const statsDiv=document.getElementById('obj-stats');
 
-  // Populate vincular selects del modal
-  _populateObjetivoSels();
-
-  // Stats header
   if(statsDiv){
     const activos=objetivos.filter(o=>o.activo!==false);
     if(activos.length){
       statsDiv.style.display='';
       const totalMeta=activos.reduce((a,o)=>a+(+o.monto_objetivo||0),0);
       const totalAhorrado=activos.reduce((a,o)=>{
-        const v=_getObjetivoSaldoVinculado(o);
+        const v=_calcMontoActualObjetivo(o);
         return a+(v!==null?v:(+o.monto_actual||0));
       },0);
       const proxVence=activos.filter(o=>o.fecha_limite).sort((a,b)=>a.fecha_limite.localeCompare(b.fecha_limite))[0];
@@ -2143,22 +2218,72 @@ function renderObjetivos(){
   }
 
   grid.innerHTML=objetivos.map(obj=>{
-    const saldoVinculado=_getObjetivoSaldoVinculado(obj);
-    const actual=saldoVinculado!==null?saldoVinculado:(+obj.monto_actual||0);
+    const insts=obj.instrumentos||[];
+    const autoMonto=_calcMontoActualObjetivo(obj);
+    const actual=autoMonto!==null?autoMonto:(+obj.monto_actual||0);
     const meta=+obj.monto_objetivo||1;
     const pct=Math.min(100,Math.round(actual/meta*100));
     const falta=Math.max(0,meta-actual);
     const dias=obj.fecha_limite?_diasRestantes(obj.fecha_limite):null;
     const proyFecha=_proyeccionObjetivo(obj,actual,meta);
-    const vinculo=obj.cuenta_id?'🔗 '+((S.cuentas.find(c=>c.id===obj.cuenta_id)?.nombre)||'Cuenta')
-      :obj.cartera_id?'📈 '+((S.carteras.find(c=>c.id===obj.cartera_id)?.nombre)||'Cartera'):'';
+
+    // Sección instrumentos
+    let instsHTML='';
+    if(insts.length){
+      const filas=insts.map(inst=>{
+        const montoARS=_instrMontoARS(inst);
+        const pctInst=meta?Math.round(montoARS/meta*100):0;
+        let montoOriginal='';
+        if(inst.cuenta_id){
+          const c=(S.cuentas||[]).find(c=>c.id===inst.cuenta_id);
+          if(c)montoOriginal=c.moneda==='USD'?`U$S ${(+c.saldo||0).toLocaleString('es-AR',{minimumFractionDigits:2})}`:`${$$(+c.saldo||0)}`;
+        } else if(inst.cartera_id){
+          montoOriginal='📈 auto';
+        } else if(inst.moneda==='USD'){
+          montoOriginal=`U$S ${(+inst.monto||0).toLocaleString('es-AR',{minimumFractionDigits:2})}`;
+        }
+        const desc=inst.descripcion||(INST_LABELS[inst.tipo||'otro']||'Instrumento');
+        const cuenta=inst.cuenta||(inst.cuenta_id?(S.cuentas||[]).find(c=>c.id===inst.cuenta_id)?.nombre||'':'');
+        const icono=INST_ICONOS[inst.tipo||'otro']||'📌';
+        const tickerInfo=inst.ticker&&inst.cantidad?`${inst.ticker.toUpperCase()} (${inst.cantidad} u)`:'';
+        return `<tr>
+          <td style="padding:5px 6px"><span style="margin-right:4px">${icono}</span><span style="font-size:12px">${esc(tickerInfo||desc)}</span></td>
+          <td style="padding:5px 6px;font-size:11px;color:var(--text2)">${esc(cuenta)}</td>
+          <td style="padding:5px 6px;font-size:12px;font-weight:600">${$$(montoARS)}${montoOriginal?`<br><span style="font-size:10px;color:var(--text2)">${esc(montoOriginal)}</span>`:''}</td>
+          <td style="padding:5px 6px;font-size:11px;color:var(--text2);text-align:right">${pctInst}%</td>
+          <td style="padding:3px 4px;text-align:center"><button class="btn btn-danger btn-xs" style="padding:2px 6px;font-size:10px" onclick="eliminarInstrumento('${obj.id}','${inst.id||''}')">✕</button></td>
+        </tr>`;
+      }).join('');
+      const totalPct=meta?Math.round(actual/meta*100):0;
+      instsHTML=`<div style="margin:12px 0 6px;border-top:1px solid var(--border);padding-top:10px">
+        <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px">💼 Cómo estoy ahorrando</div>
+        <div style="overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:12px">
+            <thead><tr style="color:var(--text2);font-size:10px;text-transform:uppercase">
+              <th style="padding:3px 6px;text-align:left;font-weight:600">Instrumento</th>
+              <th style="padding:3px 6px;text-align:left;font-weight:600">Cuenta/Broker</th>
+              <th style="padding:3px 6px;text-align:left;font-weight:600">Monto ARS</th>
+              <th style="padding:3px 6px;text-align:right;font-weight:600">% obj.</th>
+              <th></th>
+            </tr></thead>
+            <tbody>${filas}</tbody>
+            <tfoot><tr style="border-top:1px solid var(--border);font-weight:700">
+              <td colspan="2" style="padding:6px 6px;font-size:12px">TOTAL</td>
+              <td style="padding:6px 6px;font-size:13px;color:${actual>=meta?'var(--accent2)':'var(--text)'}">${$$(actual)}</td>
+              <td style="padding:6px 6px;font-size:11px;text-align:right;color:${actual>=meta?'var(--accent2)':'var(--text2)'}">${totalPct}%${actual>=meta?' ✅':''}</td>
+              <td></td>
+            </tr></tfoot>
+          </table>
+        </div>
+      </div>`;
+    }
+
     return`<div class="panel" style="border-top:3px solid ${esc(obj.color||'var(--accent)')}">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
         <span style="font-size:26px">${esc(obj.icono||'🎯')}</span>
         <div style="flex:1">
           <div style="font-weight:700;font-size:15px">${esc(obj.nombre)}</div>
           ${obj.fecha_limite?`<div style="font-size:11px;color:var(--text2)">${dias>0?dias+' días restantes':dias===0?'¡Hoy!':'Vencido'} · ${_fmtFecha(obj.fecha_limite)}</div>`:''}
-          ${vinculo?`<div style="font-size:11px;color:var(--accent)">${vinculo}</div>`:''}
         </div>
         <div style="text-align:right">
           <div style="font-size:18px;font-weight:800;color:${pct>=100?'var(--accent2)':'var(--text)'}">${pct}%</div>
@@ -2167,15 +2292,16 @@ function renderObjetivos(){
       <div style="background:var(--bg2);border-radius:99px;height:10px;margin-bottom:8px;overflow:hidden">
         <div style="height:10px;border-radius:99px;background:${pct>=100?'var(--accent2)':esc(obj.color||'var(--accent)')};width:${pct}%;transition:width .4s"></div>
       </div>
-      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-bottom:6px">
         <span>${$$(actual)} ahorrado</span>
         <span>Meta: ${$$(meta)}</span>
       </div>
-      ${falta>0?`<div style="font-size:12px;color:var(--text2);margin-bottom:4px">Te faltan <strong style="color:var(--text)">${$$(falta)}</strong></div>`:'<div style="font-size:12px;color:var(--accent2);font-weight:700;margin-bottom:4px">✅ ¡Objetivo alcanzado!</div>'}
-      ${proyFecha?`<div style="font-size:11px;color:var(--text2);margin-bottom:8px">A este ritmo lo lográs el <strong>${proyFecha}</strong></div>`:''}
-      ${saldoVinculado!==null?`<div style="font-size:11px;color:var(--text2);margin-bottom:8px;font-style:italic">Saldo leído automáticamente</div>`:''}
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">
-        ${saldoVinculado===null?`<button class="btn btn-primary btn-xs" onclick="openAporte('${obj.id}')">+ Aporte</button>`:''}
+      ${falta>0?`<div style="font-size:12px;color:var(--text2);margin-bottom:4px">Te faltan <strong style="color:var(--text)">${$$(falta)}</strong> (~${Math.round(falta/meta*100)}% más)</div>`:'<div style="font-size:12px;color:var(--accent2);font-weight:700;margin-bottom:4px">✅ ¡Objetivo alcanzado!</div>'}
+      ${proyFecha&&!insts.length?`<div style="font-size:11px;color:var(--text2);margin-bottom:6px">A este ritmo lo lográs el <strong>${proyFecha}</strong></div>`:''}
+      ${instsHTML}
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+        <button class="btn btn-primary btn-xs" onclick="openAddInstrumento('${obj.id}')">+ Instrumento</button>
+        ${!insts.length?`<button class="btn btn-ghost btn-xs" onclick="openAporte('${obj.id}')">+ Aporte manual</button>`:''}
         <button class="btn btn-ghost btn-xs" onclick="editObjetivo('${obj.id}')">✏️ Editar</button>
         <button class="btn btn-danger btn-xs" onclick="eliminarObjetivo('${obj.id}')">✕</button>
       </div>
@@ -2196,7 +2322,6 @@ function _fmtFecha(fechaStr){
 function _proyeccionObjetivo(obj,actual,meta){
   const hist=obj.historial_aportes||[];
   if(!hist.length||actual>=meta)return null;
-  // Calcular promedio mensual de aportes
   if(hist.length<2)return null;
   const sorted=[...hist].sort((a,b)=>a.fecha.localeCompare(b.fecha));
   const primerFecha=new Date(sorted[0].fecha+'T00:00:00');
@@ -2214,21 +2339,6 @@ function _proyeccionObjetivo(obj,actual,meta){
   return `${d}/${m}/${y}`;
 }
 
-function _populateObjetivoSels(){
-  const cSel=document.getElementById('obj-cuenta');
-  const cartSel=document.getElementById('obj-cartera');
-  if(cSel){
-    const prev=cSel.value;
-    cSel.innerHTML='<option value="">— Sin vincular —</option>'+(S.cuentas||[]).map(c=>`<option value="${c.id}">${esc(c.icono||'🏦')} ${esc(c.nombre)}</option>`).join('');
-    if(prev)cSel.value=prev;
-  }
-  if(cartSel){
-    const prev=cartSel.value;
-    cartSel.innerHTML='<option value="">— Sin vincular —</option>'+(S.carteras||[]).map(c=>`<option value="${c.id}">${esc(c.nombre)}</option>`).join('');
-    if(prev)cartSel.value=prev;
-  }
-}
-
 function openNuevoObjetivo(){
   document.getElementById('obj-id').value='';
   document.getElementById('modal-obj-title').textContent='Nuevo objetivo';
@@ -2238,9 +2348,6 @@ function openNuevoObjetivo(){
   document.getElementById('obj-actual').value='0';
   document.getElementById('obj-fecha').value='';
   document.getElementById('obj-color').value='#3a6338';
-  _populateObjetivoSels();
-  document.getElementById('obj-cuenta').value='';
-  document.getElementById('obj-cartera').value='';
   openModal('modal-objetivo');
 }
 
@@ -2254,9 +2361,6 @@ function editObjetivo(id){
   document.getElementById('obj-actual').value=obj.monto_actual||0;
   document.getElementById('obj-fecha').value=obj.fecha_limite||'';
   document.getElementById('obj-color').value=obj.color||'#3a6338';
-  _populateObjetivoSels();
-  document.getElementById('obj-cuenta').value=obj.cuenta_id||'';
-  document.getElementById('obj-cartera').value=obj.cartera_id||'';
   openModal('modal-objetivo');
 }
 
@@ -2266,15 +2370,16 @@ function guardarObjetivo(){
   const meta=+document.getElementById('obj-meta').value;
   if(!meta||meta<=0)return alert('El monto objetivo debe ser mayor a 0');
   const editId=document.getElementById('obj-id').value;
-  const cuentaId=document.getElementById('obj-cuenta').value||null;
-  const carteraId=document.getElementById('obj-cartera').value||null;
   const data={nombre,icono:document.getElementById('obj-icono').value||'🎯',
     monto_objetivo:meta,monto_actual:+document.getElementById('obj-actual').value||0,
     fecha_limite:document.getElementById('obj-fecha').value||null,
-    color:document.getElementById('obj-color').value,
-    cuenta_id:cuentaId,cartera_id:carteraId,activo:true};
-  if(editId){Object.assign(S.objetivos.find(o=>o.id===editId),data);}
-  else{S.objetivos.push({id:uid(),historial_aportes:[],...data});}
+    color:document.getElementById('obj-color').value,activo:true};
+  if(editId){
+    const existing=S.objetivos.find(o=>o.id===editId);
+    Object.assign(existing,data);
+  } else {
+    S.objetivos.push({id:uid(),historial_aportes:[],instrumentos:[],...data});
+  }
   save();closeModal('modal-objetivo');renderObjetivos();
   showToast('✅ Objetivo guardado');
 }
@@ -2306,6 +2411,101 @@ function guardarAporte(){
   obj.monto_actual=(+obj.monto_actual||0)+monto;
   save();closeModal('modal-aporte');renderObjetivos();
   showToast('✅ Aporte registrado');
+}
+
+// ── Instrumentos de ahorro
+function _populateInstSels(){
+  const cSel=document.getElementById('inst-cuenta-id');
+  const cartSel=document.getElementById('inst-cartera-id');
+  if(cSel){
+    const prev=cSel.value;
+    cSel.innerHTML='<option value="">— Sin vincular —</option>'+(S.cuentas||[]).map(c=>`<option value="${c.id}">${esc(c.icono||'🏦')} ${esc(c.nombre)} (${c.moneda})</option>`).join('');
+    if(prev)cSel.value=prev;
+  }
+  if(cartSel){
+    const prev=cartSel.value;
+    cartSel.innerHTML='<option value="">— Sin vincular —</option>'+(S.carteras||[]).map(c=>`<option value="${c.id}">${esc(c.nombre)}</option>`).join('');
+    if(prev)cartSel.value=prev;
+  }
+}
+
+function openAddInstrumento(objId){
+  const obj=S.objetivos.find(o=>o.id===objId);if(!obj)return;
+  document.getElementById('inst-obj-id').value=objId;
+  document.getElementById('inst-id').value='';
+  document.getElementById('modal-inst-title').textContent=`Instrumento — ${obj.nombre}`;
+  document.getElementById('inst-tipo').value='efectivo';
+  document.getElementById('inst-desc').value='';
+  document.getElementById('inst-cuenta-nombre').value='';
+  document.getElementById('inst-monto').value='';
+  document.getElementById('inst-moneda').value='ARS';
+  document.getElementById('inst-ticker').value='';
+  document.getElementById('inst-cantidad').value='';
+  document.getElementById('inst-cot-info').textContent='';
+  _populateInstSels();
+  document.getElementById('inst-cuenta-id').value='';
+  document.getElementById('inst-cartera-id').value='';
+  onInstTipoChange();
+  openModal('modal-instrumento');
+}
+
+function onInstTipoChange(){
+  const tipo=document.getElementById('inst-tipo')?.value;
+  const tickerSec=document.getElementById('inst-ticker-section');
+  if(tickerSec)tickerSec.style.display=(tipo==='cedear'||tipo==='accion'||tipo==='cripto')?'':'none';
+  const montoLabel=document.getElementById('inst-monto-label');
+  if(montoLabel){
+    if(tipo==='cedear'||tipo==='accion')montoLabel.textContent='Costo total ARS (si no usás ticker)';
+    else montoLabel.textContent='Monto';
+  }
+}
+
+function onInstTickerInput(val){
+  const info=document.getElementById('inst-cot-info');
+  if(!info||!val)return;
+  const tk=val.trim().toUpperCase();
+  const precio=liveprices[tk]?.priceARS||getPrecioManual(tk)||null;
+  if(precio){
+    info.textContent=`Cotización: ${$$(precio)} por unidad`;
+    const cant=+document.getElementById('inst-cantidad')?.value||0;
+    if(cant)info.textContent+=` · Total: ${$$(precio*cant)}`;
+  } else {
+    info.textContent='Sin cotización — presioná "Actualizar" en Inversiones para cargar precios';
+  }
+}
+
+function guardarInstrumento(){
+  const objId=document.getElementById('inst-obj-id').value;
+  const obj=S.objetivos.find(o=>o.id===objId);if(!obj)return;
+  if(!obj.instrumentos)obj.instrumentos=[];
+  const tipo=document.getElementById('inst-tipo').value;
+  const desc=document.getElementById('inst-desc').value.trim();
+  const cuentaNombre=document.getElementById('inst-cuenta-nombre').value.trim();
+  const monto=+document.getElementById('inst-monto').value||0;
+  const moneda=document.getElementById('inst-moneda').value;
+  const ticker=(document.getElementById('inst-ticker').value||'').trim().toUpperCase()||null;
+  const cantidad=+document.getElementById('inst-cantidad').value||0;
+  const cuentaId=document.getElementById('inst-cuenta-id').value||null;
+  const carteraId=document.getElementById('inst-cartera-id').value||null;
+  if(!desc&&!ticker&&!cuentaId&&!carteraId)return alert('Ingresá una descripción o vinculá una cuenta/cartera');
+  const inst={id:uid(),tipo,descripcion:desc,cuenta:cuentaNombre,monto,moneda,
+    ticker,cantidad:cantidad||null,cuenta_id:cuentaId,cartera_id:carteraId};
+  const editId=document.getElementById('inst-id').value;
+  if(editId){
+    const idx=obj.instrumentos.findIndex(i=>i.id===editId);
+    if(idx>=0){obj.instrumentos[idx]=inst;}
+  } else {
+    obj.instrumentos.push(inst);
+  }
+  save();closeModal('modal-instrumento');renderObjetivos();
+  showToast('✅ Instrumento guardado');
+}
+
+function eliminarInstrumento(objId,instId){
+  const obj=S.objetivos.find(o=>o.id===objId);if(!obj)return;
+  if(!confirm('¿Eliminar este instrumento?'))return;
+  obj.instrumentos=(obj.instrumentos||[]).filter(i=>i.id!==instId);
+  save();renderObjetivos();
 }
 
 // ====== CARTERAS ======
@@ -4788,7 +4988,7 @@ function renderDashboard(){
     const proxObj=objetivosActivos.filter(o=>o.fecha_limite).sort((a,b)=>a.fecha_limite.localeCompare(b.fecha_limite))[0]
       ||objetivosActivos[0];
     if(proxObj){
-      const saldoV=_getObjetivoSaldoVinculado(proxObj);
+      const saldoV=_calcMontoActualObjetivo(proxObj);
       const actual=saldoV!==null?saldoV:(+proxObj.monto_actual||0);
       const meta=+proxObj.monto_objetivo||1;
       const pct=Math.min(100,Math.round(actual/meta*100));
