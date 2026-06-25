@@ -448,6 +448,7 @@ input[type=checkbox]{width:auto;margin-right:5px}
     <h1>FinanzasApp</h1>
   </div>
   <div class="mh-actions">
+    <button class="mh-btn" id="btn-refresh" onclick="refreshApp()" title="Actualizar">🔄</button>
     <button class="mh-btn" onclick="toggleTheme()" id="theme-btn-mob">🌙</button>
     <button class="mh-btn" onclick="openSheet('sheet-settings')">
       <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
@@ -1664,6 +1665,27 @@ function save(){
 }
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,5);}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+
+function showToast(msg,duration=2500){
+  let t=document.getElementById('app-toast');
+  if(!t){
+    t=document.createElement('div');t.id='app-toast';
+    t.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--card2);color:var(--text);border:1px solid var(--border);border-radius:12px;padding:10px 20px;font-size:13px;font-weight:600;z-index:9999;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.15)';
+    document.body.appendChild(t);
+  }
+  t.textContent=msg;
+  t.style.opacity='1';t.style.transform='translateX(-50%) translateY(0)';
+  clearTimeout(t._tid);
+  t._tid=setTimeout(()=>{t.style.opacity='0';t.style.transform='translateX(-50%) translateY(20px)';},duration);
+}
+
+function refreshApp(){
+  load();
+  const secId=document.querySelector('.section.active')?.id||'inicio';
+  const navEl=document.querySelector(`.nav-item[onclick*="'${secId}'"]`)||document.querySelector(`.nav-item.active`);
+  nav(secId,navEl);
+  showToast('✅ Datos actualizados');
+}
 function nextFechaDia(dia){
   const hoy=new Date();
   let d=new Date(hoy.getFullYear(),hoy.getMonth(),dia);
@@ -1980,17 +2002,60 @@ function toggleSubcatPanel(cat){
 function renderSubcatPanel(cat,panel){
   const subs=getSubcats(cat);
   const safeId=cat.replace(/\s+/g,'-');
+  const catQ=cat.replace(/'/g,"\\'");
   panel.innerHTML=`<div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px">Subcategorías de ${cat}</div>
-    <div id="subcat-tags-${safeId}" style="margin-bottom:10px">${
-      subs.length?subs.map(s=>`<span class="subcat-tag">${s}<button onclick="removeSubcat('${cat}','${s}')" title="Eliminar">×</button></span>`).join('')
+    <div id="subcat-tags-${safeId}" style="margin-bottom:10px;display:flex;flex-wrap:wrap;gap:6px">${
+      subs.length?subs.map((s,i)=>{
+        const sq=s.replace(/'/g,"\\'");
+        return`<span class="subcat-tag" id="subcat-item-${safeId}-${i}">
+          <span class="subcat-label">${s}</span>
+          <button onclick="startEditSubcat('${catQ}',${i})" title="Editar" style="background:none;border:none;cursor:pointer;color:var(--text2);padding:0 2px;font-size:12px">✏️</button>
+          <button onclick="removeSubcat('${catQ}','${sq}')" title="Eliminar" style="background:none;border:none;cursor:pointer;color:var(--text2);padding:0 2px;font-size:13px">×</button>
+        </span>`;
+      }).join('')
       :'<span style="color:var(--text2);font-size:12px">Sin subcategorías</span>'
     }</div>
     <div style="display:flex;gap:6px">
-      <input id="subcat-new-${safeId}" type="text" placeholder="Nueva subcategoría" class="input-sm"
+      <input id="subcat-new-${safeId}" type="text" placeholder="Nueva subcategoría"
         style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:13px"
-        onkeydown="if(event.key==='Enter')addSubcat('${cat}')"/>
-      <button class="btn btn-primary btn-sm" onclick="addSubcat('${cat}')">+ Agregar</button>
+        onkeydown="if(event.key==='Enter')addSubcat('${catQ}')"/>
+      <button class="btn btn-primary btn-sm" onclick="addSubcat('${catQ}')">+ Agregar</button>
     </div>`;
+}
+function startEditSubcat(cat,idx){
+  const safeId=cat.replace(/\s+/g,'-');
+  const item=document.getElementById(`subcat-item-${safeId}-${idx}`);if(!item)return;
+  const subs=getSubcats(cat);
+  const oldName=subs[idx];if(oldName===undefined)return;
+  const catQ=cat.replace(/'/g,"\\'");
+  item.innerHTML=`
+    <input id="subcat-edit-${safeId}-${idx}" type="text" value="${oldName.replace(/"/g,'&quot;')}"
+      style="padding:3px 7px;border:1.5px solid var(--accent);border-radius:6px;background:var(--bg);color:var(--text);font-size:12px;width:110px"
+      onkeydown="if(event.key==='Enter')confirmEditSubcat('${catQ}',${idx});if(event.key==='Escape')renderSubcatPanelForCat('${catQ}')"/>
+    <button onclick="confirmEditSubcat('${catQ}',${idx})" style="background:none;border:none;cursor:pointer;color:var(--accent2);font-size:14px;padding:0 2px">✓</button>
+    <button onclick="renderSubcatPanelForCat('${catQ}')" style="background:none;border:none;cursor:pointer;color:var(--text2);font-size:14px;padding:0 2px">✗</button>`;
+  const inp=document.getElementById(`subcat-edit-${safeId}-${idx}`);
+  if(inp){inp.focus();inp.select();}
+}
+function confirmEditSubcat(cat,idx){
+  const safeId=cat.replace(/\s+/g,'-');
+  const inp=document.getElementById(`subcat-edit-${safeId}-${idx}`);if(!inp)return;
+  const newName=inp.value.trim();
+  const subs=getSubcats(cat);
+  const oldName=subs[idx];
+  if(!newName||newName===oldName){renderSubcatPanelForCat(cat);return;}
+  if(subs.includes(newName)){inp.style.borderColor='var(--accent4)';return;}
+  subs[idx]=newName;
+  setSubcats(cat,subs);
+  // Actualizar gastos que tenían la subcategoría vieja
+  S.gastos.filter(g=>g.categoria===cat&&g.subcategoria===oldName).forEach(g=>g.subcategoria=newName);
+  save();
+  renderSubcatPanelForCat(cat);
+}
+function renderSubcatPanelForCat(cat){
+  const safeId=cat.replace(/\s+/g,'-');
+  const panel=document.getElementById('subcat-panel-'+safeId);
+  if(panel)renderSubcatPanel(cat,panel);
 }
 function addSubcat(cat){
   const safeId=cat.replace(/\s+/g,'-');
@@ -1999,15 +2064,12 @@ function addSubcat(cat){
   const subs=getSubcats(cat);
   if(subs.includes(val)){inp.style.borderColor='var(--accent4)';return;}
   subs.push(val);setSubcats(cat,subs);inp.value='';
-  const panel=document.getElementById('subcat-panel-'+safeId);
-  if(panel)renderSubcatPanel(cat,panel);
+  renderSubcatPanelForCat(cat);
 }
 function removeSubcat(cat,sub){
   const subs=getSubcats(cat).filter(s=>s!==sub);
   setSubcats(cat,subs);
-  const safeId=cat.replace(/\s+/g,'-');
-  const panel=document.getElementById('subcat-panel-'+safeId);
-  if(panel)renderSubcatPanel(cat,panel);
+  renderSubcatPanelForCat(cat);
 }
 
 function renderCategorias(){
