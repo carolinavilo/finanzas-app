@@ -44,7 +44,7 @@ html{overflow-x:clip;width:100%;overscroll-behavior-y:none}
 body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;display:flex;min-height:100vh;font-size:14px;transition:background .25s,color .25s;overflow-x:clip;width:100%;overscroll-behavior-y:none}
 
 /* ── SIDEBAR ── */
-#sidebar{width:230px;height:100vh;background:var(--sidebar);border-right:2px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;z-index:100;transition:background .25s;overflow-y:auto;overflow-x:hidden}
+#sidebar{width:230px;height:100vh;max-height:100vh;background:var(--sidebar);border-right:2px solid var(--border);display:flex;flex-direction:column;position:fixed!important;top:0;left:0;z-index:100;transition:background .25s;overflow-y:auto!important;overflow-x:hidden!important}
 #sidebar::-webkit-scrollbar{width:4px}
 #sidebar::-webkit-scrollbar-track{background:transparent}
 #sidebar::-webkit-scrollbar-thumb{background:rgba(128,128,128,.25);border-radius:2px}
@@ -504,6 +504,10 @@ input[type=checkbox]{width:auto;margin-right:5px}
       <span class="nav-icon-wrap"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M4 6h16M4 10h16M4 14h10M4 18h6"/></svg></span>
       <span class="nav-label" style="flex:1">Categorías</span>
     </div>
+    <div class="nav-item" onclick="nav('configuracion',this)" id="nav-configuracion">
+      <span class="nav-icon-wrap"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></span>
+      <span class="nav-label" style="flex:1">Configuración</span>
+    </div>
   </nav>
   <div class="sidebar-bottom">
     <p id="fecha-sb"></p>
@@ -522,8 +526,7 @@ input[type=checkbox]{width:auto;margin-right:5px}
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:12px">
           <button class="toggle-btn" onclick="backupData()" id="btn-backup">💾 Backup</button>
           <button class="toggle-btn" onclick="document.getElementById('restore-input').click()" id="btn-restore">📂 Restaurar</button>
-          <button class="toggle-btn" onclick="verCacheInversiones()">🗄️ Ver caché</button>
-          <button class="toggle-btn" onclick="toggleTheme()" id="theme-btn">🌙 Oscuro</button>
+          <button class="toggle-btn" onclick="toggleTheme()" id="theme-btn" style="grid-column:1/-1">🌙 Oscuro</button>
         </div>
         <input type="file" id="restore-input" accept=".json" style="display:none" onchange="restoreData(event)"/>
         <!-- Color de acento -->
@@ -807,6 +810,62 @@ input[type=checkbox]{width:auto;margin-right:5px}
         <input type="text" id="nueva-cat-ingreso" placeholder="Nueva categoría de ingreso..."
           style="flex:1" onkeydown="if(event.key==='Enter')addCat('ingreso')"/>
         <button class="btn btn-success" onclick="addCat('ingreso')" style="white-space:nowrap">+ Agregar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="section-configuracion" class="section">
+  <div class="page-header"><div class="page-header-left"><h2>⚙️ Configuración</h2><p>Preferencias y ajustes de la app</p></div></div>
+  <div class="two-col">
+    <div class="panel">
+      <!-- API Key IA -->
+      <div class="panel-title">🤖 Asistente IA</div>
+      <p style="font-size:12px;color:var(--text2);margin-bottom:12px">La clave se guarda solo en este dispositivo, nunca en el servidor.</p>
+      <div id="cfg-ai-key-container"></div>
+    </div>
+    <div class="panel">
+      <!-- Color de acento -->
+      <div class="panel-title">🎨 Color de acento</div>
+      <div class="color-picker-wrap" style="margin-top:10px">
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
+          <div class="color-swatch" style="background:#3a6338" onclick="setAccent('verde')"   title="Verde"></div>
+          <div class="color-swatch" style="background:#1a5eb5" onclick="setAccent('azul')"    title="Azul"></div>
+          <div class="color-swatch" style="background:#4338ca" onclick="setAccent('indigo')"  title="Índigo"></div>
+          <div class="color-swatch" style="background:#9d174d" onclick="setAccent('rosa')"    title="Rosa"></div>
+          <div class="color-swatch" style="background:#c2410c" onclick="setAccent('naranja')" title="Naranja"></div>
+          <div class="color-swatch" style="background:#0f766e" onclick="setAccent('teal')"    title="Teal"></div>
+          <input type="color" value="#6c63ff" title="Color personalizado" onchange="setAccentCustom(this.value)"
+            style="width:26px;height:26px;border-radius:50%;cursor:pointer;border:2px solid transparent;padding:1px;background:none;-webkit-appearance:none"/>
+        </div>
+        <p style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);margin-bottom:8px">Colores semánticos</p>
+        <div class="color-row-pick"><label>🟢 Ingresos / OK</label><input type="color" id="cfg-color2" oninput="setSemanticColor(2,this.value)"/></div>
+        <div class="color-row-pick"><label>🟡 Advertencia</label><input type="color" id="cfg-color3" oninput="setSemanticColor(3,this.value)"/></div>
+        <div class="color-row-pick"><label>🔴 Peligro / Gasto</label><input type="color" id="cfg-color4" oninput="setSemanticColor(4,this.value)"/></div>
+        <div class="color-row-pick"><label>🔵 Info</label><input type="color" id="cfg-color5" oninput="setSemanticColor(5,this.value)"/></div>
+        <button onclick="resetSemanticColors()" style="font-size:11px;color:var(--text2);background:none;border:none;cursor:pointer;padding:6px 0;text-decoration:underline">Restaurar colores</button>
+      </div>
+    </div>
+    <div class="panel" style="grid-column:1/-1">
+      <!-- Modo oscuro -->
+      <div class="panel-title">🌙 Apariencia</div>
+      <div style="display:flex;align-items:center;gap:14px;margin-top:12px">
+        <button class="toggle-btn" onclick="toggleTheme()" id="cfg-theme-btn" style="min-width:130px">🌙 Modo oscuro</button>
+      </div>
+      <!-- Ajustes avanzados colapsable -->
+      <div style="margin-top:20px;border-top:1px solid var(--border);padding-top:16px">
+        <button onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'"
+          style="width:100%;background:none;border:none;cursor:pointer;color:var(--text2);font-size:12px;font-weight:600;text-align:left;padding:4px 0;display:flex;justify-content:space-between;align-items:center;text-transform:uppercase;letter-spacing:.5px">
+          <span>⚙️ Ajustes avanzados</span><span>▼</span>
+        </button>
+        <div style="display:none;margin-top:12px">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:12px">
+            <button class="toggle-btn" onclick="backupData()">💾 Backup</button>
+            <button class="toggle-btn" onclick="document.getElementById('restore-input-cfg').click()">📂 Restaurar</button>
+            <button class="toggle-btn" onclick="verCacheInversiones()">🗄️ Ver caché</button>
+          </div>
+          <input type="file" id="restore-input-cfg" accept=".json" style="display:none" onchange="restoreData(event)"/>
+        </div>
       </div>
     </div>
   </div>
@@ -1709,7 +1768,14 @@ function setAccent(theme){
   S.config.colorTheme=theme;delete S.config.customColor;save();applyAccent(theme);
 }
 function setAccentCustom(color){
-  S.config.colorTheme='custom';S.config.customColor=color;save();applyAccent('custom',color);
+  S.config.colorTheme='custom';S.config.customColor=color;save();
+  localStorage.setItem('accentColor',color);
+  applyAccent('custom',color);
+}
+function setAccentColor(color){
+  document.documentElement.style.setProperty('--accent-color',color);
+  document.documentElement.style.setProperty('--primary',color);
+  localStorage.setItem('accentColor',color);
 }
 function applyTheme(){
   document.body.classList.toggle('light',S.config.tema==='light');
@@ -1720,6 +1786,12 @@ function applyTheme(){
   if(themeBtnMob)themeBtnMob.textContent=isLight?'🌙':'☀️';
   const settingsIcon=document.getElementById('settings-theme-icon');
   if(settingsIcon)settingsIcon.textContent=isLight?'🌙':'☀️';
+  // Aplicar color de acento guardado en localStorage (fast path para desktop)
+  const savedAccent=localStorage.getItem('accentColor');
+  if(savedAccent){
+    document.documentElement.style.setProperty('--accent-color',savedAccent);
+    document.documentElement.style.setProperty('--primary',savedAccent);
+  }
   applyAccent(S.config.colorTheme||'verde',S.config.customColor);
   // Colores semánticos
   [2,3,4,5].forEach(n=>{
@@ -1783,7 +1855,14 @@ function navMob(id){
 function renderSection(id){
   ({dashboard:renderDashboard,ingresos:renderIngresos,gastos:renderGastos,
     tarjetas:renderTarjetas,cuotas:renderCuotas,inversiones:renderInversiones,
-    presupuesto:renderPresupuesto,categorias:renderCategorias}[id]||(() => {}))();
+    presupuesto:renderPresupuesto,categorias:renderCategorias,
+    configuracion:renderConfiguracion}[id]||(() => {}))();
+}
+function renderConfiguracion(){
+  renderKeyWidget('cfg-ai-key-container');
+  const cfgThemeBtn=document.getElementById('cfg-theme-btn');
+  if(cfgThemeBtn)cfgThemeBtn.textContent=S.config.tema==='light'?'☀️ Modo claro':'🌙 Modo oscuro';
+  [2,3,4,5].forEach(n=>{const el=document.getElementById('cfg-color'+n);if(el)el.value=S.config['color'+n]||getComputedStyle(document.documentElement).getPropertyValue('--accent'+n).trim();});
 }
 
 // ====== CATEGORÍAS ======
@@ -4504,16 +4583,27 @@ document.addEventListener('DOMContentLoaded', async () => {
   const accessToken = params.get('access_token');
   if ((type === 'invite' || type === 'recovery' || type === 'signup') && accessToken) {
     showSetPasswordScreen();
+    return;
+  }
+
+  // Intento 1: verificar sesión inmediatamente
+  const { data: { session } } = await sb.auth.getSession();
+  if (session?.user) {
+    currentUser = session.user;
+    _afterLoginDone = true;
+    await afterLogin();
   } else {
-    // Verificar sesión activa (F5 / recarga)
-    const { data: { session } } = await sb.auth.getSession();
-    if (session?.user) {
-      currentUser = session.user;
-      _afterLoginDone = true;
-      await afterLogin();
-    } else {
-      showLogin();
-    }
+    // Intento 2: Supabase a veces necesita un tick extra para restaurar desde localStorage
+    setTimeout(async () => {
+      const { data: { session: s2 } } = await sb.auth.getSession();
+      if (s2?.user) {
+        currentUser = s2.user;
+        _afterLoginDone = true;
+        await afterLogin();
+      } else {
+        showLogin();
+      }
+    }, 500);
   }
 
   // Escuchar cambios de auth en vivo (login desde formulario, logout)
