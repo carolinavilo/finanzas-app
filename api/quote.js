@@ -1,5 +1,27 @@
+const rateLimit = new Map() // ip -> { count, resetAt }
+const LIMIT = 30
+const WINDOW_MS = 60_000
+
+function checkRateLimit(ip) {
+  const now = Date.now()
+  const entry = rateLimit.get(ip)
+  if (!entry || now > entry.resetAt) {
+    rateLimit.set(ip, { count: 1, resetAt: now + WINDOW_MS })
+    return true
+  }
+  if (entry.count >= LIMIT) return false
+  entry.count++
+  return true
+}
+
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
+
+  const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket?.remoteAddress || 'unknown'
+  if (!checkRateLimit(ip)) {
+    return res.status(429).json({ error: 'Too many requests' })
+  }
+
   const ticker = req.query.ticker
   if (!ticker) return res.status(400).json({ error: 'ticker requerido' })
   try {
