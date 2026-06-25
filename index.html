@@ -1229,42 +1229,7 @@ let _afterLoginDone = false;
 // onAuthStateChange: solo maneja login en vivo (form submit) y logout.
 // La restauración de sesión al recargar la página (F5) la maneja checkSession()
 // con getSession() para evitar condiciones de carrera con INITIAL_SESSION.
-sb.auth.onAuthStateChange(async (event, session) => {
-  if (event === 'SIGNED_IN' && session && !_afterLoginDone) {
-    currentUser = session.user;
-    _afterLoginDone = true;
-    await afterLogin();
-  } else if (event === 'TOKEN_REFRESHED' && session) {
-    currentUser = session.user;
-  } else if (event === 'SIGNED_OUT') {
-    currentUser = null;
-    userRole = null;
-    _afterLoginDone = false;
-    showLogin();
-  }
-});
-
-async function checkSession() {
-  // Manejar links de invitación / recovery que llegan por URL hash
-  const hash = window.location.hash;
-  const params = new URLSearchParams(hash.replace('#', ''));
-  const type = params.get('type');
-  const accessToken = params.get('access_token');
-  if ((type === 'invite' || type === 'recovery' || type === 'signup') && accessToken) {
-    showSetPasswordScreen();
-    return;
-  }
-
-  // Camino principal: getSession() es la fuente de verdad al cargar/recargar
-  const { data: { session } } = await sb.auth.getSession();
-  if (session) {
-    currentUser = session.user;
-    _afterLoginDone = true;
-    await afterLogin();
-  } else {
-    showLogin();
-  }
-}
+// Auth listener y verificación de sesión se inicializan en DOMContentLoaded (al final del script)
 
 function showSetPasswordScreen() {
   document.getElementById('login-screen').classList.remove('hidden');
@@ -2020,59 +1985,38 @@ function toggleSubcatPanel(cat){
 function renderSubcatPanel(cat,panel){
   const subs=getSubcats(cat);
   const safeId=cat.replace(/\s+/g,'-');
-  const catQ=cat.replace(/'/g,"\\'");
-  panel.innerHTML=`<div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px">Subcategorías de ${cat}</div>
+  const catEnc=cat.replace(/"/g,'&quot;');
+  panel.innerHTML=`<div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px">Subcategorías de ${esc(cat)}</div>
     <div id="subcat-tags-${safeId}" style="margin-bottom:10px;display:flex;flex-wrap:wrap;gap:6px">${
-      subs.length?subs.map((s,i)=>{
-        const sq=s.replace(/'/g,"\\'");
-        return`<span class="subcat-tag" id="subcat-item-${safeId}-${i}">
-          <span class="subcat-label">${s}</span>
-          <button onclick="startEditSubcat('${catQ}',${i})" title="Editar" style="background:none;border:none;cursor:pointer;color:var(--text2);padding:0 2px;font-size:12px">✏️</button>
-          <button onclick="removeSubcat('${catQ}','${sq}')" title="Eliminar" style="background:none;border:none;cursor:pointer;color:var(--text2);padding:0 2px;font-size:13px">×</button>
-        </span>`;
-      }).join('')
+      subs.length?subs.map(s=>`<span class="subcat-item" data-nombre="${s.replace(/"/g,'&quot;')}">
+        <span class="subcat-nombre">${esc(s)}</span>
+        <button class="btn-editar-subcat" data-cat="${catEnc}" data-nombre="${s.replace(/"/g,'&quot;')}" title="Editar" style="background:none;border:none;cursor:pointer;color:var(--text2);padding:0 3px;font-size:12px">✏️</button>
+        <button class="btn-eliminar-subcat" data-cat="${catEnc}" data-nombre="${s.replace(/"/g,'&quot;')}" title="Eliminar" style="background:none;border:none;cursor:pointer;color:var(--text2);padding:0 3px;font-size:13px">×</button>
+      </span>`).join('')
       :'<span style="color:var(--text2);font-size:12px">Sin subcategorías</span>'
     }</div>
     <div style="display:flex;gap:6px">
       <input id="subcat-new-${safeId}" type="text" placeholder="Nueva subcategoría"
         style="flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:13px"
-        onkeydown="if(event.key==='Enter')addSubcat('${catQ}')"/>
-      <button class="btn btn-primary btn-sm" onclick="addSubcat('${catQ}')">+ Agregar</button>
+        onkeydown="if(event.key==='Enter')addSubcat('${cat.replace(/'/g,"\\'")}')"/>
+      <button class="btn btn-primary btn-sm" onclick="addSubcat('${cat.replace(/'/g,"\\'")}')">+ Agregar</button>
     </div>`;
 }
-function startEditSubcat(cat,idx){
-  const safeId=cat.replace(/\s+/g,'-');
-  const item=document.getElementById(`subcat-item-${safeId}-${idx}`);if(!item)return;
+function guardarEditSubcat(cat,nombreViejo,nombreNuevo){
+  if(!nombreNuevo.trim()||nombreNuevo.trim()===nombreViejo)return;
   const subs=getSubcats(cat);
-  const oldName=subs[idx];if(oldName===undefined)return;
-  const catQ=cat.replace(/'/g,"\\'");
-  item.innerHTML=`
-    <input id="subcat-edit-${safeId}-${idx}" type="text" value="${oldName.replace(/"/g,'&quot;')}"
-      style="padding:3px 7px;border:1.5px solid var(--accent);border-radius:6px;background:var(--bg);color:var(--text);font-size:12px;width:110px"
-      onkeydown="if(event.key==='Enter')confirmEditSubcat('${catQ}',${idx});if(event.key==='Escape')renderSubcatPanelForCat('${catQ}')"/>
-    <button onclick="confirmEditSubcat('${catQ}',${idx})" style="background:none;border:none;cursor:pointer;color:var(--accent2);font-size:14px;padding:0 2px">✓</button>
-    <button onclick="renderSubcatPanelForCat('${catQ}')" style="background:none;border:none;cursor:pointer;color:var(--text2);font-size:14px;padding:0 2px">✗</button>`;
-  const inp=document.getElementById(`subcat-edit-${safeId}-${idx}`);
-  if(inp){inp.focus();inp.select();}
-}
-function confirmEditSubcat(cat,idx){
-  const safeId=cat.replace(/\s+/g,'-');
-  const inp=document.getElementById(`subcat-edit-${safeId}-${idx}`);if(!inp)return;
-  const newName=inp.value.trim();
-  const subs=getSubcats(cat);
-  const oldName=subs[idx];
-  if(!newName||newName===oldName){renderSubcatPanelForCat(cat);return;}
-  if(subs.includes(newName)){inp.style.borderColor='var(--accent4)';return;}
-  subs[idx]=newName;
+  const idx=subs.indexOf(nombreViejo);
+  if(idx===-1)return;
+  if(subs.includes(nombreNuevo.trim())){showToast('⚠️ Ya existe esa subcategoría');return;}
+  subs[idx]=nombreNuevo.trim();
   setSubcats(cat,subs);
-  // Actualizar gastos que tenían la subcategoría vieja
-  S.gastos.filter(g=>g.categoria===cat&&g.subcategoria===oldName).forEach(g=>g.subcategoria=newName);
+  S.gastos=S.gastos.map(g=>g.subcategoria===nombreViejo&&g.categoria===cat?{...g,subcategoria:nombreNuevo.trim()}:g);
   save();
   renderSubcatPanelForCat(cat);
+  showToast('✅ Subcategoría actualizada');
 }
 function renderSubcatPanelForCat(cat){
-  const safeId=cat.replace(/\s+/g,'-');
-  const panel=document.getElementById('subcat-panel-'+safeId);
+  const panel=document.getElementById('subcat-panel-'+cat.replace(/\s+/g,'-'));
   if(panel)renderSubcatPanel(cat,panel);
 }
 function addSubcat(cat){
@@ -2085,8 +2029,7 @@ function addSubcat(cat){
   renderSubcatPanelForCat(cat);
 }
 function removeSubcat(cat,sub){
-  const subs=getSubcats(cat).filter(s=>s!==sub);
-  setSubcats(cat,subs);
+  setSubcats(cat,getSubcats(cat).filter(s=>s!==sub));
   renderSubcatPanelForCat(cat);
 }
 
@@ -2435,8 +2378,8 @@ function renderGastos(){
       <td>${g.recurrente?'<span class="badge b-blue">🔄</span>':'—'}</td>
       <td style="text-align:right;font-weight:700">${$$(g.monto)}</td>
       <td style="white-space:nowrap">
-        <button class="btn-editar-gasto" onclick="editGasto('${esc(g.id)}')" title="Editar">✏️</button>
-        <button class="btn-eliminar-gasto" onclick="eliminarGasto('${esc(g.id)}')" title="Eliminar">🗑️</button>
+        <button class="btn-editar-gasto" data-id="${esc(g.id)}" title="Editar">✏️</button>
+        <button class="btn-eliminar-gasto" data-id="${esc(g.id)}" title="Eliminar">🗑️</button>
       </td>
     </tr>`;
   }).join('');
@@ -2954,8 +2897,8 @@ function renderCuotas(){
         </div>
         <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">
           <div class="cuota-item-monto">${$$(item.monto)}</div>
-          <button class="btn-editar-gasto" onclick="editCompraCuotas('${item.id}')" title="Editar">✏️</button>
-          <button class="btn-eliminar-cuota" onclick="if(confirm('¿Eliminar esta compra en cuotas?')){S.comprasCuotas=S.comprasCuotas.filter(c=>c.id!=='${item.id}');save();renderCuotas();renderTarjetas();showToast('Cuota eliminada')}" title="Eliminar">🗑️</button>
+          <button class="btn-editar-gasto" data-cuota-id="${item.id}" title="Editar">✏️</button>
+          <button class="btn-eliminar-cuota" data-id="${item.id}" title="Eliminar">🗑️</button>
         </div>
       </div>`).join('');
       return`<div class="tarjeta-grupo">
@@ -4487,16 +4430,108 @@ function startApp(){
 }
 
 
-async function init(){
-  // Primero verificar autenticación
-  applyTheme();
-  // Ocultar app mientras verifica
-  document.getElementById('sidebar').style.display='none';
-  document.getElementById('main').style.display='none';
-  await checkSession();
-}
+// ── Handler delegado central ──
+document.addEventListener('click', e => {
+  // Editar gasto
+  const editBtn = e.target.closest('.btn-editar-gasto');
+  if (editBtn) {
+    const id = editBtn.dataset.id || editBtn.dataset.cuotaId;
+    if (editBtn.dataset.cuotaId) { editCompraCuotas(id); return; }
+    if (id) { editGasto(id); return; }
+  }
 
-init();
+  // Eliminar gasto
+  const delGasto = e.target.closest('.btn-eliminar-gasto');
+  if (delGasto) {
+    const id = delGasto.dataset.id; if (!id) return;
+    if (!confirm('¿Eliminar este gasto?')) return;
+    S.gastos = S.gastos.filter(g => String(g.id) !== String(id));
+    save(); renderGastos(); showToast('Gasto eliminado');
+    return;
+  }
+
+  // Eliminar cuota
+  const delCuota = e.target.closest('.btn-eliminar-cuota');
+  if (delCuota) {
+    const id = delCuota.dataset.id; if (!id) return;
+    if (!confirm('¿Eliminar esta compra en cuotas?')) return;
+    S.comprasCuotas = S.comprasCuotas.filter(c => String(c.id) !== String(id));
+    save(); renderCuotas(); renderTarjetas(); showToast('Cuota eliminada');
+    return;
+  }
+
+  // Editar subcategoría
+  const editSubcat = e.target.closest('.btn-editar-subcat');
+  if (editSubcat) {
+    const cat = editSubcat.dataset.cat;
+    const nombre = editSubcat.dataset.nombre;
+    const item = editSubcat.closest('.subcat-item');
+    if (!item) return;
+    const span = item.querySelector('.subcat-nombre');
+    const input = document.createElement('input');
+    input.value = nombre;
+    input.style.cssText = 'width:120px;padding:4px 8px;border:1.5px solid var(--accent);border-radius:6px;background:var(--bg);color:var(--text);font-size:12px';
+    span.replaceWith(input);
+    input.focus(); input.select();
+    input.addEventListener('keydown', ev => {
+      if (ev.key === 'Enter') guardarEditSubcat(cat, nombre, input.value);
+      if (ev.key === 'Escape') renderSubcatPanelForCat(cat);
+    });
+    editSubcat.textContent = '✓';
+    editSubcat.onclick = () => guardarEditSubcat(cat, nombre, input.value);
+    return;
+  }
+
+  // Eliminar subcategoría
+  const delSubcat = e.target.closest('.btn-eliminar-subcat');
+  if (delSubcat) {
+    const cat = delSubcat.dataset.cat;
+    const nombre = delSubcat.dataset.nombre;
+    removeSubcat(cat, nombre);
+    return;
+  }
+});
+
+document.addEventListener('DOMContentLoaded', async () => {
+  applyTheme();
+  document.getElementById('sidebar').style.display = 'none';
+  document.getElementById('main').style.display = 'none';
+
+  // Manejar links de invitación / recovery por URL hash
+  const hash = window.location.hash;
+  const params = new URLSearchParams(hash.replace('#', ''));
+  const type = params.get('type');
+  const accessToken = params.get('access_token');
+  if ((type === 'invite' || type === 'recovery' || type === 'signup') && accessToken) {
+    showSetPasswordScreen();
+  } else {
+    // Verificar sesión activa (F5 / recarga)
+    const { data: { session } } = await sb.auth.getSession();
+    if (session?.user) {
+      currentUser = session.user;
+      _afterLoginDone = true;
+      await afterLogin();
+    } else {
+      showLogin();
+    }
+  }
+
+  // Escuchar cambios de auth en vivo (login desde formulario, logout)
+  sb.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'SIGNED_IN' && session?.user && !_afterLoginDone) {
+      currentUser = session.user;
+      _afterLoginDone = true;
+      await afterLogin();
+    } else if (event === 'TOKEN_REFRESHED' && session) {
+      currentUser = session.user;
+    } else if (event === 'SIGNED_OUT') {
+      currentUser = null;
+      userRole = null;
+      _afterLoginDone = false;
+      showLogin();
+    }
+  });
+});
 
 // ── COLORES SEMÁNTICOS ──
 function setSemanticColor(n, val) {
