@@ -492,6 +492,10 @@ input[type=checkbox]{width:auto;margin-right:5px}
       <span class="nav-icon-wrap"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></span>
       <span class="nav-label" style="flex:1">Cuentas</span>
     </div>
+    <div class="nav-item" onclick="nav('objetivos',this)">
+      <span class="nav-icon-wrap"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></span>
+      <span class="nav-label" style="flex:1">Objetivos</span>
+    </div>
     <div class="nav-item" onclick="nav('cuotas',this)">
       <span class="nav-icon-wrap"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="12" y2="18"/></svg></span>
       <span class="nav-label" style="flex:1">Cuotas</span>
@@ -544,6 +548,12 @@ input[type=checkbox]{width:auto;margin-right:5px}
   <div class="two-col">
     <div class="panel"><div class="panel-title">Cuotas próximas <span class="sub" id="cuotas-prox-count"></span></div><div id="dash-cuotas"></div></div>
     <div class="panel"><div class="panel-title">Últimos movimientos</div><div id="dash-ultimos"></div></div>
+  </div>
+  <div id="dash-objetivos-row" style="display:none;margin-bottom:14px">
+    <div class="panel" onclick="navMob('objetivos')" style="cursor:pointer">
+      <div class="panel-title">🎯 Objetivos <span class="sub">Click para ver todos →</span></div>
+      <div id="dash-objetivos-list"></div>
+    </div>
   </div>
   <div id="dash-cuentas-row" style="display:none;margin-bottom:14px">
     <div class="panel" onclick="navMob('cuentas')" style="cursor:pointer">
@@ -694,6 +704,18 @@ input[type=checkbox]{width:auto;margin-right:5px}
   </div>
 </div>
 
+<!-- OBJETIVOS -->
+<div id="section-objetivos" class="section">
+  <div class="page-header">
+    <div class="page-header-left"><h2>🎯 Objetivos de ahorro</h2><p>Seguí el progreso de tus metas financieras</p></div>
+    <div class="page-header-right">
+      <button class="btn btn-primary" onclick="openNuevoObjetivo()">+ Nuevo objetivo</button>
+    </div>
+  </div>
+  <div id="obj-stats" style="display:none;margin-bottom:18px"></div>
+  <div id="obj-grid" class="two-col"></div>
+</div>
+
 <!-- CUENTAS -->
 <div id="section-cuentas" class="section">
   <div class="page-header">
@@ -738,6 +760,7 @@ input[type=checkbox]{width:auto;margin-right:5px}
     <div class="page-header-left"><h2>📈 Inversiones</h2><p>Tu portfolio y rendimientos</p></div>
     <button class="btn btn-primary" onclick="nuevaInversion()">+ Nueva inversión</button>
   </div>
+  <div id="carteras-tabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px"></div>
   <div class="three-col" id="inv-stats"></div>
   <div class="two-col" style="margin-bottom:14px">
     <div class="panel">
@@ -910,6 +933,10 @@ input[type=checkbox]{width:auto;margin-right:5px}
       <div class="bs-item" id="bsm-cuentas" onclick="navMob('cuentas',null);closeSheet('sheet-mas')">
         <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
         Cuentas
+      </div>
+      <div class="bs-item" id="bsm-objetivos" onclick="navMob('objetivos',null);closeSheet('sheet-mas')">
+        <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+        Objetivos
       </div>
       <div class="bs-item" id="bsm-cuotas" onclick="navMob('cuotas',null);closeSheet('sheet-mas')">
         <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
@@ -1102,6 +1129,83 @@ input[type=checkbox]{width:auto;margin-right:5px}
 </div>
 
 <!-- MODAL COMPRA EN CUOTAS -->
+<!-- MODAL: NUEVO/EDITAR OBJETIVO -->
+<div class="modal-overlay" id="modal-objetivo">
+  <div class="modal">
+    <div class="modal-header"><h3 id="modal-obj-title">Nuevo objetivo</h3><button class="modal-close" onclick="closeModal('modal-objetivo')">×</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="obj-id"/>
+      <div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end">
+        <div class="form-group"><label>Nombre del objetivo</label><input type="text" id="obj-nombre" placeholder="Ej: Viaje a Europa"/></div>
+        <div class="form-group"><label>Ícono</label><input type="text" id="obj-icono" value="🎯" maxlength="4" style="width:56px;text-align:center;font-size:20px"/></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="form-group"><label>Monto objetivo ($)</label><input type="number" id="obj-meta" placeholder="0" inputmode="decimal"/></div>
+        <div class="form-group"><label>Monto ahorrado ($)</label><input type="number" id="obj-actual" placeholder="0" inputmode="decimal"/></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="form-group"><label>Fecha límite</label><input type="date" id="obj-fecha"/></div>
+        <div class="form-group"><label>Color</label>
+          <input type="color" id="obj-color" value="#3a6338"
+            style="width:48px;height:38px;border-radius:8px;cursor:pointer;border:2px solid var(--border);padding:2px;background:none;-webkit-appearance:none"/>
+        </div>
+      </div>
+      <div class="form-group"><label>Vincular a cuenta <span style="font-weight:400;font-size:11px">(el saldo se lee automáticamente)</span></label>
+        <select id="obj-cuenta"><option value="">— Sin vincular —</option></select>
+      </div>
+      <div class="form-group"><label>Vincular a cartera de inversión</label>
+        <select id="obj-cartera"><option value="">— Sin vincular —</option></select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-neutral" onclick="closeModal('modal-objetivo')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarObjetivo()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: APORTE A OBJETIVO -->
+<div class="modal-overlay" id="modal-aporte">
+  <div class="modal">
+    <div class="modal-header"><h3>💰 Agregar aporte</h3><button class="modal-close" onclick="closeModal('modal-aporte')">×</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="aporte-obj-id"/>
+      <div id="aporte-obj-info" style="font-size:13px;color:var(--text2);margin-bottom:12px"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="form-group"><label>Monto del aporte ($)</label><input type="number" id="aporte-monto" placeholder="0" inputmode="decimal"/></div>
+        <div class="form-group"><label>Fecha</label><input type="date" id="aporte-fecha"/></div>
+      </div>
+      <div class="form-group"><label>Notas</label><input type="text" id="aporte-notas" placeholder="Opcional"/></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-neutral" onclick="closeModal('modal-aporte')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarAporte()">Aportar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: NUEVA CARTERA -->
+<div class="modal-overlay" id="modal-cartera">
+  <div class="modal">
+    <div class="modal-header"><h3 id="modal-cart-title">Nueva cartera</h3><button class="modal-close" onclick="closeModal('modal-cartera')">×</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="cart-id"/>
+      <div class="form-group"><label>Nombre</label><input type="text" id="cart-nombre" placeholder="Ej: Cartera Juanpe"/></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="form-group"><label>Color</label>
+          <input type="color" id="cart-color" value="#3a6338"
+            style="width:48px;height:38px;border-radius:8px;cursor:pointer;border:2px solid var(--border);padding:2px;background:none;-webkit-appearance:none"/>
+        </div>
+        <div class="form-group"><label>Descripción</label><input type="text" id="cart-desc" placeholder="Opcional"/></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-neutral" onclick="closeModal('modal-cartera')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarCartera()">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: NUEVA/EDITAR CUENTA -->
 <div class="modal-overlay" id="modal-cuenta">
   <div class="modal">
@@ -1258,6 +1362,7 @@ input[type=checkbox]{width:auto;margin-right:5px}
       <div class="form-group"><label>Costo total (ARS)</label><input id="iv-monto" type="number" placeholder="Se calcula solo o ingresalo"/></div>
       <div class="form-group"><label>Moneda</label><select id="iv-moneda"><option value="ARS">Pesos (ARS)</option><option value="USD">Dólares (USD)</option></select></div>
       <div class="form-group"><label>TNA % <span style="font-weight:400;font-size:10px;color:var(--text2)">(Plazo Fijo / FCI)</span></label><input id="iv-tasa" type="number" placeholder="75" step="0.1"/></div>
+      <div class="form-group"><label>Cartera</label><select id="iv-cartera"></select></div>
       <div class="form-group" style="grid-column:1/-1"><label>Notas</label><input id="iv-notas" placeholder="Opcional"/></div>
     </div>
     <div style="background:rgba(108,99,255,.07);border:1px solid rgba(108,99,255,.2);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--text2);margin-bottom:2px">
@@ -1719,6 +1824,7 @@ const CAT_COLORS={
 function _defaultS(){
   return{gastos:[],ingresos:[],tarjetas:[],cuotas:[],inversiones:[],presupuesto:{},
     comprasCuotas:[],gastosFinTarjeta:[],ventas:[],cuentas:[],
+    objetivos:[],carteras:[],
     catsGasto:[...DEFAULT_CATS_GASTO],catsIngreso:[...DEFAULT_CATS_INGRESO],
     config:{tema:'light',colorTheme:'verde'}};
 }
@@ -1729,6 +1835,14 @@ function _applyGuards(p){
   if(!p.config.colorTheme)p.config.colorTheme='verde';
   if(!p.comprasCuotas)p.comprasCuotas=[];
   if(!p.cuentas)p.cuentas=[];
+  if(!p.objetivos)p.objetivos=[];
+  if(!p.carteras)p.carteras=[];
+  // Migrar inversiones existentes a cartera "Principal"
+  if(p.inversiones&&p.inversiones.length&&!p.carteras.length){
+    const pid=uid();
+    p.carteras=[{id:pid,nombre:'Principal',color:'var(--accent)',descripcion:''}];
+    p.inversiones.forEach(inv=>{if(!inv.carteraId)inv.carteraId=pid;});
+  }
   // Migrar: agregar cargos[] a tarjetas existentes
   if(p.tarjetas)p.tarjetas.forEach(t=>{if(!t.cargos)t.cargos=[];});
   if(!p.gastosFinTarjeta)p.gastosFinTarjeta=[];
@@ -1969,13 +2083,299 @@ function renderSection(id){
   ({dashboard:renderDashboard,ingresos:renderIngresos,gastos:renderGastos,
     tarjetas:renderTarjetas,cuotas:renderCuotas,inversiones:renderInversiones,
     presupuesto:renderPresupuesto,categorias:renderCategorias,
-    configuracion:renderConfiguracion,cuentas:renderCuentas}[id]||(() => {}))();
+    configuracion:renderConfiguracion,cuentas:renderCuentas,
+    objetivos:renderObjetivos}[id]||(() => {}))();
 }
 function renderConfiguracion(){
   renderKeyWidget('cfg-ai-key-container');
   const cfgThemeBtn=document.getElementById('cfg-theme-btn');
   if(cfgThemeBtn)cfgThemeBtn.textContent=S.config.tema==='light'?'☀️ Modo claro':'🌙 Modo oscuro';
   [2,3,4,5].forEach(n=>{const el=document.getElementById('cfg-color'+n);if(el)el.value=S.config['color'+n]||getComputedStyle(document.documentElement).getPropertyValue('--accent'+n).trim();});
+}
+
+// ====== OBJETIVOS ======
+function _getObjetivoSaldoVinculado(obj){
+  // Si tiene cuenta vinculada, leer saldo de esa cuenta
+  if(obj.cuenta_id){
+    const c=S.cuentas.find(c=>c.id===obj.cuenta_id);
+    if(c)return +c.saldo||0;
+  }
+  // Si tiene cartera vinculada, calcular valor total de inversiones de esa cartera
+  if(obj.cartera_id){
+    const toARS=(m,mon)=>(mon==='USD'&&dolarRates.blue?.venta)?m*dolarRates.blue.venta:m;
+    return S.inversiones.filter(i=>i.carteraId===obj.cartera_id)
+      .reduce((a,i)=>a+toARS(+i.montoInvertido||0,i.moneda),0);
+  }
+  return null; // no vinculado — usar monto_actual manual
+}
+
+function renderObjetivos(){
+  const objetivos=S.objetivos||[];
+  const grid=document.getElementById('obj-grid');
+  const statsDiv=document.getElementById('obj-stats');
+
+  // Populate vincular selects del modal
+  _populateObjetivoSels();
+
+  // Stats header
+  if(statsDiv){
+    const activos=objetivos.filter(o=>o.activo!==false);
+    if(activos.length){
+      statsDiv.style.display='';
+      const totalMeta=activos.reduce((a,o)=>a+(+o.monto_objetivo||0),0);
+      const totalAhorrado=activos.reduce((a,o)=>{
+        const v=_getObjetivoSaldoVinculado(o);
+        return a+(v!==null?v:(+o.monto_actual||0));
+      },0);
+      const proxVence=activos.filter(o=>o.fecha_limite).sort((a,b)=>a.fecha_limite.localeCompare(b.fecha_limite))[0];
+      statsDiv.innerHTML=`<div class="three-col">
+        <div class="stat-card c-green"><div class="icon">🎯</div><div class="label">Objetivos activos</div><div class="value">${activos.length}</div></div>
+        <div class="stat-card c-blue"><div class="icon">💰</div><div class="label">Total ahorrado</div><div class="value">${$$(totalAhorrado)}</div><div class="sub">de ${$$(totalMeta)}</div></div>
+        ${proxVence?`<div class="stat-card c-yellow"><div class="icon">⏰</div><div class="label">Próximo a vencer</div><div class="value" style="font-size:13px">${esc(proxVence.icono||'🎯')} ${esc(proxVence.nombre)}</div><div class="sub">${_diasRestantes(proxVence.fecha_limite)} días</div></div>`:''}
+      </div>`;
+    } else { statsDiv.style.display='none'; }
+  }
+
+  if(!grid)return;
+  if(!objetivos.length){
+    grid.innerHTML='<div class="panel" style="grid-column:1/-1"><div class="empty"><div class="ei">🎯</div><p>No tenés objetivos de ahorro. Creá el primero arriba.</p></div></div>';
+    return;
+  }
+
+  grid.innerHTML=objetivos.map(obj=>{
+    const saldoVinculado=_getObjetivoSaldoVinculado(obj);
+    const actual=saldoVinculado!==null?saldoVinculado:(+obj.monto_actual||0);
+    const meta=+obj.monto_objetivo||1;
+    const pct=Math.min(100,Math.round(actual/meta*100));
+    const falta=Math.max(0,meta-actual);
+    const dias=obj.fecha_limite?_diasRestantes(obj.fecha_limite):null;
+    const proyFecha=_proyeccionObjetivo(obj,actual,meta);
+    const vinculo=obj.cuenta_id?'🔗 '+((S.cuentas.find(c=>c.id===obj.cuenta_id)?.nombre)||'Cuenta')
+      :obj.cartera_id?'📈 '+((S.carteras.find(c=>c.id===obj.cartera_id)?.nombre)||'Cartera'):'';
+    return`<div class="panel" style="border-top:3px solid ${esc(obj.color||'var(--accent)')}">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <span style="font-size:26px">${esc(obj.icono||'🎯')}</span>
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:15px">${esc(obj.nombre)}</div>
+          ${obj.fecha_limite?`<div style="font-size:11px;color:var(--text2)">${dias>0?dias+' días restantes':dias===0?'¡Hoy!':'Vencido'} · ${_fmtFecha(obj.fecha_limite)}</div>`:''}
+          ${vinculo?`<div style="font-size:11px;color:var(--accent)">${vinculo}</div>`:''}
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:18px;font-weight:800;color:${pct>=100?'var(--accent2)':'var(--text)'}">${pct}%</div>
+        </div>
+      </div>
+      <div style="background:var(--bg2);border-radius:99px;height:10px;margin-bottom:8px;overflow:hidden">
+        <div style="height:10px;border-radius:99px;background:${pct>=100?'var(--accent2)':esc(obj.color||'var(--accent)')};width:${pct}%;transition:width .4s"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-bottom:8px">
+        <span>${$$(actual)} ahorrado</span>
+        <span>Meta: ${$$(meta)}</span>
+      </div>
+      ${falta>0?`<div style="font-size:12px;color:var(--text2);margin-bottom:4px">Te faltan <strong style="color:var(--text)">${$$(falta)}</strong></div>`:'<div style="font-size:12px;color:var(--accent2);font-weight:700;margin-bottom:4px">✅ ¡Objetivo alcanzado!</div>'}
+      ${proyFecha?`<div style="font-size:11px;color:var(--text2);margin-bottom:8px">A este ritmo lo lográs el <strong>${proyFecha}</strong></div>`:''}
+      ${saldoVinculado!==null?`<div style="font-size:11px;color:var(--text2);margin-bottom:8px;font-style:italic">Saldo leído automáticamente</div>`:''}
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">
+        ${saldoVinculado===null?`<button class="btn btn-primary btn-xs" onclick="openAporte('${obj.id}')">+ Aporte</button>`:''}
+        <button class="btn btn-ghost btn-xs" onclick="editObjetivo('${obj.id}')">✏️ Editar</button>
+        <button class="btn btn-danger btn-xs" onclick="eliminarObjetivo('${obj.id}')">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function _diasRestantes(fechaStr){
+  const hoy=new Date();hoy.setHours(0,0,0,0);
+  const f=new Date(fechaStr+'T00:00:00');
+  return Math.round((f-hoy)/(1000*60*60*24));
+}
+function _fmtFecha(fechaStr){
+  if(!fechaStr)return '';
+  const [y,m,d]=fechaStr.split('-');
+  return `${d}/${m}/${y}`;
+}
+function _proyeccionObjetivo(obj,actual,meta){
+  const hist=obj.historial_aportes||[];
+  if(!hist.length||actual>=meta)return null;
+  // Calcular promedio mensual de aportes
+  if(hist.length<2)return null;
+  const sorted=[...hist].sort((a,b)=>a.fecha.localeCompare(b.fecha));
+  const primerFecha=new Date(sorted[0].fecha+'T00:00:00');
+  const ultimaFecha=new Date(sorted[sorted.length-1].fecha+'T00:00:00');
+  const diasTotales=Math.max(1,(ultimaFecha-primerFecha)/(1000*60*60*24));
+  const totalAportado=sorted.reduce((a,h)=>a+(+h.monto||0),0);
+  const tasaDiaria=totalAportado/diasTotales;
+  if(tasaDiaria<=0)return null;
+  const diasFaltantes=Math.ceil((meta-actual)/tasaDiaria);
+  const proyeccion=new Date();
+  proyeccion.setDate(proyeccion.getDate()+diasFaltantes);
+  const d=proyeccion.getDate().toString().padStart(2,'0');
+  const m=(proyeccion.getMonth()+1).toString().padStart(2,'0');
+  const y=proyeccion.getFullYear();
+  return `${d}/${m}/${y}`;
+}
+
+function _populateObjetivoSels(){
+  const cSel=document.getElementById('obj-cuenta');
+  const cartSel=document.getElementById('obj-cartera');
+  if(cSel){
+    const prev=cSel.value;
+    cSel.innerHTML='<option value="">— Sin vincular —</option>'+(S.cuentas||[]).map(c=>`<option value="${c.id}">${esc(c.icono||'🏦')} ${esc(c.nombre)}</option>`).join('');
+    if(prev)cSel.value=prev;
+  }
+  if(cartSel){
+    const prev=cartSel.value;
+    cartSel.innerHTML='<option value="">— Sin vincular —</option>'+(S.carteras||[]).map(c=>`<option value="${c.id}">${esc(c.nombre)}</option>`).join('');
+    if(prev)cartSel.value=prev;
+  }
+}
+
+function openNuevoObjetivo(){
+  document.getElementById('obj-id').value='';
+  document.getElementById('modal-obj-title').textContent='Nuevo objetivo';
+  document.getElementById('obj-nombre').value='';
+  document.getElementById('obj-icono').value='🎯';
+  document.getElementById('obj-meta').value='';
+  document.getElementById('obj-actual').value='0';
+  document.getElementById('obj-fecha').value='';
+  document.getElementById('obj-color').value='#3a6338';
+  _populateObjetivoSels();
+  document.getElementById('obj-cuenta').value='';
+  document.getElementById('obj-cartera').value='';
+  openModal('modal-objetivo');
+}
+
+function editObjetivo(id){
+  const obj=S.objetivos.find(o=>o.id===id);if(!obj)return;
+  document.getElementById('obj-id').value=id;
+  document.getElementById('modal-obj-title').textContent='Editar objetivo';
+  document.getElementById('obj-nombre').value=obj.nombre;
+  document.getElementById('obj-icono').value=obj.icono||'🎯';
+  document.getElementById('obj-meta').value=obj.monto_objetivo||0;
+  document.getElementById('obj-actual').value=obj.monto_actual||0;
+  document.getElementById('obj-fecha').value=obj.fecha_limite||'';
+  document.getElementById('obj-color').value=obj.color||'#3a6338';
+  _populateObjetivoSels();
+  document.getElementById('obj-cuenta').value=obj.cuenta_id||'';
+  document.getElementById('obj-cartera').value=obj.cartera_id||'';
+  openModal('modal-objetivo');
+}
+
+function guardarObjetivo(){
+  const nombre=document.getElementById('obj-nombre').value.trim();
+  if(!nombre)return alert('Ingresá un nombre');
+  const meta=+document.getElementById('obj-meta').value;
+  if(!meta||meta<=0)return alert('El monto objetivo debe ser mayor a 0');
+  const editId=document.getElementById('obj-id').value;
+  const cuentaId=document.getElementById('obj-cuenta').value||null;
+  const carteraId=document.getElementById('obj-cartera').value||null;
+  const data={nombre,icono:document.getElementById('obj-icono').value||'🎯',
+    monto_objetivo:meta,monto_actual:+document.getElementById('obj-actual').value||0,
+    fecha_limite:document.getElementById('obj-fecha').value||null,
+    color:document.getElementById('obj-color').value,
+    cuenta_id:cuentaId,cartera_id:carteraId,activo:true};
+  if(editId){Object.assign(S.objetivos.find(o=>o.id===editId),data);}
+  else{S.objetivos.push({id:uid(),historial_aportes:[],...data});}
+  save();closeModal('modal-objetivo');renderObjetivos();
+  showToast('✅ Objetivo guardado');
+}
+
+function eliminarObjetivo(id){
+  if(!confirm('¿Eliminar este objetivo?'))return;
+  S.objetivos=S.objetivos.filter(o=>o.id!==id);
+  save();renderObjetivos();
+}
+
+function openAporte(objId){
+  const obj=S.objetivos.find(o=>o.id===objId);if(!obj)return;
+  document.getElementById('aporte-obj-id').value=objId;
+  document.getElementById('aporte-obj-info').textContent=`${obj.icono||'🎯'} ${obj.nombre} · ${$$(+obj.monto_actual||0)} de ${$$(+obj.monto_objetivo||0)}`;
+  document.getElementById('aporte-monto').value='';
+  document.getElementById('aporte-fecha').value=today();
+  document.getElementById('aporte-notas').value='';
+  openModal('modal-aporte');
+}
+
+function guardarAporte(){
+  const objId=document.getElementById('aporte-obj-id').value;
+  const monto=+document.getElementById('aporte-monto').value;
+  if(!monto||monto<=0)return alert('Ingresá un monto válido');
+  const obj=S.objetivos.find(o=>o.id===objId);if(!obj)return;
+  if(!obj.historial_aportes)obj.historial_aportes=[];
+  obj.historial_aportes.push({id:uid(),fecha:document.getElementById('aporte-fecha').value||today(),
+    monto,notas:document.getElementById('aporte-notas').value.trim()});
+  obj.monto_actual=(+obj.monto_actual||0)+monto;
+  save();closeModal('modal-aporte');renderObjetivos();
+  showToast('✅ Aporte registrado');
+}
+
+// ====== CARTERAS ======
+let _carteraActual=null; // null = Todas
+
+function populateCarteraSels(){
+  // Selector en modal-inversion
+  const ivSel=document.getElementById('iv-cartera');
+  if(ivSel){
+    const prev=ivSel.value;
+    const carts=S.carteras||[];
+    ivSel.innerHTML=carts.map(c=>`<option value="${c.id}">${esc(c.nombre)}</option>`).join('');
+    if(prev&&carts.find(c=>c.id===prev))ivSel.value=prev;
+    else if(_carteraActual&&carts.find(c=>c.id===_carteraActual))ivSel.value=_carteraActual;
+  }
+}
+
+function renderCarterasTabs(){
+  const tabs=document.getElementById('carteras-tabs');if(!tabs)return;
+  const carteras=S.carteras||[];
+  if(!carteras.length){tabs.style.display='none';return;}
+  tabs.style.display='flex';
+  tabs.innerHTML=
+    `<button class="btn btn-${_carteraActual===null?'primary':'ghost'} btn-sm" onclick="setCarteraActual(null)">Todas</button>`+
+    carteras.map(c=>`<button class="btn btn-${_carteraActual===c.id?'primary':'ghost'} btn-sm"
+      style="${_carteraActual===c.id?`background:${esc(c.color||'var(--accent)')};border-color:${esc(c.color||'var(--accent)')};`:''}"
+      onclick="setCarteraActual('${c.id}')">${esc(c.nombre)}</button>`).join('')+
+    `<button class="btn btn-ghost btn-sm" onclick="openNuevaCartera()">+ Cartera</button>`+
+    (carteras.length>1&&_carteraActual?`<button class="btn btn-danger btn-xs" onclick="eliminarCartera('${_carteraActual}')">✕ Eliminar cartera</button>`:'');
+}
+
+function setCarteraActual(id){
+  _carteraActual=id;
+  renderCarterasTabs();
+  populateCarteraSels();
+  renderInversiones();
+}
+
+function openNuevaCartera(){
+  document.getElementById('cart-id').value='';
+  document.getElementById('modal-cart-title').textContent='Nueva cartera';
+  document.getElementById('cart-nombre').value='';
+  document.getElementById('cart-color').value='#1a5eb5';
+  document.getElementById('cart-desc').value='';
+  openModal('modal-cartera');
+}
+
+function guardarCartera(){
+  const nombre=document.getElementById('cart-nombre').value.trim();
+  if(!nombre)return alert('Ingresá un nombre');
+  const editId=document.getElementById('cart-id').value;
+  const data={nombre,color:document.getElementById('cart-color').value,
+    descripcion:document.getElementById('cart-desc').value.trim()};
+  if(editId){Object.assign(S.carteras.find(c=>c.id===editId),data);}
+  else{
+    const nueva={id:uid(),...data};
+    S.carteras.push(nueva);
+    _carteraActual=nueva.id;
+  }
+  save();closeModal('modal-cartera');renderCarterasTabs();populateCarteraSels();renderInversiones();
+  showToast('✅ Cartera guardada');
+}
+
+function eliminarCartera(id){
+  const c=S.carteras.find(c=>c.id===id);if(!c)return;
+  const count=S.inversiones.filter(i=>i.carteraId===id).length;
+  if(!confirm(`¿Eliminar la cartera "${c.nombre}"?${count?` Sus ${count} inversiones quedarán sin cartera asignada.`:''}`))return;
+  S.carteras=S.carteras.filter(c=>c.id!==id);
+  if(_carteraActual===id)_carteraActual=null;
+  save();renderCarterasTabs();renderInversiones();
 }
 
 // ====== CUENTAS ======
@@ -3540,6 +3940,7 @@ function guardarInversion(){
   if(!monto&&!precioCosto)return alert('Ingresá el costo total o el precio de compra por unidad');
   const editId=document.getElementById('iv-edit-id').value;
   const montoFinal=monto||(precioCosto*(+document.getElementById('iv-cantidad').value||1));
+  const carteraId=document.getElementById('iv-cartera').value||S.carteras[0]?.id||null;
   const data={tipo:document.getElementById('iv-tipo').value,descripcion:desc,montoInvertido:montoFinal,
     precioCosto,
     tasaAnual:+document.getElementById('iv-tasa').value||0,
@@ -3548,7 +3949,8 @@ function guardarInversion(){
     moneda:document.getElementById('iv-moneda').value,
     notas:document.getElementById('iv-notas').value.trim(),
     ticker:(document.getElementById('iv-ticker').value||'').trim().toUpperCase()||null,
-    cantidad:+document.getElementById('iv-cantidad').value||0};
+    cantidad:+document.getElementById('iv-cantidad').value||0,
+    carteraId};
   if(editId){Object.assign(S.inversiones.find(i=>i.id===editId),data);}
   else{S.inversiones.push({id:uid(),...data});}
   save();closeModal('modal-inversion');renderInversiones();
@@ -3570,6 +3972,8 @@ function editInversion(id){
   document.getElementById('iv-notas').value=inv.notas||'';
   document.getElementById('iv-ticker').value=inv.ticker||'';
   document.getElementById('iv-cantidad').value=inv.cantidad||'';
+  populateCarteraSels();
+  if(inv.carteraId)document.getElementById('iv-cartera').value=inv.carteraId;
   openModal('modal-inversion');
 }
 
@@ -3679,9 +4083,11 @@ function resetInvModal(){
   document.getElementById('iv-tasa').value='';
   document.getElementById('iv-notas').value='';
 }
-function nuevaInversion(){resetInvModal();openModal('modal-inversion');}
+function nuevaInversion(){resetInvModal();populateCarteraSels();openModal('modal-inversion');}
 
 function renderInversiones(){
+  renderCarterasTabs();
+  populateCarteraSels();
   resetInvModal();
   // Limpiar caches de dividendos con valores inválidos (< 0.05 USD)
   Object.keys(localStorage).filter(k=>k.startsWith('dividendo_')).forEach(k=>{
@@ -3699,9 +4105,10 @@ function renderInversiones(){
   const toARS=(monto,moneda)=>(moneda==='USD'&&dolarRates.blue?.venta)?monto*dolarRates.blue.venta:monto;
 
   // ── Separar: con ticker (agrupables) vs sin ticker (individuales)
+  const invFiltradas=_carteraActual?S.inversiones.filter(i=>i.carteraId===_carteraActual):S.inversiones;
   const groups={};
   const singles=[];
-  S.inversiones.forEach(inv=>{
+  invFiltradas.forEach(inv=>{
     if(inv.ticker){
       const key=inv.ticker.trim().toUpperCase();
       if(!groups[key])groups[key]={ticker:key,desc:inv.descripcion,entries:[]};
@@ -3730,7 +4137,7 @@ function renderInversiones(){
   const rendPortfolio=valorActualPortfolio-totalInvPortfolio;
   const nTickers=Object.keys(groups).length;
   const nPositions=nTickers+singles.length;
-  const prox=S.inversiones.filter(i=>i.fechaVencimiento).sort((a,b)=>a.fechaVencimiento.localeCompare(b.fechaVencimiento))[0];
+  const prox=invFiltradas.filter(i=>i.fechaVencimiento).sort((a,b)=>a.fechaVencimiento.localeCompare(b.fechaVencimiento))[0];
 
   const stats=document.getElementById('inv-stats');
   const rendColor=rendPortfolio>=0?'var(--accent2)':'var(--accent4)';
@@ -3756,7 +4163,7 @@ function renderInversiones(){
   }
 
   const cont=document.getElementById('inversiones-list');
-  if(!S.inversiones.length){cont.innerHTML='<div class="empty"><div class="ei">📈</div><p>Sin inversiones registradas.</p></div>';renderCotizacionesPanel();return;}
+  if(!invFiltradas.length){cont.innerHTML=`<div class="empty"><div class="ei">📈</div><p>${_carteraActual?'Esta cartera no tiene inversiones.':'Sin inversiones registradas.'}</p></div>`;renderCotizacionesPanel();return;}
   const tcol={'Plazo Fijo':'b-green','FCI':'b-purple','Acciones':'b-yellow','Cripto':'b-red','Bono':'b-gray','Dólar':'b-yellow','Otro':'b-gray'};
 
   // ── Render helper: bloque de cotización live con 4 líneas estructuradas
@@ -4372,6 +4779,34 @@ function renderDashboard(){
     </div>`).join(''):'<div class="empty" style="padding:16px"><p>Sin movimientos aún.</p></div>';
   // Dashboard live activos widget — solo mostrar si hay inversiones con ticker
   renderDolarWidget();
+  // Widget de objetivos en dashboard
+  const objRow=document.getElementById('dash-objetivos-row');
+  const objList=document.getElementById('dash-objetivos-list');
+  const objetivosActivos=(S.objetivos||[]).filter(o=>o.activo!==false);
+  if(objRow){objRow.style.display=objetivosActivos.length?'':'none';}
+  if(objList&&objetivosActivos.length){
+    const proxObj=objetivosActivos.filter(o=>o.fecha_limite).sort((a,b)=>a.fecha_limite.localeCompare(b.fecha_limite))[0]
+      ||objetivosActivos[0];
+    if(proxObj){
+      const saldoV=_getObjetivoSaldoVinculado(proxObj);
+      const actual=saldoV!==null?saldoV:(+proxObj.monto_actual||0);
+      const meta=+proxObj.monto_objetivo||1;
+      const pct=Math.min(100,Math.round(actual/meta*100));
+      const dias=proxObj.fecha_limite?_diasRestantes(proxObj.fecha_limite):null;
+      objList.innerHTML=`<div style="margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px">
+          <span>${esc(proxObj.icono||'🎯')} <strong>${esc(proxObj.nombre)}</strong>${dias!==null?` · ${dias>0?dias+' días':dias===0?'¡Hoy!':'Vencido'}`:''}</span>
+          <span style="font-weight:700">${pct}%</span>
+        </div>
+        <div style="background:var(--bg2);border-radius:99px;height:8px;overflow:hidden">
+          <div style="height:8px;border-radius:99px;background:${esc(proxObj.color||'var(--accent)')};width:${pct}%"></div>
+        </div>
+        <div style="font-size:11px;color:var(--text2);margin-top:4px">${$$(actual)} de ${$$(meta)}</div>
+      </div>
+      ${objetivosActivos.length>1?`<div style="font-size:11px;color:var(--text2)">${objetivosActivos.length-1} objetivo${objetivosActivos.length>2?'s':''} más →</div>`:''}`;
+    }
+  }
+
   // Widget de cuentas en dashboard
   const cuentasRow=document.getElementById('dash-cuentas-row');
   const cuentasList=document.getElementById('dash-cuentas-list');
@@ -5056,7 +5491,7 @@ function startApp(){
   document.getElementById('fecha-sb').textContent=now.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});
   document.getElementById('g-fecha').value=today();
   document.getElementById('i-fecha').value=today();
-  populateCatSelects();populateTarjetaSels();populateCuentaSels();
+  populateCatSelects();populateTarjetaSels();populateCuentaSels();populateCarteraSels();
   buildMesSel('filtro-mes-g',S.gastos);
   buildMesSel('filtro-mes-i',S.ingresos);
   renderDashboard();
