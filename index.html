@@ -1440,6 +1440,8 @@ async function afterLogin() {
   const _lastCheck=localStorage.getItem('notif_last_check');
   if(_lastCheck!==new Date().toDateString())programarNotificacionesVencimiento();
   setTimeout(manejarURLParams,200);
+  // Forzar primera sincronización a Supabase después del login
+  await _saveToSupabase();
 }
 
 // ── MOBILE GASTOS UI ENRIQUECIDA ──
@@ -1693,15 +1695,19 @@ function save(){
 }
 
 async function _saveToSupabase(){
-  if(!currentUser)return;
+  if(!currentUser?.id){ console.warn('[sync] Sin usuario, no se sincroniza'); return; }
+  console.log('[sync] Guardando en Supabase, user:', currentUser.id);
   try{
-    const {error}=await sb.from('user_data').upsert(
+    const {data,error}=await sb.from('user_data').upsert(
       {user_id:currentUser.id, data:S, updated_at:new Date().toISOString()},
       {onConflict:'user_id'}
-    );
-    if(error) console.warn('[sync] Error guardando en Supabase:', error.message);
-    else console.log('[sync] Guardado en Supabase OK');
-  }catch(e){console.warn('[sync] _saveToSupabase excepción:', e.message);}
+    ).select();
+    if(error){
+      console.error('[sync] Error upsert:', error.message, '| code:', error.code, '| hint:', error.hint);
+    } else {
+      console.log('[sync] Guardado en Supabase OK, rows:', data?.length);
+    }
+  }catch(e){ console.error('[sync] Excepción:', e.message); }
 }
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,5);}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
