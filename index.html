@@ -81,6 +81,7 @@ nav{flex:1;padding:10px 10px;overflow-y:auto}
 
 /* ── LAYOUT ── */
 .two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.one-col{display:grid;grid-template-columns:1fr;gap:16px;margin-bottom:16px}
 .three-col{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:16px}
 
 /* ── PANEL ── */
@@ -501,32 +502,45 @@ input[type=checkbox]{width:auto;margin-right:5px}
     <p id="fecha-sb"></p>
     <div id="user-info-bar" style="display:none;font-size:11px;margin-bottom:8px;padding:7px 10px;background:var(--accent-light);border-radius:8px;color:var(--accent)"></div>
     <div class="sidebar-actions">
-      <button class="toggle-btn" onclick="toggleTheme()" id="theme-btn">🌙 Oscuro</button>
-      <button class="toggle-btn" onclick="backupData()" id="btn-backup">💾 Backup</button>
-      <button class="toggle-btn" onclick="document.getElementById('restore-input').click()" id="btn-restore">📂 Restaurar</button>
-      <button class="toggle-btn" onclick="verCacheInversiones()" title="Debug: ver precios cacheados">🗄️ Ver caché</button>
-      <input type="file" id="restore-input" accept=".json" style="display:none" onchange="restoreData(event)"/>
       <button class="toggle-btn" onclick="doLogout()" style="color:var(--accent4);border-color:rgba(248,113,113,.3)">🚪 Salir</button>
     </div>
-    <div class="color-picker-wrap" style="margin-top:14px">
-      <p class="nav-label" style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px;color:var(--text2)">Color de acento</p>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-        <div class="color-swatch" id="sw-verde"   style="background:#3a6338" onclick="setAccent('verde')"   title="Verde"></div>
-        <div class="color-swatch" id="sw-azul"    style="background:#1a5eb5" onclick="setAccent('azul')"    title="Azul"></div>
-        <div class="color-swatch" id="sw-indigo"  style="background:#4338ca" onclick="setAccent('indigo')"  title="Índigo"></div>
-        <div class="color-swatch" id="sw-rosa"    style="background:#9d174d" onclick="setAccent('rosa')"    title="Rosa"></div>
-        <div class="color-swatch" id="sw-naranja" style="background:#c2410c" onclick="setAccent('naranja')" title="Naranja"></div>
-        <div class="color-swatch" id="sw-teal"    style="background:#0f766e" onclick="setAccent('teal')"    title="Teal"></div>
-        <input type="color" id="sw-custom" value="#6c63ff" title="Color personalizado"
-          onchange="setAccentCustom(this.value)"
-          style="width:22px;height:22px;border-radius:50%;cursor:pointer;border:2px solid transparent;padding:1px;background:none;-webkit-appearance:none"/>
+    <!-- Ajustes avanzados colapsable -->
+    <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px">
+      <button id="btn-ajustes-adv" onclick="toggleAjustesAvanzados()"
+        style="width:100%;background:none;border:none;cursor:pointer;color:var(--text2);font-size:11px;font-weight:600;text-align:left;padding:4px 0;display:flex;justify-content:space-between;align-items:center;text-transform:uppercase;letter-spacing:.5px">
+        <span>⚙️ Ajustes avanzados</span><span id="ajustes-adv-arrow">▼</span>
+      </button>
+      <div id="ajustes-adv-panel" style="display:none;margin-top:10px">
+        <!-- Backup / Restaurar / Caché / Tema -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:12px">
+          <button class="toggle-btn" onclick="backupData()" id="btn-backup">💾 Backup</button>
+          <button class="toggle-btn" onclick="document.getElementById('restore-input').click()" id="btn-restore">📂 Restaurar</button>
+          <button class="toggle-btn" onclick="verCacheInversiones()">🗄️ Ver caché</button>
+          <button class="toggle-btn" onclick="toggleTheme()" id="theme-btn">🌙 Oscuro</button>
+        </div>
+        <input type="file" id="restore-input" accept=".json" style="display:none" onchange="restoreData(event)"/>
+        <!-- Color de acento -->
+        <div class="color-picker-wrap">
+          <p class="nav-label" style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px;color:var(--text2)">Color de acento</p>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+            <div class="color-swatch" id="sw-verde"   style="background:#3a6338" onclick="setAccent('verde')"   title="Verde"></div>
+            <div class="color-swatch" id="sw-azul"    style="background:#1a5eb5" onclick="setAccent('azul')"    title="Azul"></div>
+            <div class="color-swatch" id="sw-indigo"  style="background:#4338ca" onclick="setAccent('indigo')"  title="Índigo"></div>
+            <div class="color-swatch" id="sw-rosa"    style="background:#9d174d" onclick="setAccent('rosa')"    title="Rosa"></div>
+            <div class="color-swatch" id="sw-naranja" style="background:#c2410c" onclick="setAccent('naranja')" title="Naranja"></div>
+            <div class="color-swatch" id="sw-teal"    style="background:#0f766e" onclick="setAccent('teal')"    title="Teal"></div>
+            <input type="color" id="sw-custom" value="#6c63ff" title="Color personalizado"
+              onchange="setAccentCustom(this.value)"
+              style="width:22px;height:22px;border-radius:50%;cursor:pointer;border:2px solid transparent;padding:1px;background:none;-webkit-appearance:none"/>
+          </div>
+          <p class="nav-label" style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;margin:10px 0 8px;color:var(--text2)">Colores semánticos</p>
+          <div class="color-row-pick"><label>🟢 Ingresos / OK</label><input type="color" id="sb-color2" oninput="setSemanticColor(2,this.value)"/></div>
+          <div class="color-row-pick"><label>🟡 Advertencia</label><input type="color" id="sb-color3" oninput="setSemanticColor(3,this.value)"/></div>
+          <div class="color-row-pick"><label>🔴 Peligro / Gasto</label><input type="color" id="sb-color4" oninput="setSemanticColor(4,this.value)"/></div>
+          <div class="color-row-pick"><label>🔵 Info</label><input type="color" id="sb-color5" oninput="setSemanticColor(5,this.value)"/></div>
+          <button onclick="resetSemanticColors()" style="font-size:10px;color:var(--text2);background:none;border:none;cursor:pointer;padding:4px 0;text-decoration:underline">Restaurar colores</button>
+        </div>
       </div>
-      <p class="nav-label" style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;margin:10px 0 8px;color:var(--text2)">Colores semánticos</p>
-      <div class="color-row-pick"><label>🟢 Ingresos / OK</label><input type="color" id="sb-color2" oninput="setSemanticColor(2,this.value)"/></div>
-      <div class="color-row-pick"><label>🟡 Advertencia</label><input type="color" id="sb-color3" oninput="setSemanticColor(3,this.value)"/></div>
-      <div class="color-row-pick"><label>🔴 Peligro / Gasto</label><input type="color" id="sb-color4" oninput="setSemanticColor(4,this.value)"/></div>
-      <div class="color-row-pick"><label>🔵 Info</label><input type="color" id="sb-color5" oninput="setSemanticColor(5,this.value)"/></div>
-      <button onclick="resetSemanticColors()" style="font-size:10px;color:var(--text2);background:none;border:none;cursor:pointer;padding:4px 0;text-decoration:underline">Restaurar colores por defecto</button>
     </div>
     <div id="sb-ai-key-section" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
       <p style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px;color:var(--text2)">🤖 Asistente IA</p>
@@ -557,22 +571,14 @@ input[type=checkbox]{width:auto;margin-right:5px}
     <div class="panel"><div class="panel-title">Cuotas próximas <span class="sub" id="cuotas-prox-count"></span></div><div id="dash-cuotas"></div></div>
     <div class="panel"><div class="panel-title">Últimos movimientos</div><div id="dash-ultimos"></div></div>
   </div>
-  <div class="two-col">
+  <div class="two-col" id="dash-dolar-row">
     <div class="panel">
       <div class="panel-title">💱 Dólar hoy
         <button class="btn btn-ghost btn-sm" onclick="fetchDolar().then(renderDolarWidget)">🔄</button>
       </div>
       <div id="dash-dolar"><p style="color:var(--text2);font-size:12px">Cargando cotizaciones...</p></div>
     </div>
-    <div class="panel"><div class="panel-title">📡 Mis activos en vivo <span class="sub">Tickers configurados</span></div><div id="dash-activos-vivo"><p style="color:var(--text2);font-size:12px">Configurá tickers en tus inversiones para ver precios aquí.</p></div></div>
-  </div>
-  <!-- PANEL ADMIN: gastos de otros usuarios (solo visible para admin) -->
-  <div class="panel" id="admin-panel" style="display:none">
-    <div class="panel-title">
-      👥 Gastos de usuarios
-      <button class="btn btn-ghost btn-sm" onclick="loadCristianGastos()">🔄 Actualizar</button>
-    </div>
-    <div id="admin-gastos-panel"><p style="color:var(--text2);font-size:12px">Cargando...</p></div>
+    <div class="panel" id="dash-activos-panel" style="display:none"><div class="panel-title">📡 Mis activos en vivo <span class="sub">Tickers configurados</span></div><div id="dash-activos-vivo"></div></div>
   </div>
 </div>
 
@@ -1382,9 +1388,7 @@ async function afterLogin() {
     }
     document.getElementById('main').style.display = 'block';
     startApp();
-    // Cargar gastos de otros usuarios
     setTimeout(loadCristianGastos, 800);
-    document.getElementById('admin-panel').style.display = 'block';
     // Mostrar FAB IA y secciones de API key (solo admin)
     const aiFab = document.getElementById('ai-fab');
     if (aiFab) aiFab.style.display = 'flex';
@@ -1409,11 +1413,8 @@ async function afterLogin() {
     ['bn-dashboard','bn-ingresos','bn-tarjetas','bn-mas'].forEach(id => {
       const el = document.getElementById(id); if (el) el.style.display = 'none';
     });
-    // Ocultar backup/restore
-    const bkp = document.getElementById('btn-backup'); if (bkp) bkp.style.display = 'none';
-    const rst = document.getElementById('btn-restore'); if (rst) rst.style.display = 'none';
-    // Ocultar color picker
-    const cp = document.querySelector('.color-picker-wrap'); if (cp) cp.style.display = 'none';
+    // Ocultar ajustes avanzados para usuario no-admin
+    const advPanel = document.getElementById('btn-ajustes-adv'); if (advPanel) advPanel.style.display = 'none';
     // Cambiar logo (desktop)
     const logoH1 = document.querySelector('.logo h1'); if (logoH1) logoH1.textContent = currentNombre;
     const logoP = document.querySelector('.logo p'); if (logoP) logoP.textContent = 'Mis gastos';
@@ -1685,6 +1686,15 @@ function refreshApp(){
   const navEl=document.querySelector(`.nav-item[onclick*="'${secId}'"]`)||document.querySelector(`.nav-item.active`);
   nav(secId,navEl);
   showToast('✅ Datos actualizados');
+}
+
+function toggleAjustesAvanzados(){
+  const panel=document.getElementById('ajustes-adv-panel');
+  const arrow=document.getElementById('ajustes-adv-arrow');
+  if(!panel)return;
+  const open=panel.style.display==='none';
+  panel.style.display=open?'block':'none';
+  if(arrow)arrow.textContent=open?'▲':'▼';
 }
 function nextFechaDia(dia){
   const hoy=new Date();
@@ -3790,26 +3800,27 @@ function renderDashboard(){
       </div>
       <div style="font-weight:700;color:${m.tipo_mov==='ingreso'?'var(--accent2)':'var(--text)'}">${m.tipo_mov==='ingreso'?'+':'−'}${$$(m.monto)}</div>
     </div>`).join(''):'<div class="empty" style="padding:16px"><p>Sin movimientos aún.</p></div>';
-  // Dashboard live activos widget
+  // Dashboard live activos widget — solo mostrar si hay inversiones con ticker
   renderDolarWidget();
+  const activosPanel=document.getElementById('dash-activos-panel');
   const activosEl=document.getElementById('dash-activos-vivo');
-  if(activosEl){
-    const conTicker=S.inversiones.filter(i=>i.ticker&&i.ticker!=='USD');
-    if(!conTicker.length){activosEl.innerHTML='<p style="color:var(--text2);font-size:12px">Agregá tickers en tus inversiones para ver precios aquí.</p>';}
-    else{
-      activosEl.innerHTML=conTicker.map(inv=>{
-        const _p=liveprices[inv.ticker]?.priceARS||getPrecioManual(inv.ticker)||null;
-        const chg=liveprices[inv.ticker]?.change||0;
-        return`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(128,128,128,.07)">
-          <div><div style="font-size:13px;font-weight:500">${inv.descripcion}</div><div style="font-size:10px;color:var(--text2)">${inv.ticker}</div></div>
-          <div style="text-align:right">
-            ${_p?`<div style="font-size:13px;font-weight:700">${$$(_p)}</div>
-            <div style="font-size:11px;color:${chg>=0?'var(--accent2)':'var(--accent4)'}">${chg>=0?'▲':'▼'} ${Math.abs(chg).toFixed(2)}%</div>`
-            :'<span style="color:var(--text2);font-size:12px">sin datos</span>'}
-          </div>
-        </div>`;
-      }).join('');
-    }
+  const dolarRow=document.getElementById('dash-dolar-row');
+  const conTicker=S.inversiones.filter(i=>i.ticker&&i.ticker!=='USD');
+  if(activosPanel){activosPanel.style.display=conTicker.length?'':'none';}
+  if(dolarRow){dolarRow.className=conTicker.length?'two-col':'one-col';}
+  if(activosEl&&conTicker.length){
+    activosEl.innerHTML=conTicker.map(inv=>{
+      const _p=liveprices[inv.ticker]?.priceARS||getPrecioManual(inv.ticker)||null;
+      const chg=liveprices[inv.ticker]?.change||0;
+      return`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(128,128,128,.07)">
+        <div><div style="font-size:13px;font-weight:500">${inv.descripcion}</div><div style="font-size:10px;color:var(--text2)">${inv.ticker}</div></div>
+        <div style="text-align:right">
+          ${_p?`<div style="font-size:13px;font-weight:700">${$$(_p)}</div>
+          <div style="font-size:11px;color:${chg>=0?'var(--accent2)':'var(--accent4)'}">${chg>=0?'▲':'▼'} ${Math.abs(chg).toFixed(2)}%</div>`
+          :'<span style="color:var(--text2);font-size:12px">sin datos</span>'}
+        </div>
+      </div>`;
+    }).join('');
   }
 }
 
