@@ -1386,12 +1386,11 @@ async function afterLogin() {
   const mhTitle = document.querySelector('#mobile-header .mh-logo h1');
   if (mhTitle) mhTitle.textContent = userRole === 'admin' ? 'FinanzasApp' : currentNombre;
 
-  // Sincronizar categorías desde Supabase (ambos roles)
-  await syncCatsFromSupabase();
-
   if (userRole === 'admin') {
     // ADMIN: app completa con datos de localStorage
     load(); applyTheme();
+    // Sincronizar categorías DESPUÉS de load() para que Supabase sea fuente de verdad
+    await syncCatsFromSupabase();
     // Solo mostrar sidebar en desktop; en mobile el CSS lo oculta
     if (!isMobile) {
       document.getElementById('sidebar').style.display = 'flex';
