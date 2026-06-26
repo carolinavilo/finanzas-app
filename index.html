@@ -1669,7 +1669,7 @@ async function afterLogin() {
     logBtn.id = 'mob-logout-btn';
     logBtn.className = 'mh-btn';
     logBtn.title = 'Cerrar sesión';
-    logBtn.innerHTML = '⬅️';
+    logBtn.innerHTML = '<i data-lucide="log-out"></i>';if(typeof lucide!=='undefined')lucide.createIcons();
     logBtn.onclick = doLogout;
     mhActions.appendChild(logBtn);
   }
