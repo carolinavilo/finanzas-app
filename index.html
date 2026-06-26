@@ -1870,7 +1870,7 @@ const CAT_COLORS={
 
 function _defaultS(){
   return{gastos:[],ingresos:[],tarjetas:[],cuotas:[],inversiones:[],presupuesto:{},
-    comprasCuotas:[],gastosFinTarjeta:[],ventas:[],cuentas:[],
+    comprasCuotas:[],gastosFinTarjeta:[],ventas:[],cuentas:[],transferencias:[],
     objetivos:[],carteras:[],
     catsGasto:[...DEFAULT_CATS_GASTO],catsIngreso:[...DEFAULT_CATS_INGRESO],
     config:{tema:'light',colorTheme:'verde'}};
@@ -1882,6 +1882,7 @@ function _applyGuards(p){
   if(!p.config.colorTheme)p.config.colorTheme='verde';
   if(!p.comprasCuotas)p.comprasCuotas=[];
   if(!p.cuentas)p.cuentas=[];
+  if(!p.transferencias)p.transferencias=[];
   if(!p.objetivos)p.objetivos=[];
   p.objetivos.forEach(o=>{if(!o.instrumentos)o.instrumentos=[];if(!o.historial_aportes)o.historial_aportes=[];});
   if(!p.carteras)p.carteras=[];
@@ -2772,6 +2773,10 @@ function guardarTransferencia(){
   if(!origen||!destino)return;
   origen.saldo=(+origen.saldo||0)-monto;
   destino.saldo=(+destino.saldo||0)+monto;
+  if(!S.transferencias)S.transferencias=[];
+  S.transferencias.push({id:uid(),origen_id:origenId,destino_id:destinoId,monto,
+    fecha:document.getElementById('tr-fecha').value||today(),
+    notas:document.getElementById('tr-notas').value.trim()});
   save();closeModal('modal-transferencia');renderCuentas();
   showToast(`✅ Transferencia: ${origen.nombre} → ${destino.nombre}`);
 }
@@ -3212,6 +3217,11 @@ function guardarEditIngreso(){
 
 function eliminarIngreso(id){
   if(!confirm('¿Eliminar este ingreso?'))return;
+  const ing=S.ingresos.find(i=>i.id===id);
+  if(ing?.cuentaId){
+    const cuenta=S.cuentas.find(c=>c.id===ing.cuentaId);
+    if(cuenta)cuenta.saldo=(+cuenta.saldo||0)-ing.monto;
+  }
   S.ingresos=S.ingresos.filter(i=>i.id!==id);save();renderIngresos();refreshDashIfVisible();
 }
 
@@ -3343,6 +3353,11 @@ function guardarEditGasto(){
 
 function eliminarGasto(id){
   if(!confirm('¿Eliminar este gasto? Esta acción no se puede deshacer.'))return;
+  const g=S.gastos.find(g=>g.id===id);
+  if(g?.cuentaId){
+    const cuenta=S.cuentas.find(c=>c.id===g.cuentaId);
+    if(cuenta)cuenta.saldo=(+cuenta.saldo||0)+g.monto;
+  }
   S.gastos=S.gastos.filter(g=>g.id!==id);
   if(userRole==='usuario'){syncGastoDelete(id);}else{save();}
   renderGastos();refreshDashIfVisible();
