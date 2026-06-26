@@ -92,6 +92,11 @@ nav{flex:1;padding:10px 10px;overflow-y:auto}
 .panel{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-card);padding:22px;margin-bottom:16px;box-shadow:var(--shadow)}
 .panel-title{font-size:13px;font-weight:600;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center}
 .panel-title .sub{color:var(--text2);font-size:11px;font-weight:400}
+#dash-sortable{display:flex;flex-direction:column;gap:14px}
+#dash-sortable>.two-col,#dash-sortable>[id]{margin-bottom:0}
+.dash-drag-handle{cursor:grab;opacity:.35;font-size:14px;margin-right:6px;user-select:none;touch-action:none;-webkit-user-select:none;flex-shrink:0}
+.dash-drag-handle:active{cursor:grabbing}
+.dash-dragging{box-shadow:0 12px 40px rgba(0,0,0,.25)!important;z-index:50;opacity:.92;transition:none!important}
 
 /* ── BUTTONS ── */
 .btn{padding:8px 16px;border-radius:10px;border:none;cursor:pointer;font-size:12px;font-weight:600;transition:.15s;line-height:1}
@@ -534,41 +539,43 @@ input[type=checkbox]{width:auto;margin-right:5px}
   <div class="page-header"><div class="page-header-left"><h2 id="dash-greeting">Dashboard</h2><p id="dash-sub"></p></div><div class="page-header-right" style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary" onclick="navMob('gastos');setTimeout(()=>{const el=document.getElementById('g-desc');if(el)el.focus();},200)">＋ Registrar gasto</button><button class="btn btn-primary" style="background:var(--accent2)" onclick="navMob('ingresos');setTimeout(()=>{const el=document.getElementById('i-desc');if(el)el.focus();},200)">＋ Registrar ingreso</button></div></div>
   <div id="dash-alerts"></div>
   <div class="cards-grid-5" id="dash-cards"></div>
-  <div class="two-col">
-    <div class="panel"><div class="panel-title">Gastos por categoría <span class="sub">Este mes</span></div><div class="chart-wrap"><canvas id="chartCat"></canvas></div></div>
-    <div class="panel"><div class="panel-title">Balance mensual <span class="sub">Últimos 6 meses</span></div><div class="chart-wrap"><canvas id="chartMes"></canvas></div></div>
-  </div>
-  <div class="two-col">
-    <div class="panel">
-      <div class="panel-title">Proyección fin de mes <span class="sub" id="proj-label"></span></div>
-      <div id="dash-proyeccion"></div>
-    </div>
-    <div class="panel"><div class="panel-title">Comparativa categorías <span class="sub">vs mes anterior</span></div><div id="dash-comparativa"></div></div>
-  </div>
-  <div class="two-col">
-    <div class="panel"><div class="panel-title">Cuotas próximas <span class="sub" id="cuotas-prox-count"></span></div><div id="dash-cuotas"></div></div>
-    <div class="panel"><div class="panel-title">Últimos movimientos</div><div id="dash-ultimos"></div></div>
-  </div>
-  <div id="dash-objetivos-row" style="display:none;margin-bottom:14px">
-    <div class="panel" onclick="navMob('objetivos')" style="cursor:pointer">
-      <div class="panel-title">🎯 Objetivos <span class="sub">Click para ver todos →</span></div>
-      <div id="dash-objetivos-list"></div>
-    </div>
-  </div>
-  <div id="dash-cuentas-row" style="display:none;margin-bottom:14px">
-    <div class="panel" onclick="navMob('cuentas')" style="cursor:pointer">
-      <div class="panel-title">🏦 Mis cuentas <span class="sub">Click para ver detalle →</span></div>
-      <div id="dash-cuentas-list"></div>
-    </div>
-  </div>
-  <div class="two-col" id="dash-dolar-row">
-    <div class="panel">
-      <div class="panel-title">💱 Dólar hoy
-        <button class="btn btn-ghost btn-sm" onclick="fetchDolar().then(renderDolarWidget)">🔄</button>
+  <div id="dash-sortable">
+    <div data-widget="cuentas" id="dash-cuentas-row" style="display:none">
+      <div class="panel" onclick="navMob('cuentas')" style="cursor:pointer">
+        <div class="panel-title"><span><span class="dash-drag-handle" onclick="event.stopPropagation()">⠿</span>🏦 Mis cuentas</span><span class="sub">Click para ver detalle →</span></div>
+        <div id="dash-cuentas-list"></div>
       </div>
-      <div id="dash-dolar"><p style="color:var(--text2);font-size:12px">Cargando cotizaciones...</p></div>
     </div>
-    <div class="panel" id="dash-activos-panel" style="display:none"><div class="panel-title">📡 Mis activos en vivo <span class="sub">Tickers configurados</span></div><div id="dash-activos-vivo"></div></div>
+    <div data-widget="graficos" class="two-col">
+      <div class="panel"><div class="panel-title"><span><span class="dash-drag-handle">⠿</span>Gastos por categoría</span><span class="sub">Este mes</span></div><div class="chart-wrap"><canvas id="chartCat"></canvas></div></div>
+      <div class="panel"><div class="panel-title"><span><span class="dash-drag-handle" style="visibility:hidden">⠿</span>Balance mensual</span><span class="sub">Últimos 6 meses</span></div><div class="chart-wrap"><canvas id="chartMes"></canvas></div></div>
+    </div>
+    <div data-widget="proyeccion" class="two-col">
+      <div class="panel">
+        <div class="panel-title"><span><span class="dash-drag-handle">⠿</span>Proyección fin de mes</span><span class="sub" id="proj-label"></span></div>
+        <div id="dash-proyeccion"></div>
+      </div>
+      <div class="panel"><div class="panel-title"><span><span class="dash-drag-handle" style="visibility:hidden">⠿</span>Comparativa categorías</span><span class="sub">vs mes anterior</span></div><div id="dash-comparativa"></div></div>
+    </div>
+    <div data-widget="movimientos" class="two-col">
+      <div class="panel"><div class="panel-title"><span><span class="dash-drag-handle">⠿</span>Cuotas próximas</span><span class="sub" id="cuotas-prox-count"></span></div><div id="dash-cuotas"></div></div>
+      <div class="panel"><div class="panel-title"><span><span class="dash-drag-handle" style="visibility:hidden">⠿</span>Últimos movimientos</span></div><div id="dash-ultimos"></div></div>
+    </div>
+    <div data-widget="objetivos" id="dash-objetivos-row" style="display:none">
+      <div class="panel" onclick="navMob('objetivos')" style="cursor:pointer">
+        <div class="panel-title"><span><span class="dash-drag-handle" onclick="event.stopPropagation()">⠿</span>🎯 Objetivos</span><span class="sub">Click para ver todos →</span></div>
+        <div id="dash-objetivos-list"></div>
+      </div>
+    </div>
+    <div data-widget="dolar" class="two-col" id="dash-dolar-row">
+      <div class="panel">
+        <div class="panel-title"><span><span class="dash-drag-handle">⠿</span>💱 Dólar hoy</span>
+          <button class="btn btn-ghost btn-sm" onclick="fetchDolar().then(renderDolarWidget)">🔄</button>
+        </div>
+        <div id="dash-dolar"><p style="color:var(--text2);font-size:12px">Cargando cotizaciones...</p></div>
+      </div>
+      <div class="panel" id="dash-activos-panel" style="display:none"><div class="panel-title">📡 Mis activos en vivo <span class="sub">Tickers configurados</span></div><div id="dash-activos-vivo"></div></div>
+    </div>
   </div>
 </div>
 
@@ -5119,6 +5126,75 @@ function renderDashboard(){
       </div>`;
     }).join('');
   }
+
+  _applyDashOrder();
+  _initDashSort();
+}
+
+// ── Dashboard drag-to-reorder ──
+const _DASH_DEFAULT_ORDER=['cuentas','graficos','proyeccion','movimientos','objetivos','dolar'];
+let _ddState=null;
+
+function _applyDashOrder(){
+  const c=document.getElementById('dash-sortable');if(!c)return;
+  const order=S.config?.dashboardOrder||_DASH_DEFAULT_ORDER;
+  order.forEach(id=>{
+    const el=c.querySelector(`[data-widget="${id}"]`);
+    if(el)c.appendChild(el);
+  });
+  c.querySelectorAll('[data-widget]').forEach(el=>{
+    if(!order.includes(el.dataset.widget))c.appendChild(el);
+  });
+}
+
+function _initDashSort(){
+  const c=document.getElementById('dash-sortable');
+  if(!c||c._sortInited)return;
+  c._sortInited=true;
+
+  c.addEventListener('pointerdown',e=>{
+    const h=e.target.closest('.dash-drag-handle');
+    if(!h)return;
+    const w=h.closest('[data-widget]');
+    if(!w)return;
+    e.preventDefault();
+    try{w.setPointerCapture(e.pointerId);}catch(_){}
+    _ddState={w,y0:e.clientY};
+    w.classList.add('dash-dragging');
+  });
+
+  c.addEventListener('pointermove',e=>{
+    if(!_ddState)return;
+    e.preventDefault();
+    const dy=e.clientY-_ddState.y0;
+    _ddState.w.style.transform=`translateY(${dy}px)`;
+    // Swap with siblings when center crosses their midpoint
+    const {w}=_ddState;
+    const wR=w.getBoundingClientRect();
+    const wMid=wR.top+wR.height/2;
+    [...c.querySelectorAll('[data-widget]')].forEach(s=>{
+      if(s===w)return;
+      const sR=s.getBoundingClientRect();
+      const sMid=sR.top+sR.height/2;
+      const after=w.compareDocumentPosition(s)&Node.DOCUMENT_POSITION_FOLLOWING;
+      const before=w.compareDocumentPosition(s)&Node.DOCUMENT_POSITION_PRECEDING;
+      if(dy>0&&wMid>sMid&&after){c.insertBefore(s,w);_ddState.y0=e.clientY;w.style.transform='';}
+      else if(dy<0&&wMid<sMid&&before){c.insertBefore(w,s);_ddState.y0=e.clientY;w.style.transform='';}
+    });
+  },{passive:false});
+
+  const _endDrag=()=>{
+    if(!_ddState)return;
+    _ddState.w.style.transform='';
+    _ddState.w.classList.remove('dash-dragging');
+    const order=[...c.querySelectorAll('[data-widget]')].map(el=>el.dataset.widget);
+    if(!S.config)S.config={};
+    S.config.dashboardOrder=order;
+    save();
+    _ddState=null;
+  };
+  c.addEventListener('pointerup',_endDrag);
+  c.addEventListener('pointercancel',_endDrag);
 }
 
 function refreshDashIfVisible(){
