@@ -575,9 +575,11 @@ input[type=checkbox]{width:auto;margin-right:5px}
         <div id="dash-cuentas-list"></div>
       </div>
     </div>
-    <div data-widget="graficos" class="two-col">
+    <div data-widget="graficos-cat">
       <div class="panel"><div class="panel-title"><span><span class="dash-drag-handle">⠿</span>Gastos por categoría</span><span class="sub">Este mes</span></div><div class="chart-wrap"><canvas id="chartCat"></canvas></div></div>
-      <div class="panel"><div class="panel-title"><span><span class="dash-drag-handle" style="visibility:hidden">⠿</span>Balance mensual</span><span class="sub">Últimos 6 meses</span></div><div class="chart-wrap"><canvas id="chartMes"></canvas></div></div>
+    </div>
+    <div data-widget="graficos-mes">
+      <div class="panel"><div class="panel-title"><span><span class="dash-drag-handle">⠿</span>Balance mensual</span><span class="sub">Últimos 6 meses</span></div><div class="chart-wrap"><canvas id="chartMes"></canvas></div></div>
     </div>
     <div data-widget="proyeccion" class="two-col">
       <div class="panel">
@@ -5255,7 +5257,7 @@ function renderDashboard(){
 }
 
 // ── Dashboard drag-to-reorder ──
-const _DASH_DEFAULT_ORDER=['cuentas','graficos','proyeccion','movimientos','objetivos','dolar'];
+const _DASH_DEFAULT_ORDER=['cuentas','graficos-cat','graficos-mes','proyeccion','movimientos','objetivos','dolar'];
 let _ddState=null;
 
 function _applyDashOrder(){
