@@ -1958,7 +1958,8 @@ async function loadCristianGastos() {
 }
 
 // ====== STATE ======
-const DEFAULT_CATS_GASTO=['Comida','Transporte','Entretenimiento','Salud','Ropa','Hogar','Educación','Servicios','Supermercado','Otros'];
+const DEFAULT_CATS_GASTO=['Comida','Transporte','Entretenimiento','Salud','Ropa','Hogar','Educación','Servicios','Supermercado','Otros','Ajuste de saldo'];
+const SYSTEM_CATS=['Ajuste de saldo'];
 const DEFAULT_CATS_INGRESO=['Sueldo','Freelance','Alquiler','Inversiones','Regalo','Otros'];
 const CAT_COLORS={
   'Comida':'#6c63ff','Transporte':'#4ade80','Entretenimiento':'#f59e0b','Salud':'#f87171',
@@ -3061,6 +3062,7 @@ async function addCat(tipo){
 }
 
 async function removeCat(tipo,cat){
+  if(SYSTEM_CATS.includes(cat)){alert('Esta categoría del sistema no se puede eliminar.');return;}
   if(!confirm(`¿Eliminar categoría "${cat}"?`))return;
   if(tipo==='gasto')S.catsGasto=S.catsGasto.filter(c=>c!==cat);
   else S.catsIngreso=S.catsIngreso.filter(c=>c!==cat);
@@ -3235,11 +3237,11 @@ function renderCategorias(){
       const nsubs=getSubcats(c).length;
       return `<div class="cat-row" data-subcat-cat="${c.replace(/"/g,'&quot;')}">
         <div class="cat-row-dot"></div>
-        <div class="cat-row-name" id="catname-${tipo}-${i}">${c}</div>
+        <div class="cat-row-name" id="catname-${tipo}-${i}">${c}${SYSTEM_CATS.includes(c)?'<span style="background:var(--card2);color:var(--text2);font-size:10px;padding:2px 6px;border-radius:6px;font-weight:600;margin-left:6px">Sistema</span>':''}</div>
         <div class="cat-row-actions" id="catact-${tipo}-${i}">
           <button class="btn btn-xs btn-ghost" onclick="toggleSubcatPanel('${safe}')" title="Subcategorías" style="padding:6px 10px;font-size:12px">⊕ Subcats${nsubs?` (${nsubs})`:''}  </button>
           <button class="btn btn-xs btn-ghost" onclick="startEditCat('${tipo}',${i},'${safe}')" title="Editar" style="padding:6px 10px;font-size:12px">✏️</button>
-          <button class="btn btn-xs btn-danger" onclick="removeCat('${tipo}','${safe}')" title="Eliminar" style="padding:6px 10px;font-size:12px">✕</button>
+          ${SYSTEM_CATS.includes(c)?'':'<button class="btn btn-xs btn-danger" onclick="removeCat(\''+tipo+'\',\''+safe+'\')" title="Eliminar" style="padding:6px 10px;font-size:12px">✕</button>'}
         </div>
       </div>`;
     }).join('');
