@@ -2107,7 +2107,14 @@ function diasHasta(f){return Math.ceil((new Date(f+'T12:00:00')-new Date())/(864
 function mesPretty(m){const[y,mo]=m.split('-');return['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][+mo-1]+' '+y;}
 
 // ====== THEME ======
-const ACCENT_THEMES=['verde','azul','indigo','rosa','naranja','teal'];
+const ACCENT_THEMES=['verde','azul','indigo','rosa','naranja','teal','sage','mocha','midnight','terracotta','clay'];
+const PALETTE_THEMES={
+  mocha:      {bg:'#FBF7F4',card:'#FFFFFF',card2:'#EDE7DF',border:'#E5DED2',sidebar:'#FFFFFF'},
+  midnight:   {bg:'#F3F1EC',card:'#FFFFFF',card2:'#E8E6DF',border:'#D5D2C8',sidebar:'#FFFFFF'},
+  terracotta: {bg:'#F2EDE7',card:'#FFFFFF',card2:'#EAE4DC',border:'#DDD5CC',sidebar:'#FFFFFF'},
+  clay:       {bg:'#FAF7F5',card:'#FFFFFF',card2:'#EFE9E2',border:'#E3D6CC',sidebar:'#FFFFFF'},
+};
+const _PALETTE_VARS=['--bg','--card','--card2','--border','--sidebar'];
 const DEFAULT_COLORS = { c2:'#4ade80', c3:'#f59e0b', c4:'#f87171', c5:'#60a5fa' };
 function applyAccent(theme,customColor){
   ACCENT_THEMES.forEach(t=>document.body.classList.remove('ac-'+t));
@@ -2117,10 +2124,18 @@ function applyAccent(theme,customColor){
   } else if(theme==='custom'&&customColor){
     document.documentElement.style.setProperty('--accent',customColor);
   }
+  // Apply full palette vars in light mode; reset in dark or non-palette
+  const p=PALETTE_THEMES[theme];
+  if(p&&S.config.tema==='light'){
+    Object.entries(p).forEach(([k,v])=>document.documentElement.style.setProperty('--'+k,v));
+  } else {
+    _PALETTE_VARS.forEach(v=>document.documentElement.style.removeProperty(v));
+  }
   // update swatch active state
   ACCENT_THEMES.forEach(t=>{const el=document.getElementById('sw-'+t);if(el)el.classList.toggle('active',theme===t);});
   const cEl=document.getElementById('sw-custom');
   if(cEl){cEl.style.borderColor=theme==='custom'?'var(--text)':'transparent';if(customColor&&theme==='custom')cEl.value=customColor;}
+  syncColorPickers();
 }
 function setAccent(theme){
   S.config.colorTheme=theme;delete S.config.customColor;save();applyAccent(theme);
@@ -2137,6 +2152,13 @@ function setAccentColor(color){
 }
 function applyTheme(){
   document.body.classList.toggle('light',S.config.tema==='light');
+  // Re-apply or clear palette vars when toggling dark/light
+  const _pt=PALETTE_THEMES[S.config.colorTheme];
+  if(_pt&&S.config.tema==='light'){
+    Object.entries(_pt).forEach(([k,v])=>document.documentElement.style.setProperty('--'+k,v));
+  } else {
+    _PALETTE_VARS.forEach(v=>document.documentElement.style.removeProperty(v));
+  }
   const isLight=S.config.tema==='light';
   const themeBtn=document.getElementById('theme-btn');
   if(themeBtn)themeBtn.textContent=isLight?'🌙 Oscuro':'☀️ Claro';
