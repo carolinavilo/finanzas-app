@@ -231,6 +231,12 @@ input[type=checkbox]{width:auto;margin-right:5px}
 .color-palette{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 .color-swatch{width:28px;height:28px;border-radius:50%;border:2px solid transparent;cursor:pointer;transition:.15s;flex-shrink:0}
 .color-swatch.selected{border-color:var(--text);box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--text)}
+.palette-card{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;border:2px solid var(--border);cursor:pointer;transition:.15s;background:var(--card2)}
+.palette-card:hover{border-color:var(--accent)}
+.palette-card.active{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.palette-label{font-size:12px;font-weight:600;color:var(--text);min-width:110px;flex-shrink:0}
+.palette-strip{display:flex;flex:1;border-radius:6px;overflow:hidden;height:22px}
+.palette-strip>div{flex:1}
 .cargo-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px}
 .cargo-row:last-child{border-bottom:none}
 .btn-editar-gasto,.btn-eliminar-gasto,.btn-eliminar-cuota{background:none;border:none;cursor:pointer;padding:4px 8px;border-radius:6px;font-size:15px;min-width:32px;min-height:32px;display:inline-flex;align-items:center;justify-content:center;transition:.15s}
@@ -886,6 +892,34 @@ input[type=checkbox]{width:auto;margin-right:5px}
       <!-- Color de acento -->
       <div class="panel-title">🎨 Color de acento</div>
       <div class="color-picker-wrap" style="margin-top:10px">
+        <p style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);margin-bottom:8px">Paletas</p>
+        <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px">
+          <div class="palette-card" data-palette="mocha" onclick="setAccent('mocha')">
+            <span class="palette-label">Warm Neutrals</span>
+            <div class="palette-strip">
+              <div style="background:#FBF7F4"></div><div style="background:#E5DED2"></div><div style="background:#A39382"></div><div style="background:#685D54"></div><div style="background:#232323"></div>
+            </div>
+          </div>
+          <div class="palette-card" data-palette="midnight" onclick="setAccent('midnight')">
+            <span class="palette-label">Ivory & Midnight</span>
+            <div class="palette-strip">
+              <div style="background:#F3F1EC"></div><div style="background:#B6B8AB"></div><div style="background:#9FA3AD"></div><div style="background:#E0DFD2"></div><div style="background:#3C3E4A"></div>
+            </div>
+          </div>
+          <div class="palette-card" data-palette="terracotta" onclick="setAccent('terracotta')">
+            <span class="palette-label">Natural Mix</span>
+            <div class="palette-strip">
+              <div style="background:#F2EDE7"></div><div style="background:#E8EBED"></div><div style="background:#B78E79"></div><div style="background:#919F90"></div><div style="background:#414751"></div>
+            </div>
+          </div>
+          <div class="palette-card" data-palette="clay" onclick="setAccent('clay')">
+            <span class="palette-label">Earth Tones</span>
+            <div class="palette-strip">
+              <div style="background:#FAF7F5"></div><div style="background:#E3D6CC"></div><div style="background:#C7965C"></div><div style="background:#BA704A"></div><div style="background:#61593D"></div>
+            </div>
+          </div>
+        </div>
+        <p style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);margin-bottom:8px">Sólidos</p>
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
           <div class="color-swatch" style="background:#3d6b4f" onclick="setAccent('sage')"    title="Sage"></div>
           <div class="color-swatch" style="background:#3a6338" onclick="setAccent('verde')"   title="Verde"></div>
@@ -893,11 +927,7 @@ input[type=checkbox]{width:auto;margin-right:5px}
           <div class="color-swatch" style="background:#4338ca" onclick="setAccent('indigo')"  title="Índigo"></div>
           <div class="color-swatch" style="background:#9d174d" onclick="setAccent('rosa')"    title="Rosa"></div>
           <div class="color-swatch" style="background:#c2410c" onclick="setAccent('naranja')" title="Naranja"></div>
-          <div class="color-swatch" style="background:#0f766e" onclick="setAccent('teal')"        title="Teal"></div>
-          <div class="color-swatch" style="background:#685D54" onclick="setAccent('mocha')"       title="Mocha"></div>
-          <div class="color-swatch" style="background:#3C3E4A" onclick="setAccent('midnight')"    title="Midnight"></div>
-          <div class="color-swatch" style="background:#B78E79" onclick="setAccent('terracotta')"  title="Terracotta"></div>
-          <div class="color-swatch" style="background:#BA704A" onclick="setAccent('clay')"        title="Clay"></div>
+          <div class="color-swatch" style="background:#0f766e" onclick="setAccent('teal')"    title="Teal"></div>
           <input type="color" value="#6c63ff" title="Color personalizado" onchange="setAccentCustom(this.value)"
             style="width:26px;height:26px;border-radius:50%;cursor:pointer;border:2px solid transparent;padding:1px;background:none;-webkit-appearance:none"/>
         </div>
@@ -5999,6 +6029,14 @@ function syncColorPickers() {
   [2,3,4,5].forEach(n=>{
     const val = S.config['color'+n] || DEFAULT_COLORS['c'+n];
     ['mob-color'+n,'cfg-color'+n].forEach(id=>{const el=document.getElementById(id);if(el)el.value=val;});
+  });
+  const ct = S.config.colorTheme||'';
+  document.querySelectorAll('.palette-card').forEach(el=>{
+    const theme = el.getAttribute('data-palette');
+    el.classList.toggle('active', theme===ct);
+  });
+  document.querySelectorAll('[id^="msw-"]').forEach(el=>{
+    el.classList.toggle('active', el.id==='msw-'+ct);
   });
 }
 
