@@ -581,16 +581,20 @@ input[type=checkbox]{width:auto;margin-right:5px}
     <div data-widget="graficos-mes">
       <div class="panel"><div class="panel-title"><span><span class="dash-drag-handle">⠿</span>Balance mensual</span><span class="sub">Últimos 6 meses</span></div><div class="chart-wrap"><canvas id="chartMes"></canvas></div></div>
     </div>
-    <div data-widget="proyeccion" class="two-col">
+    <div data-widget="proyeccion">
       <div class="panel">
         <div class="panel-title"><span><span class="dash-drag-handle">⠿</span>Proyección fin de mes</span><span class="sub" id="proj-label"></span></div>
         <div id="dash-proyeccion"></div>
       </div>
-      <div class="panel"><div class="panel-title"><span><span class="dash-drag-handle" style="visibility:hidden">⠿</span>Comparativa categorías</span><span class="sub">vs mes anterior</span></div><div id="dash-comparativa"></div></div>
     </div>
-    <div data-widget="movimientos" class="two-col">
+    <div data-widget="comparativa">
+      <div class="panel"><div class="panel-title"><span><span class="dash-drag-handle">⠿</span>Comparativa categorías</span><span class="sub">vs mes anterior</span></div><div id="dash-comparativa"></div></div>
+    </div>
+    <div data-widget="cuotas">
       <div class="panel"><div class="panel-title"><span><span class="dash-drag-handle">⠿</span>Cuotas próximas</span><span class="sub" id="cuotas-prox-count"></span></div><div id="dash-cuotas"></div></div>
-      <div class="panel"><div class="panel-title"><span><span class="dash-drag-handle" style="visibility:hidden">⠿</span>Últimos movimientos</span></div><div id="dash-ultimos"></div></div>
+    </div>
+    <div data-widget="ultimos">
+      <div class="panel"><div class="panel-title"><span><span class="dash-drag-handle">⠿</span>Últimos movimientos</span></div><div id="dash-ultimos"></div></div>
     </div>
     <div data-widget="objetivos" id="dash-objetivos-row" style="display:none">
       <div class="panel" onclick="navMob('objetivos')" style="cursor:pointer">
@@ -5257,7 +5261,7 @@ function renderDashboard(){
 }
 
 // ── Dashboard drag-to-reorder ──
-const _DASH_DEFAULT_ORDER=['cuentas','graficos-cat','graficos-mes','proyeccion','movimientos','objetivos','dolar'];
+const _DASH_DEFAULT_ORDER=['cuentas','graficos-cat','graficos-mes','proyeccion','comparativa','cuotas','ultimos','objetivos','dolar'];
 let _ddState=null;
 
 function _applyDashOrder(){
