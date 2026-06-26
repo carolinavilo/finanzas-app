@@ -112,7 +112,7 @@ nav{flex:1;padding:10px 10px;overflow-y:auto}
 .panel-title .sub{color:var(--text2);font-size:11px;font-weight:400}
 #dash-sortable{display:flex;flex-direction:column;gap:14px}
 #dash-sortable>.two-col,#dash-sortable>[id]{margin-bottom:0}
-.dash-drag-handle{cursor:grab;opacity:.35;font-size:14px;margin-right:6px;user-select:none;touch-action:none;-webkit-user-select:none;flex-shrink:0}
+.dash-drag-handle{cursor:grab;opacity:.35;font-size:18px;margin-right:8px;user-select:none;touch-action:none;-webkit-user-select:none;flex-shrink:0;padding:4px 6px;min-width:32px;min-height:32px;display:inline-flex;align-items:center;justify-content:center}
 .dash-drag-handle:active{cursor:grabbing}
 .dash-dragging{box-shadow:0 12px 40px rgba(0,0,0,.25)!important;z-index:50;opacity:.92;transition:none!important}
 
@@ -5281,17 +5281,22 @@ function _initDashSort(){
     const w=h.closest('[data-widget]');
     if(!w)return;
     e.preventDefault();
+    e.stopPropagation();
+    document.body.style.overflow='hidden';
+    document.body.style.touchAction='none';
     try{w.setPointerCapture(e.pointerId);}catch(_){}
-    _ddState={w,y0:e.clientY};
+    const rect=w.getBoundingClientRect();
+    _ddState={w,y0:e.clientY,startY:e.clientY,origIndex:[...c.querySelectorAll('[data-widget]')].indexOf(w)};
+    w.style.width=rect.width+'px';
     w.classList.add('dash-dragging');
-  });
+  },{passive:false});
 
   c.addEventListener('pointermove',e=>{
     if(!_ddState)return;
     e.preventDefault();
+    e.stopPropagation();
     const dy=e.clientY-_ddState.y0;
     _ddState.w.style.transform=`translateY(${dy}px)`;
-    // Swap with siblings when center crosses their midpoint
     const {w}=_ddState;
     const wR=w.getBoundingClientRect();
     const wMid=wR.top+wR.height/2;
@@ -5308,7 +5313,10 @@ function _initDashSort(){
 
   const _endDrag=()=>{
     if(!_ddState)return;
+    document.body.style.overflow='';
+    document.body.style.touchAction='';
     _ddState.w.style.transform='';
+    _ddState.w.style.width='';
     _ddState.w.classList.remove('dash-dragging');
     const order=[...c.querySelectorAll('[data-widget]')].map(el=>el.dataset.widget);
     if(!S.config)S.config={};
@@ -5316,8 +5324,9 @@ function _initDashSort(){
     save();
     _ddState=null;
   };
-  c.addEventListener('pointerup',_endDrag);
-  c.addEventListener('pointercancel',_endDrag);
+  c.addEventListener('pointerup',_endDrag,{passive:false});
+  c.addEventListener('pointercancel',_endDrag,{passive:false});
+  c.addEventListener('lostpointercapture',_endDrag,{passive:false});
 }
 
 function refreshDashIfVisible(){
