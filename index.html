@@ -5327,6 +5327,7 @@ let liveprices={};   // { ticker: {price, priceARS, priceUSD, change, fuente} }
 let dolarRates={};   // { casa: {compra, venta, nombre} }
 let cedearVencimientos={}; // { ticker: {fecha, tipo, fuente, timestamp} }
 let cedearDividendos={};  // { ticker: {pagaDividendos, frecuencia, proximaFechaEx, ...} }
+let _lastDividendoError='';
 // ── Contador de llamadas a la API de Anthropic ──
 function registrarLlamadaAPI(tipo=''){
   try{
@@ -5475,24 +5476,24 @@ async function obtenerDividendoCEDEAR(ticker){
   try{
     registrarLlamadaAPI('dividendo');
     const _hoy=new Date().toISOString().slice(0,10);
-    const _reqBody3={model:'claude-sonnet-4-6',max_tokens:200,messages:[{role:'user',content:`Respondé ÚNICAMENTE con JSON válido, sin texto ni markdown.\nHoy es ${_hoy}. Basándote en tu conocimiento sobre ETFs estadounidenses, dame el dividendo trimestral más reciente del ETF ${ticker} en USD por acción. La proximaFechaPago debe ser una fecha FUTURA (después de hoy). Devolvé SOLO: {"pagaDividendos": true, "ultimoDividendoUSD": 0.45, "frecuencia": "trimestral", "proximaFechaPago": "2026-09-30", "fuente": "conocimiento del modelo"}`}]};
-    console.log('[Anthropic/dividendo] request body:',JSON.stringify(_reqBody3,null,2));
+    const _reqBody3={model:'claude-haiku-4-5-20251001',max_tokens:300,messages:[{role:'user',content:`Respondé ÚNICAMENTE con JSON válido, sin texto ni markdown.\nHoy es ${_hoy}. Basándote en tu conocimiento, ¿el ticker ${ticker} paga dividendos? Si paga, dame el último dividendo en USD por acción. La proximaFechaPago debe ser una fecha FUTURA (después de hoy). Devolvé SOLO este JSON:\n{"pagaDividendos": true, "ultimoDividendoUSD": 0.45, "frecuencia": "trimestral", "proximaFechaPago": "2026-09-30", "fuente": "conocimiento del modelo"}\nSi no paga dividendos: {"pagaDividendos": false}`}]};
     const r=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
-      signal:AbortSignal.timeout(10000),
+      signal:AbortSignal.timeout(20000),
       headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
       body:JSON.stringify(_reqBody3)
     });
     const _respText=await r.text();
-    console.log('[Anthropic/dividendo] status:', r.status, '| body:', _respText.slice(0,400));
-    if(!r.ok)throw new Error('HTTP '+r.status+': '+_respText.slice(0,200));
+    console.log('[dividendo]',ticker,'status:',r.status,'body:',_respText.slice(0,300));
+    if(!r.ok)throw new Error('HTTP '+r.status+': '+_respText.slice(0,120));
     const data=JSON.parse(_respText);
-    const textBlock=data.content.filter(b=>b.type==='text').pop();
-    if(!textBlock)return null;
-    const match=textBlock.text.match(/\{[\s\S]*\}/);
-    if(!match)return null;
+    const textBlock=(data.content||[]).filter(b=>b.type==='text').pop();
+    if(!textBlock)throw new Error('Respuesta sin bloque de texto');
+    const match=textBlock.text.match(/\{[\s\S]*?\}/);
+    if(!match)throw new Error('Sin JSON en respuesta: '+textBlock.text.slice(0,80));
     const result=JSON.parse(match[0]);
-    // Corregir fechas en el pasado: si la IA devolvió año anterior, avanzar al siguiente año
+    if(typeof result.pagaDividendos!=='boolean')throw new Error('JSON inválido: falta pagaDividendos');
+    // Corregir fechas en el pasado
     const _hoyStr=new Date().toISOString().slice(0,10);
     for(const campo of ['proximaFechaPago','proximaFechaEx']){
       if(result[campo]&&result[campo]<_hoyStr){
@@ -5500,18 +5501,18 @@ async function obtenerDividendoCEDEAR(ticker){
         result[campo]=`${parseInt(fy)+1}-${fm}-${fd}`;
       }
     }
-    // Validar rango razonable para dividendo por acción de ETF
+    // Validar rango para dividendo (relajado a $0.01–$50 para cubrir stocks y ETFs)
     if(result.pagaDividendos&&result.ultimoDividendoUSD){
-      if(result.ultimoDividendoUSD<0.05||result.ultimoDividendoUSD>10){
-        // Valor fuera de rango: no cachear, forzar nueva búsqueda la próxima vez
+      if(result.ultimoDividendoUSD<0.01||result.ultimoDividendoUSD>50){
         localStorage.removeItem(cacheKey);
-        return null;
+        throw new Error('Dividendo fuera de rango: '+result.ultimoDividendoUSD);
       }
     }
     localStorage.setItem(cacheKey,JSON.stringify({...result,timestamp:Date.now()}));
     return result;
   }catch(e){
-    console.error('[dividendo] error para',ticker,':',e?.message||e);
+    console.error('[dividendo]',ticker,':',e?.message||e);
+    _lastDividendoError=e?.message||String(e);
     return null;
   }
 }
@@ -5614,7 +5615,7 @@ async function cargarDividendosCEDEARs(){
     const valEl=document.getElementById('prox-venc-value');
     const subEl=document.getElementById('prox-venc-sub');
     if(valEl)valEl.textContent='—';
-    if(subEl)subEl.textContent='No se pudo obtener información · Reintentá más tarde';
+    if(subEl)subEl.textContent=_lastDividendoError?`Error: ${_lastDividendoError.slice(0,90)}`:'No se pudo obtener datos · Reintentá más tarde';
   }
   // Actualizar dashboard
   const dashDivEl=document.getElementById('dash-prox-div');
