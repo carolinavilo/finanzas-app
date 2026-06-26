@@ -653,9 +653,9 @@ input[type=checkbox]{width:auto;margin-right:5px}
     <div class="panel-title">Nuevo gasto</div>
     <div class="gasto-form-v2">
       <div class="form-group"><label>Descripción</label><input type="text" id="g-desc" placeholder="Ej: Almuerzo, Nafta, Netflix..." autocomplete="off"/></div>
-      <div id="g-fecha-wrap" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div class="form-group"><label>Monto (ARS)</label><input type="number" id="g-monto" inputmode="decimal" placeholder="0" style="font-size:16px" oninput="updateGastoCuotasPreview()"/></div>
-        <div class="form-group"><label>Fecha</label><input type="date" id="g-fecha" style="font-size:16px"/></div>
+      <div id="g-fecha-wrap" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px">
+        <div class="form-group" style="min-width:0"><label>Monto (ARS)</label><input type="number" id="g-monto" inputmode="decimal" placeholder="0" style="font-size:16px;width:100%" oninput="updateGastoCuotasPreview()"/></div>
+        <div class="form-group" style="min-width:0"><label>Fecha</label><input type="date" id="g-fecha" style="font-size:16px;width:100%"/></div>
       </div>
       <div class="form-group"><label>Categoría</label><select id="g-cat" onchange="onGastoCatChange()"></select></div>
       <div class="form-group" id="g-subcat-wrap" style="display:none"><label>Subcategoría</label><select id="g-subcat"><option value="">-- Sin subcategoría --</option></select></div>
