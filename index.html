@@ -5510,7 +5510,10 @@ async function obtenerDividendoCEDEAR(ticker){
     }
     localStorage.setItem(cacheKey,JSON.stringify({...result,timestamp:Date.now()}));
     return result;
-  }catch(e){return null;}
+  }catch(e){
+    console.error('[dividendo] error para',ticker,':',e?.message||e);
+    return null;
+  }
 }
 
 function actualizarCardDividendo(){
@@ -5518,7 +5521,11 @@ function actualizarCardDividendo(){
   const subEl=document.getElementById('prox-venc-sub');
   if(!valEl||!subEl)return;
   const entries=Object.entries(cedearDividendos);
-  if(!entries.length)return;
+  if(!entries.length){
+    valEl.textContent='—';
+    // No pisar el mensaje de "Consultando X..." mientras carga
+    return;
+  }
   const meses=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
   const conDiv=entries.filter(([,v])=>v.pagaDividendos&&(v.proximaFechaPago||v.proximaFechaEx)).sort((a,b)=>(a[1].proximaFechaPago||a[1].proximaFechaEx).localeCompare(b[1].proximaFechaPago||b[1].proximaFechaEx));
   if(!conDiv.length){
@@ -5567,7 +5574,21 @@ function actualizarDivDividendo(ticker){
 
 async function cargarDividendosCEDEARs(){
   const tickers=[...new Set(S.inversiones.filter(i=>i.ticker&&!CRYPTO_IDS[i.ticker]&&i.ticker!=='USD').map(i=>i.ticker.toUpperCase()))];
-  if(!tickers.length)return;
+  if(!tickers.length){
+    const valEl=document.getElementById('prox-venc-value');
+    const subEl=document.getElementById('prox-venc-sub');
+    if(valEl)valEl.textContent='—';
+    if(subEl)subEl.textContent='Sin inversiones con ticker configurado';
+    return;
+  }
+  const apiKey=localStorage.getItem('anthropic_api_key')||localStorage.getItem('ai_key');
+  if(!apiKey){
+    const valEl=document.getElementById('prox-venc-value');
+    const subEl=document.getElementById('prox-venc-sub');
+    if(valEl)valEl.textContent='—';
+    if(subEl)subEl.textContent='Configurá tu API key en Configuración para usar esta función';
+    return;
+  }
   // Limpiar caches con valores sospechosos (< 0.05 USD) para forzar re-búsqueda
   tickers.forEach(t=>{
     try{
@@ -5581,10 +5602,19 @@ async function cargarDividendosCEDEARs(){
     }catch(e){}
   });
   for(const t of tickers){
+    const subEl=document.getElementById('prox-venc-sub');
+    if(subEl)subEl.textContent=`Consultando ${t}...`;
     const result=await obtenerDividendoCEDEAR(t);
     if(result)cedearDividendos[t]=result;
     actualizarCardDividendo();
     actualizarDivDividendo(t);
+  }
+  // Si luego de todo no hay datos, mostrar mensaje claro
+  if(!Object.keys(cedearDividendos).length){
+    const valEl=document.getElementById('prox-venc-value');
+    const subEl=document.getElementById('prox-venc-sub');
+    if(valEl)valEl.textContent='—';
+    if(subEl)subEl.textContent='No se pudo obtener información · Reintentá más tarde';
   }
   // Actualizar dashboard
   const dashDivEl=document.getElementById('dash-prox-div');
@@ -5780,6 +5810,10 @@ function toggleCotPanel(){
 function actualizarDividendosForzado(){
   Object.keys(localStorage).filter(k=>k.startsWith('dividendo_')).forEach(k=>localStorage.removeItem(k));
   cedearDividendos={};
+  const valEl=document.getElementById('prox-venc-value');
+  const subEl=document.getElementById('prox-venc-sub');
+  if(valEl)valEl.innerHTML='⏳';
+  if(subEl)subEl.textContent='Cargando dividendos...';
   cargarDividendosCEDEARs();
 }
 
