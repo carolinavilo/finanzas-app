@@ -3361,11 +3361,14 @@ function agregarIngreso(){
   if(!desc)return alert('Ingresá una descripción');
   if(!monto||monto<=0)return alert('El monto debe ser mayor a 0');
   const cuentaId=document.getElementById('i-cuenta')?.value||null;
-  S.ingresos.push({id:uid(),fecha:document.getElementById('i-fecha').value||today(),
+  const nuevoIngreso={id:uid(),fecha:document.getElementById('i-fecha').value||today(),
     descripcion:desc,categoria:document.getElementById('i-cat-sel').value,
     monto,cuentaId:cuentaId||null,
     recurrente:document.getElementById('i-recurrente').checked,
-    notas:document.getElementById('i-notas').value.trim()});
+    notas:document.getElementById('i-notas').value.trim()};
+  const dupI=S.ingresos.find(i=>i.descripcion===nuevoIngreso.descripcion&&i.monto===nuevoIngreso.monto&&i.fecha===nuevoIngreso.fecha);
+  if(dupI&&!confirm(`⚠️ Ya existe un ingreso similar:\n"${nuevoIngreso.descripcion}" · $${nuevoIngreso.monto} · ${nuevoIngreso.fecha}\n\n¿Querés registrarlo de todas formas?`))return;
+  S.ingresos.push(nuevoIngreso);
   // Sumar saldo a la cuenta destino si se eligió una
   if(cuentaId){
     const cuenta=S.cuentas.find(c=>c.id===cuentaId);
@@ -3486,6 +3489,8 @@ function agregarGasto(){
       return;
     }
     const nuevo={id:uid(),fecha,descripcion:desc,categoria:cat,subcategoria,monto,tipo,tarjetaId,notas,recurrente:false};
+    const dupG1=S.gastos.find(g=>g.descripcion===nuevo.descripcion&&g.monto===nuevo.monto&&g.fecha===nuevo.fecha&&g.categoria===nuevo.categoria);
+    if(dupG1&&!confirm(`⚠️ Ya existe un gasto similar:\n"${nuevo.descripcion}" · $${nuevo.monto} · ${nuevo.fecha}\n\n¿Querés registrarlo de todas formas?`))return;
     S.gastos.push(nuevo);
     if(userRole==='usuario'){syncGastoAdd(nuevo);}else{save();}
     resetGastoForm();renderGastos();refreshDashIfVisible();
@@ -3495,6 +3500,8 @@ function agregarGasto(){
   const cuentaId=tipo==='debito'?document.getElementById('g-cuenta-debito').value:null;
   const nuevo={id:uid(),fecha,descripcion:desc,categoria:cat,subcategoria,monto,tipo,
     tarjetaId:null,cuentaId,notas,recurrente:false};
+  const dupG2=S.gastos.find(g=>g.descripcion===nuevo.descripcion&&g.monto===nuevo.monto&&g.fecha===nuevo.fecha&&g.categoria===nuevo.categoria);
+  if(dupG2&&!confirm(`⚠️ Ya existe un gasto similar:\n"${nuevo.descripcion}" · $${nuevo.monto} · ${nuevo.fecha}\n\n¿Querés registrarlo de todas formas?`))return;
   // Descontar saldo de la cuenta si es débito
   if(cuentaId){
     const cuenta=S.cuentas.find(c=>c.id===cuentaId);
