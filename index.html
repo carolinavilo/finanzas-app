@@ -2109,12 +2109,12 @@ function mesPretty(m){const[y,mo]=m.split('-');return['Enero','Febrero','Marzo',
 // ====== THEME ======
 const ACCENT_THEMES=['verde','azul','indigo','rosa','naranja','teal','sage','mocha','midnight','terracotta','clay'];
 const PALETTE_THEMES={
-  mocha:      {bg:'#FBF7F4',card:'#FFFFFF',card2:'#EDE7DF',border:'#E5DED2',sidebar:'#FFFFFF'},
-  midnight:   {bg:'#F3F1EC',card:'#FFFFFF',card2:'#E8E6DF',border:'#D5D2C8',sidebar:'#FFFFFF'},
-  terracotta: {bg:'#F2EDE7',card:'#FFFFFF',card2:'#EAE4DC',border:'#DDD5CC',sidebar:'#FFFFFF'},
-  clay:       {bg:'#FAF7F5',card:'#FFFFFF',card2:'#EFE9E2',border:'#E3D6CC',sidebar:'#FFFFFF'},
+  mocha:      {bg:'#FBF7F4',card:'#FFFFFF',card2:'#EDE7DF',border:'#E5DED2',sidebar:'#FFFFFF',accent2:'#7A9E7E',accent3:'#C9A04A',accent4:'#C47A7A',accent5:'#7A8FA3'},
+  midnight:   {bg:'#F3F1EC',card:'#FFFFFF',card2:'#E8E6DF',border:'#D5D2C8',sidebar:'#FFFFFF',accent2:'#8A9E84',accent3:'#B89A55',accent4:'#B07A7A',accent5:'#9FA3AD'},
+  terracotta: {bg:'#F2EDE7',card:'#FFFFFF',card2:'#EAE4DC',border:'#DDD5CC',sidebar:'#FFFFFF',accent2:'#919F90',accent3:'#C4965C',accent4:'#C07A72',accent5:'#9EB0BD'},
+  clay:       {bg:'#FAF7F5',card:'#FFFFFF',card2:'#EFE9E2',border:'#E3D6CC',sidebar:'#FFFFFF',accent2:'#8A9A6E',accent3:'#C7965C',accent4:'#BA704A',accent5:'#9A9882'},
 };
-const _PALETTE_VARS=['--bg','--card','--card2','--border','--sidebar'];
+const _PALETTE_VARS=['--bg','--card','--card2','--border','--sidebar','--accent2','--accent3','--accent4','--accent5'];
 const DEFAULT_COLORS = { c2:'#4ade80', c3:'#f59e0b', c4:'#f87171', c5:'#60a5fa' };
 function applyAccent(theme,customColor){
   ACCENT_THEMES.forEach(t=>document.body.classList.remove('ac-'+t));
