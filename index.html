@@ -2173,11 +2173,12 @@ function applyTheme(){
     document.documentElement.style.setProperty('--primary',savedAccent);
   }
   applyAccent(S.config.colorTheme||'verde',S.config.customColor);
-  // Colores semánticos
+  // Colores semánticos (no pisar vars de paleta con removeProperty)
+  const _isPalette=!!PALETTE_THEMES[S.config.colorTheme];
   [2,3,4,5].forEach(n=>{
     const v=S.config['color'+n];
     if(v) document.documentElement.style.setProperty('--accent'+n,v);
-    else document.documentElement.style.removeProperty('--accent'+n);
+    else if(!_isPalette) document.documentElement.style.removeProperty('--accent'+n);
   });
   syncColorPickers();
 }
