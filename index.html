@@ -602,14 +602,16 @@ input[type=checkbox]{width:auto;margin-right:5px}
         <div id="dash-objetivos-list"></div>
       </div>
     </div>
-    <div data-widget="dolar" class="two-col" id="dash-dolar-row">
+    <div data-widget="dolar" id="dash-dolar-row">
       <div class="panel">
         <div class="panel-title"><span><span class="dash-drag-handle">⠿</span>💱 Dólar hoy</span>
           <button class="btn btn-ghost btn-sm" onclick="fetchDolar().then(renderDolarWidget)">🔄</button>
         </div>
         <div id="dash-dolar"><p style="color:var(--text2);font-size:12px">Cargando cotizaciones...</p></div>
       </div>
-      <div class="panel" id="dash-activos-panel" style="display:none"><div class="panel-title">📡 Mis activos en vivo <span class="sub">Tickers configurados</span></div><div id="dash-activos-vivo"></div></div>
+    </div>
+    <div data-widget="activos" id="dash-activos-panel" style="display:none">
+      <div class="panel"><div class="panel-title"><span><span class="dash-drag-handle">⠿</span>📡 Mis activos en vivo</span><span class="sub">Tickers configurados</span></div><div id="dash-activos-vivo"></div></div>
     </div>
   </div>
 </div>
@@ -5240,7 +5242,6 @@ function renderDashboard(){
   // Deduplicar por ticker único
   const tickersUnicos=[...new Map(conTicker.map(i=>[i.ticker,i])).values()];
   if(activosPanel){activosPanel.style.display=tickersUnicos.length?'':'none';}
-  if(dolarRow){dolarRow.className=tickersUnicos.length?'two-col':'one-col';}
   if(activosEl&&tickersUnicos.length){
     activosEl.innerHTML=tickersUnicos.map(inv=>{
       const _p=liveprices[inv.ticker]?.priceARS||getPrecioManual(inv.ticker)||null;
@@ -5261,7 +5262,7 @@ function renderDashboard(){
 }
 
 // ── Dashboard drag-to-reorder ──
-const _DASH_DEFAULT_ORDER=['cuentas','graficos-cat','graficos-mes','proyeccion','comparativa','cuotas','ultimos','objetivos','dolar'];
+const _DASH_DEFAULT_ORDER=['cuentas','graficos-cat','graficos-mes','proyeccion','comparativa','cuotas','ultimos','objetivos','dolar','activos'];
 let _ddState=null;
 
 function _applyDashOrder(){
