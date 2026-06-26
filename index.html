@@ -13,23 +13,28 @@
 <title>FinanzasApp</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#0f1117;--sidebar:#16181f;--card:#1e2030;--card2:#252840;
+  --bg:#13151a;--sidebar:#1a1d24;--card:#20232c;--card2:#272b35;
   --accent:#6c63ff;--accent2:#4ade80;--accent3:#f59e0b;--accent4:#f87171;--accent5:#60a5fa;
   --accent-light:color-mix(in srgb,var(--accent) 13%,transparent);
   --accent-mid:color-mix(in srgb,var(--accent) 20%,transparent);
   --accent-border:color-mix(in srgb,var(--accent) 35%,transparent);
-  --text:#e2e8f0;--text2:#94a3b8;--border:#2d3148;
-  --shadow:0 2px 10px rgba(0,0,0,.22);--shadow-md:0 6px 26px rgba(0,0,0,.32);
-  --radius-card:18px;
+  --border:#2e3240;--text:#eef0f4;--text2:#8892a4;
+  --shadow:0 2px 10px rgba(0,0,0,.28);--shadow-md:0 6px 26px rgba(0,0,0,.38);
+  --radius-card:16px;
 }
 .light{
-  --bg:#f0f2f5;--sidebar:#ffffff;--card:#ffffff;--card2:#f0f2f5;
-  --text:#0d1117;--text2:#4b5563;--border:#d1d5db;
-  --shadow:0 1px 3px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.07);
-  --shadow-md:0 4px 8px rgba(0,0,0,.07),0 12px 32px rgba(0,0,0,.12);
+  --bg:#f0ede8;--sidebar:#ffffff;--card:#ffffff;--card2:#f5f3ef;
+  --text:#1a1a1a;--text2:#6b7280;--border:#e5e0d8;
+  --shadow:0 1px 3px rgba(0,0,0,.04),0 4px 12px rgba(0,0,0,.06);
+  --shadow-md:0 4px 8px rgba(0,0,0,.06),0 12px 28px rgba(0,0,0,.10);
+  --radius-card:16px;
 }
 /* ── ACCENT THEMES ── */
 .ac-verde{--accent:#3a6338}
@@ -38,10 +43,18 @@
 .ac-rosa{--accent:#9d174d}
 .ac-naranja{--accent:#c2410c}
 .ac-teal{--accent:#0f766e}
+.ac-sage{--accent:#3d6b4f}
 
 *,*::before,*::after{box-sizing:border-box}
 html{overflow-x:clip;width:100%;overscroll-behavior-y:none}
-body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;display:flex;min-height:100vh;font-size:14px;transition:background .25s,color .25s;overflow-x:clip;width:100%;overscroll-behavior-y:none}
+body{background:var(--bg);color:var(--text);font-family:'Inter','Segoe UI',system-ui,sans-serif;display:flex;min-height:100vh;font-size:14px;transition:background .25s,color .25s;overflow-x:clip;width:100%;overscroll-behavior-y:none}
+h1,h2,h3{font-weight:700;letter-spacing:-.3px}
+input,select,textarea{font-family:'Inter',system-ui,sans-serif;font-size:13px}
+th{font-weight:600;letter-spacing:.4px}
+i[data-lucide]{display:inline-flex}
+.nav-icon-wrap i[data-lucide]{width:18px;height:18px;stroke-width:1.8}
+.bn-item i[data-lucide]{width:22px;height:22px;stroke-width:1.8}
+.bs-item i[data-lucide]{width:22px;height:22px;stroke-width:1.8}
 
 /* ── SIDEBAR ── */
 #sidebar{width:230px;height:100vh;max-height:100vh;background:var(--sidebar);border-right:2px solid var(--border);display:flex;flex-direction:column;position:fixed!important;top:0;left:0;z-index:100;transition:background .25s;overflow-y:auto!important;overflow-x:hidden!important}
@@ -76,10 +89,10 @@ nav{flex:1;padding:10px 10px;overflow-y:auto}
 .cards-grid-5,.cards-grid-6{display:grid;gap:14px;margin-bottom:22px}
 .cards-grid-5{grid-template-columns:repeat(5,1fr)}.cards-grid-6{grid-template-columns:repeat(6,1fr)}
 .cards-grid-5>*,.cards-grid-6>*,.two-col>*,.three-col>*{min-width:0}
-.stat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-card);padding:20px;position:relative;box-shadow:var(--shadow);transition:box-shadow .2s,transform .2s}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px 22px;position:relative;box-shadow:var(--shadow);transition:box-shadow .2s,transform .2s}
 .stat-card:hover{box-shadow:var(--shadow-md);transform:translateY(-1px)}
-.stat-card .label{font-size:11px;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.7px;font-weight:600}
-.stat-card .value{font-size:21px;font-weight:700;letter-spacing:-.3px}
+.stat-card .label{font-size:11px;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+.stat-card .value{font-size:22px;font-weight:800;letter-spacing:-.5px}
 .stat-card .sub{font-size:11px;color:var(--text2);margin-top:6px}
 .stat-card .icon{position:absolute;top:18px;right:18px;font-size:22px;opacity:.3}
 .c-purple .value{color:var(--accent)}.c-green .value{color:var(--accent2)}.c-yellow .value{color:var(--accent3)}.c-red .value{color:var(--accent4)}.c-blue .value{color:var(--accent5)}
@@ -90,8 +103,8 @@ nav{flex:1;padding:10px 10px;overflow-y:auto}
 .three-col{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:16px}
 
 /* ── PANEL ── */
-.panel{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-card);padding:22px;margin-bottom:16px;box-shadow:var(--shadow)}
-.panel-title{font-size:13px;font-weight:600;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center}
+.panel{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:22px;margin-bottom:16px;box-shadow:var(--shadow)}
+.panel-title{font-size:14px;font-weight:600;letter-spacing:-.1px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center}
 .panel-title .sub{color:var(--text2);font-size:11px;font-weight:400}
 #dash-sortable{display:flex;flex-direction:column;gap:14px}
 #dash-sortable>.two-col,#dash-sortable>[id]{margin-bottom:0}
@@ -100,7 +113,7 @@ nav{flex:1;padding:10px 10px;overflow-y:auto}
 .dash-dragging{box-shadow:0 12px 40px rgba(0,0,0,.25)!important;z-index:50;opacity:.92;transition:none!important}
 
 /* ── BUTTONS ── */
-.btn{padding:8px 16px;border-radius:10px;border:none;cursor:pointer;font-size:12px;font-weight:600;transition:.15s;line-height:1}
+.btn{padding:8px 16px;border-radius:10px;border:none;cursor:pointer;font-size:13px;font-weight:600;letter-spacing:.1px;transition:.15s;line-height:1}
 .btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{filter:brightness(1.08);transform:translateY(-1px)}
 .btn-success{background:rgba(74,222,128,.13);color:var(--accent2);border:1px solid rgba(74,222,128,.3)}
 .btn-danger{background:rgba(248,113,113,.1);color:var(--accent4);border:1px solid rgba(248,113,113,.24)}
@@ -137,7 +150,7 @@ input[type=checkbox]{width:auto;margin-right:5px}
 /* ── MODAL ── */
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;backdrop-filter:blur(3px)}
 .modal-overlay.open{display:flex}
-.modal{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-card);padding:26px;width:540px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-md)}
+.modal{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:26px;width:540px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-md)}
 .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
 .modal-header h3{font-size:16px;font-weight:700;letter-spacing:-.2px}
 .modal-close{background:none;border:none;color:var(--text2);cursor:pointer;font-size:20px;line-height:1}
@@ -479,47 +492,47 @@ input[type=checkbox]{width:auto;margin-right:5px}
   </div>
   <nav>
     <div class="nav-item active" onclick="nav('dashboard',this)">
-      <span class="nav-icon-wrap"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span>
+      <span class="nav-icon-wrap"><i data-lucide="layout-dashboard"></i></span>
       <span class="nav-label" style="flex:1">Inicio</span>
     </div>
     <div class="nav-item" onclick="nav('ingresos',this)">
-      <span class="nav-icon-wrap"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/><line x1="5" y1="19" x2="19" y2="19"/></svg></span>
+      <span class="nav-icon-wrap"><i data-lucide="trending-up"></i></span>
       <span class="nav-label" style="flex:1">Ingresos</span>
     </div>
     <div class="nav-item" onclick="nav('gastos',this)">
-      <span class="nav-icon-wrap"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/><line x1="5" y1="5" x2="19" y2="5"/></svg></span>
+      <span class="nav-icon-wrap"><i data-lucide="trending-down"></i></span>
       <span class="nav-label" style="flex:1">Gastos</span>
     </div>
     <div class="nav-item" onclick="nav('tarjetas',this)">
-      <span class="nav-icon-wrap"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/><line x1="5" y1="15" x2="9" y2="15"/></svg></span>
+      <span class="nav-icon-wrap"><i data-lucide="credit-card"></i></span>
       <span class="nav-label" style="flex:1">Tarjetas</span>
     </div>
     <div class="nav-item" id="nav-cuentas" onclick="nav('cuentas',this)">
-      <span class="nav-icon-wrap"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></span>
+      <span class="nav-icon-wrap"><i data-lucide="landmark"></i></span>
       <span class="nav-label" style="flex:1">Cuentas</span>
     </div>
     <div class="nav-item" onclick="nav('objetivos',this)">
-      <span class="nav-icon-wrap"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></span>
+      <span class="nav-icon-wrap"><i data-lucide="target"></i></span>
       <span class="nav-label" style="flex:1">Objetivos</span>
     </div>
     <div class="nav-item" onclick="nav('cuotas',this)">
-      <span class="nav-icon-wrap"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="12" y2="18"/></svg></span>
+      <span class="nav-icon-wrap"><i data-lucide="calendar-days"></i></span>
       <span class="nav-label" style="flex:1">Cuotas</span>
     </div>
     <div class="nav-item" onclick="nav('inversiones',this)">
-      <span class="nav-icon-wrap"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg></span>
+      <span class="nav-icon-wrap"><i data-lucide="bar-chart-2"></i></span>
       <span class="nav-label" style="flex:1">Inversiones</span>
     </div>
     <div class="nav-item" onclick="nav('presupuesto',this)">
-      <span class="nav-icon-wrap"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/><circle cx="12" cy="12" r="4"/></svg></span>
+      <span class="nav-icon-wrap"><i data-lucide="piggy-bank"></i></span>
       <span class="nav-label" style="flex:1">Presupuesto</span>
     </div>
     <div class="nav-item" onclick="nav('categorias',this)">
-      <span class="nav-icon-wrap"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M4 6h16M4 10h16M4 14h10M4 18h6"/></svg></span>
+      <span class="nav-icon-wrap"><i data-lucide="tag"></i></span>
       <span class="nav-label" style="flex:1">Categorías</span>
     </div>
     <div class="nav-item" onclick="nav('configuracion',this)" id="nav-configuracion">
-      <span class="nav-icon-wrap"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></span>
+      <span class="nav-icon-wrap"><i data-lucide="settings"></i></span>
       <span class="nav-label" style="flex:1">Configuración</span>
     </div>
   </nav>
@@ -865,6 +878,7 @@ input[type=checkbox]{width:auto;margin-right:5px}
       <div class="panel-title">🎨 Color de acento</div>
       <div class="color-picker-wrap" style="margin-top:10px">
         <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:14px">
+          <div class="color-swatch" style="background:#3d6b4f" onclick="setAccent('sage')"    title="Sage"></div>
           <div class="color-swatch" style="background:#3a6338" onclick="setAccent('verde')"   title="Verde"></div>
           <div class="color-swatch" style="background:#1a5eb5" onclick="setAccent('azul')"    title="Azul"></div>
           <div class="color-swatch" style="background:#4338ca" onclick="setAccent('indigo')"  title="Índigo"></div>
@@ -912,23 +926,23 @@ input[type=checkbox]{width:auto;margin-right:5px}
 <!-- BOTTOM NAV (mobile) -->
 <nav id="bottom-nav">
   <div class="bn-item active" id="bn-dashboard" onclick="navMob('dashboard')">
-    <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    <i data-lucide="layout-dashboard"></i>
     Inicio
   </div>
   <div class="bn-item" id="bn-gastos" onclick="navMob('gastos')">
-    <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/><line x1="5" y1="5" x2="19" y2="5"/></svg>
+    <i data-lucide="trending-down"></i>
     Gastos
   </div>
   <div class="bn-item" id="bn-ingresos" onclick="navMob('ingresos')">
-    <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/><line x1="5" y1="19" x2="19" y2="19"/></svg>
+    <i data-lucide="trending-up"></i>
     Ingresos
   </div>
   <div class="bn-item" id="bn-tarjetas" onclick="navMob('tarjetas')">
-    <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/><line x1="5" y1="15" x2="9" y2="15"/></svg>
+    <i data-lucide="credit-card"></i>
     Tarjetas
   </div>
   <div class="bn-item" id="bn-mas" onclick="openSheet('sheet-mas')">
-    <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+    <i data-lucide="more-horizontal"></i>
     Más
   </div>
 </nav>
@@ -939,27 +953,27 @@ input[type=checkbox]{width:auto;margin-right:5px}
     <div class="bottom-sheet-handle"></div>
     <div class="bs-grid">
       <div class="bs-item" id="bsm-cuentas" onclick="navMob('cuentas',null);closeSheet('sheet-mas')">
-        <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+        <i data-lucide="landmark"></i>
         Cuentas
       </div>
       <div class="bs-item" id="bsm-objetivos" onclick="navMob('objetivos',null);closeSheet('sheet-mas')">
-        <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+        <i data-lucide="target"></i>
         Objetivos
       </div>
       <div class="bs-item" id="bsm-cuotas" onclick="navMob('cuotas',null);closeSheet('sheet-mas')">
-        <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <i data-lucide="calendar-days"></i>
         Cuotas
       </div>
       <div class="bs-item" id="bsm-inversiones" onclick="navMob('inversiones',null);closeSheet('sheet-mas')">
-        <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+        <i data-lucide="bar-chart-2"></i>
         Inversiones
       </div>
       <div class="bs-item" id="bsm-presupuesto" onclick="navMob('presupuesto',null);closeSheet('sheet-mas')">
-        <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        <i data-lucide="piggy-bank"></i>
         Presupuesto
       </div>
       <div class="bs-item" id="bsm-categorias" onclick="navMob('categorias',null);closeSheet('sheet-mas')">
-        <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M4 6h16M4 10h16M4 14h10M4 18h6"/></svg>
+        <i data-lucide="tag"></i>
         Categorías
       </div>
     </div>
@@ -983,6 +997,7 @@ input[type=checkbox]{width:auto;margin-right:5px}
     <div class="bs-sep"></div>
     <div class="bs-colors">
       <span class="bs-color-label">Color de acento</span>
+      <div class="color-swatch" style="background:#3d6b4f" onclick="setAccent('sage')"    id="msw-sage"    title="Sage"></div>
       <div class="color-swatch" style="background:#3a6338" onclick="setAccent('verde')"   id="msw-verde"   title="Verde"></div>
       <div class="color-swatch" style="background:#1a5eb5" onclick="setAccent('azul')"    id="msw-azul"    title="Azul"></div>
       <div class="color-swatch" style="background:#4338ca" onclick="setAccent('indigo')"  id="msw-indigo"  title="Índigo"></div>
@@ -1893,7 +1908,7 @@ function _defaultS(){
     comprasCuotas:[],gastosFinTarjeta:[],ventas:[],cuentas:[],transferencias:[],
     objetivos:[],carteras:[],
     catsGasto:[...DEFAULT_CATS_GASTO],catsIngreso:[...DEFAULT_CATS_INGRESO],
-    config:{tema:'light',colorTheme:'verde'}};
+    config:{tema:'light',colorTheme:'sage'}};
 }
 function _applyGuards(p){
   if(!p.catsGasto||!p.catsGasto.length)p.catsGasto=[...DEFAULT_CATS_GASTO];
@@ -2137,6 +2152,7 @@ function nav(id,el){
   syncBottomNav(id);
   renderSection(id);
   window.scrollTo(0,0);
+  if(window.lucide)lucide.createIcons();
 }
 function navMob(id){
   const sidebarEl=document.querySelector(`.nav-item[onclick*="'${id}'"]`);
@@ -2147,6 +2163,7 @@ function navMob(id){
   syncBottomNav(id);
   renderSection(id);
   window.scrollTo({top:0,behavior:'smooth'});
+  if(window.lucide)lucide.createIcons();
 }
 function renderSection(id){
   ({dashboard:renderDashboard,ingresos:renderIngresos,gastos:renderGastos,
@@ -5897,6 +5914,7 @@ document.addEventListener('click', e => {
 
 document.addEventListener('DOMContentLoaded', async () => {
   applyTheme();
+  if(window.lucide)lucide.createIcons();
   document.getElementById('sidebar').style.display = 'none';
   document.getElementById('main').style.display = 'none';
 
