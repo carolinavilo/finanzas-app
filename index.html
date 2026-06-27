@@ -150,6 +150,7 @@ tr:hover td{background:rgba(128,128,128,.025)}
 input,select,textarea{background:var(--card2);border:1px solid var(--border);border-radius:10px;color:var(--text);padding:9px 12px;font-size:13px;width:100%;font-family:inherit;outline:none;transition:.15s}
 input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-light)}
 input[type=checkbox]{width:auto;margin-right:5px}
+.modal input[type=date]{width:100%;box-sizing:border-box;-webkit-appearance:none;appearance:none;text-align:left;padding:9px 12px;font-size:13px;font-family:inherit}
 .form-row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px}
 .form-row .form-group{flex:1;min-width:130px}
 
@@ -3754,13 +3755,18 @@ function editGasto(id){
   document.getElementById('eg-id').value=id;
   document.getElementById('eg-fecha').value=g.fecha;
   document.getElementById('eg-desc').value=g.descripcion;
-  document.getElementById('eg-cat').value=g.categoria;
   document.getElementById('eg-monto').value=g.monto;
   document.getElementById('eg-tipo').value=g.tipo;
   document.getElementById('eg-tarjeta-group').style.display=g.tipo==='tarjeta'?'flex':'none';
   document.getElementById('eg-tarjeta').value=g.tarjetaId||'';
   document.getElementById('eg-notas').value=g.notas||'';
   document.getElementById('eg-recurrente').checked=!!g.recurrente;
+  const egCat=document.getElementById('eg-cat');
+  if(egCat&&g.categoria){
+    const exists=[...egCat.options].some(o=>o.value===g.categoria);
+    if(!exists){const opt=document.createElement('option');opt.value=g.categoria;opt.textContent=g.categoria;egCat.appendChild(opt);}
+    egCat.value=g.categoria;
+  }
   _fillSubcatSel('eg-subcat','eg-subcat-wrap',g.categoria,g.subcategoria||'');
   openModal('modal-edit-gasto');
 }
