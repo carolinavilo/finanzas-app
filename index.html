@@ -213,6 +213,13 @@ input[type=checkbox]{width:auto;margin-right:5px}
 .inv-cot-lista{max-height:0;overflow:hidden;transition:max-height .35s ease}
 .inv-cot-lista.abierto{max-height:1200px}
 .tarjeta-card{background:var(--card);border:1px solid var(--border);border-top:3px solid var(--accent);border-radius:var(--radius-card);padding:20px;margin-bottom:14px;box-shadow:var(--shadow)}
+#tarjetas-list .table-scroll{overflow-x:visible}
+#tarjetas-list table{width:100%;table-layout:fixed}
+@media(max-width:600px){
+  #tarjetas-list th:nth-child(4),#tarjetas-list td:nth-child(4){display:none}
+  #tarjetas-list th:nth-child(1),#tarjetas-list td:nth-child(1){width:60px;font-size:11px}
+  #tarjetas-list th:nth-child(3),#tarjetas-list td:nth-child(3){width:75px;font-size:11px}
+}
 
 /* ── PRESUP ── */
 .presup-row{margin-bottom:14px}
@@ -4036,11 +4043,19 @@ function eliminarGastoFin(id){
   S.gastosFinTarjeta=S.gastosFinTarjeta.filter(g=>g.id!==id);save();renderTarjetas();
 }
 
+function filtrarMovimientosTarjetas(){
+  const q=(document.getElementById('tarjetas-search')?.value||'').toLowerCase();
+  document.querySelectorAll('#tarjetas-list tbody tr').forEach(tr=>{
+    tr.style.display=!q||tr.textContent.toLowerCase().includes(q)?'':'none';
+  });
+}
+
 function renderTarjetas(){
   const cont=document.getElementById('tarjetas-list');
   if(!S.tarjetas.length){cont.innerHTML='<div class="empty"><div class="ei">💳</div><p>No tenés tarjetas registradas.</p></div>';return;}
   const mesHoy=today().slice(0,7);
-  cont.innerHTML=S.tarjetas.map(t=>{
+  const searchBar='<input type="text" id="tarjetas-search" placeholder="🔍 Buscar movimiento..." oninput="filtrarMovimientosTarjetas()" style="width:100%;margin-bottom:14px">';
+  cont.innerHTML=searchBar+S.tarjetas.map(t=>{
     if(!tarjetaMesSelected[t.id])tarjetaMesSelected[t.id]=mesHoy;
     const mes=tarjetaMesSelected[t.id];
     const mesPrev=addMeses(mes,-1);
@@ -5099,7 +5114,7 @@ function renderDashboard(){
   document.getElementById('dash-cards').innerHTML=`
     <div class="stat-card c-green"><div class="icon">🟢</div><div class="label">Ingresos del mes</div><div class="value">${$$(totalI)}</div><div class="sub">${iMes.length} registros</div></div>
     <div class="stat-card c-red"><div class="icon">💸</div><div class="label">Gastos del mes</div><div class="value">${$$(totalG)}</div><div class="sub">${gMes.length} transacciones · fecha de compra</div></div>
-    <div class="stat-card c-yellow"><div class="icon">💳</div><div class="label">A pagar este mes</div><div class="value">${$$(totalAPagar)}</div><div class="sub">Tarjeta + cuotas que vencen</div></div>
+    <div class="stat-card c-yellow" style="cursor:pointer" onclick="navMob('cuotas');setTimeout(()=>{const sel=document.getElementById('filtro-mes-cuotas');if(sel){const hoy=new Date();sel.value=hoy.getFullYear()+'-'+(String(hoy.getMonth()+1).padStart(2,'0'));sel.dispatchEvent(new Event('change'));}},300)"><div class="icon">💳</div><div class="label">A pagar este mes</div><div class="value">${$$(totalAPagar)}</div><div class="sub">Tarjeta + cuotas que vencen</div></div>
     <div class="stat-card ${balance>=0?'c-green':'c-red'}"><div class="icon">⚖️</div><div class="label">Balance neto</div><div class="value ${balance>=0?'pos':'neg'}">${balance>=0?'+':''}${$$(balance)}</div><div class="sub">Ingresos − gastos − cuotas</div></div>
     <div class="stat-card c-blue" onclick="navMob('inversiones')" style="cursor:pointer" title="Ver detalle de inversiones">
       <div class="icon">📈</div>
