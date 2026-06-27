@@ -215,6 +215,8 @@ input[type=checkbox]{width:auto;margin-right:5px}
 .tarjeta-card{background:var(--card);border:1px solid var(--border);border-top:3px solid var(--accent);border-radius:var(--radius-card);padding:20px;margin-bottom:14px;box-shadow:var(--shadow)}
 .sort-drag-handle{cursor:grab;opacity:.4;font-size:16px;user-select:none;touch-action:none;-webkit-user-select:none;flex-shrink:0;padding:4px 6px;min-width:28px;min-height:28px;display:inline-flex;align-items:center;justify-content:center}
 .sort-drag-handle:active{cursor:grabbing}
+.tarjeta-drag-handle{cursor:grab;opacity:.4;font-size:16px;padding:4px 8px;touch-action:none;user-select:none;-webkit-user-select:none;min-width:32px;min-height:32px;display:inline-flex;align-items:center}
+.tarjeta-drag-handle:active{cursor:grabbing}
 #tarjetas-list .table-scroll{overflow-x:visible}
 #tarjetas-list table{width:100%;table-layout:fixed}
 @media(max-width:600px){
@@ -381,20 +383,21 @@ input[type=checkbox]{width:auto;margin-right:5px}
   .table-scroll th:nth-child(6),
   .table-scroll td:nth-child(6){width:90px;font-size:12px;text-align:right}
 
-  /* Gastos + Ingresos — grid compacto */
-  #gastos-tbody tr,#ingresos-tbody tr{display:grid;grid-template-columns:1fr auto;grid-template-rows:auto auto;border-bottom:1px solid var(--border);padding:8px 2px;gap:1px 8px;position:relative}
-  #gastos-tbody td,#ingresos-tbody td{display:none;border:none;padding:0}
-  /* Descripción — col izq fila 1 */
-  #gastos-tbody td:nth-child(2),#ingresos-tbody td:nth-child(2){display:block;font-size:13px;font-weight:600;grid-column:1;grid-row:1}
-  /* Fecha — col izq fila 2 */
-  #gastos-tbody td:nth-child(1),#ingresos-tbody td:nth-child(1){display:block;font-size:11px;color:var(--text2);grid-column:1;grid-row:2}
-  /* Categoría inline */
-  #gastos-tbody td:nth-child(3),#ingresos-tbody td:nth-child(3){display:inline-block;grid-column:1;grid-row:2;font-size:10px}
-  /* Monto — col der fila 1 */
+  /* Gastos — grid compacto */
+  #gastos-tbody tr{display:grid;grid-template-columns:1fr auto;grid-template-rows:auto auto;border-bottom:1px solid var(--border);padding:8px 2px;gap:1px 8px;position:relative}
+  #gastos-tbody td{display:none;border:none;padding:0}
+  #gastos-tbody td:nth-child(2){display:block;font-size:13px;font-weight:600;grid-column:1;grid-row:1}
+  #gastos-tbody td:nth-child(1){display:block;font-size:11px;color:var(--text2);grid-column:1;grid-row:2}
+  #gastos-tbody td:nth-child(3){display:inline-block;grid-column:1;grid-row:2;font-size:10px}
   #gastos-tbody td:nth-child(7){display:block;font-size:13px;font-weight:700;text-align:right!important;grid-column:2;grid-row:1;white-space:nowrap}
-  #ingresos-tbody td:nth-child(6){display:block;font-size:13px;font-weight:700;text-align:right!important;grid-column:2;grid-row:1;white-space:nowrap}
-  /* Botones — col der fila 2 */
   #gastos-tbody td:nth-child(8){display:block;grid-column:2;grid-row:2;text-align:right;white-space:nowrap}
+  /* Ingresos — grid compacto (1=Fecha,2=Desc,3=Cat,4=Notas,5=Rec,6=Monto,7=Botones) */
+  #ingresos-tbody tr{display:grid;grid-template-columns:1fr auto;grid-template-rows:auto auto;border-bottom:1px solid var(--border);padding:8px 2px;gap:2px 8px;position:relative}
+  #ingresos-tbody td{display:none;border:none;padding:0}
+  #ingresos-tbody td:nth-child(2){display:block;font-size:13px;font-weight:600;grid-column:1;grid-row:1}
+  #ingresos-tbody td:nth-child(1){display:block;font-size:11px;color:var(--text2);grid-column:1;grid-row:2}
+  #ingresos-tbody td:nth-child(3){display:inline-block;font-size:10px;grid-column:1;grid-row:2}
+  #ingresos-tbody td:nth-child(6){display:block;font-size:13px;font-weight:700;color:var(--accent2);text-align:right!important;grid-column:2;grid-row:1;white-space:nowrap}
   #ingresos-tbody td:nth-child(7){display:block;grid-column:2;grid-row:2;text-align:right;white-space:nowrap}
   .btn-editar-gasto,.btn-eliminar-gasto{font-size:12px;padding:2px 4px;min-width:24px;min-height:24px}
   #section-gastos thead,#section-ingresos thead{display:none}
@@ -4162,7 +4165,7 @@ function renderTarjetas(){
           <div style="font-size:12px;color:var(--text2);margin-top:2px">Próx. cierre: <strong>${nextFechaDia(t.cierre)}</strong> · Próx. venc: <strong>${nextFechaDia(t.vencimiento)}</strong></div>
         </div>
         <div style="display:flex;gap:6px;flex-shrink:0;align-items:center">
-          <span class="sort-drag-handle" title="Reordenar">⠿</span>
+          <span class="tarjeta-drag-handle" title="Reordenar">⠿</span>
           <button class="btn btn-ghost btn-sm" onclick="editFechasTarjeta('${esc(t.id)}')" title="Editar fechas">📅</button>
           <button class="btn btn-ghost btn-sm" onclick="editTarjeta('${esc(t.id)}')">✏️ Editar</button>
           <button class="btn btn-danger btn-sm" onclick="eliminarTarjeta('${esc(t.id)}')">✕</button>
@@ -5298,7 +5301,7 @@ function renderDashboard(){
     ...S.ingresos.map(i=>({...i,tipo_mov:'ingreso'}))
   ].sort((a,b)=>b.fecha.localeCompare(a.fecha)).slice(0,7);
   document.getElementById('dash-ultimos').innerHTML=movs.length?movs.map(m=>`
-    <div onclick="${m.tipo_mov==='ingreso'?"navMob('ingresos');setTimeout(()=>{const el=document.getElementById('i-desc');if(el){el.scrollIntoView({behavior:'smooth'});el.focus();}},300)":"navMob('gastos');setTimeout(()=>{const el=document.getElementById('g-desc');if(el){el.scrollIntoView({behavior:'smooth'});el.focus();}},300)"}" style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(128,128,128,.07);cursor:pointer">
+    <div onclick="${m.tipo_mov==='ingreso'?"navMob('ingresos')":"navMob('gastos')"}" style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(128,128,128,.07);cursor:pointer">
       <div>
         <div style="font-size:13px;font-weight:500">${m.descripcion}</div>
         <div style="font-size:11px;color:var(--text2)">${ff(m.fecha)} · ${m.categoria}</div>
@@ -5369,7 +5372,7 @@ function _initSort(containerId,dataAttr,configKey){
   const c=document.getElementById(containerId);if(!c)return;
   let state=null;
   c.addEventListener('pointerdown',e=>{
-    const h=e.target.closest('.sort-drag-handle');if(!h)return;
+    const h=e.target.closest('.sort-drag-handle,.tarjeta-drag-handle');if(!h)return;
     const w=h.closest('['+dataAttr+']');if(!w)return;
     e.preventDefault();e.stopPropagation();
     document.body.style.overflow='hidden';document.body.style.touchAction='none';
