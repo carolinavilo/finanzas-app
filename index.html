@@ -2126,6 +2126,7 @@ async function load(){
         // Mantener localStorage en sync
         const json=JSON.stringify(S);
         localStorage.setItem('fz_v3',json);localStorage.setItem('fz_v3_backup',json);
+        if(S.config?.anthropicKey)localStorage.setItem('anthropic_api_key',S.config.anthropicKey);
         return;
       }
     }catch(e){console.warn('[sync] Error cargando desde Supabase:', e.message);}
@@ -2175,15 +2176,12 @@ async function _saveToSupabase(){
 }
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,5);}
 function getApiKey(){
-  const k=localStorage.getItem('anthropic_api_key')
+  return S?.config?.anthropicKey
+    ||localStorage.getItem('anthropic_api_key')
     ||localStorage.getItem('ai_key')
     ||localStorage.getItem('aiKey')
     ||localStorage.getItem('ai-key')
-    ||S.config?.aiKey
-    ||S.config?.anthropicKey
     ||'';
-  console.log('[API KEY] fuentes:',{anthropic_api_key:!!localStorage.getItem('anthropic_api_key'),ai_key:!!localStorage.getItem('ai_key'),config_aiKey:!!S.config?.aiKey});
-  return k;
 }
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 
@@ -5951,18 +5949,7 @@ async function cargarDividendosCEDEARs(){
     if(subEl)subEl.textContent='Sin inversiones con ticker configurado';
     return;
   }
-  const apiKey=(()=>{
-    const k=localStorage.getItem('anthropic_api_key')
-      ||localStorage.getItem('ai_key')
-      ||localStorage.getItem('aiKey')
-      ||sessionStorage.getItem('anthropic_api_key')
-      ||S?.config?.aiKey
-      ||S?.config?.anthropicKey
-      ||'';
-    console.log('[dividendos] API key encontrada:',k?'✅ sí ('+k.slice(0,8)+'...)':'❌ no');
-    console.log('[dividendos] localStorage keys:',Object.keys(localStorage).filter(k=>k.includes('key')||k.includes('api')));
-    return k;
-  })();
+  const apiKey=getApiKey();
   if(!apiKey){
     const valEl=document.getElementById('prox-venc-value');
     const subEl=document.getElementById('prox-venc-sub');
@@ -6189,10 +6176,7 @@ function toggleCotPanel(){
 }
 
 function actualizarDividendosForzado(){
-  const _key=localStorage.getItem('anthropic_api_key')||localStorage.getItem('ai_key')||'';
-  console.log('[actualizarDividendos] key:',_key?'✅ '+_key.slice(0,12)+'...':'❌ vacía');
-  console.log('[actualizarDividendos] todas las keys en localStorage:',Object.keys(localStorage));
-  if(!_key){showToast('⚠️ No se encontró API key. Guardala de nuevo en Configuración.');return;}
+  if(!getApiKey()){showToast('⚠️ No se encontró API key. Guardala de nuevo en Configuración.');return;}
   Object.keys(localStorage).filter(k=>k.startsWith('dividendo_')).forEach(k=>localStorage.removeItem(k));
   cedearDividendos={};
   const valEl=document.getElementById('prox-venc-value');
@@ -6707,6 +6691,9 @@ function saveKeyWidget(cid) {
   const msg = document.getElementById(cid + '-msg');
   if (!val) { if (msg) msg.textContent = '⚠️ Pegá tu API key primero.'; return; }
   localStorage.setItem('anthropic_api_key', val);
+  if(!S.config)S.config={};
+  S.config.anthropicKey=val;
+  save();
   if (msg) { msg.style.color = 'var(--accent2)'; msg.textContent = '✅ Guardada'; }
   ['ai-key-config', 'mob-ai-key-container', 'cfg-ai-key-container'].forEach(id => {
     if (id !== cid) renderKeyWidget(id);
