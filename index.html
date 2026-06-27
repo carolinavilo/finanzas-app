@@ -1316,6 +1316,29 @@ input[type=checkbox]{width:auto;margin-right:5px}
         <div class="form-group"><label>Nombre del objetivo</label><input type="text" id="obj-nombre" placeholder="Ej: Viaje a Europa"/></div>
         <div class="form-group"><label>Ícono</label><input type="text" id="obj-icono" value="🎯" maxlength="4" style="width:56px;text-align:center;font-size:20px"/></div>
       </div>
+      <div class="form-group">
+        <label>Imagen (opcional)</label>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div id="obj-img-preview" style="width:56px;height:56px;border-radius:12px;background:var(--card2);display:flex;align-items:center;justify-content:center;font-size:28px;overflow:hidden;flex-shrink:0">🎯</div>
+          <div>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('obj-img-input').click()">📷 Subir imagen</button>
+            <button type="button" class="btn btn-ghost btn-sm" id="obj-img-quitar" style="display:none" onclick="objImgData=null;document.getElementById('obj-img-preview').innerHTML=document.getElementById('obj-icono').value||'🎯';document.getElementById('obj-img-quitar').style.display='none'">✕ Quitar</button>
+            <input type="file" id="obj-img-input" accept="image/*" style="display:none" onchange="onObjImgChange(event)">
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>¿Dónde vas a ahorrar?</label>
+        <select id="obj-tipo-ahorro">
+          <option value="">Sin especificar</option>
+          <option value="cuenta">💳 Cuenta / billetera</option>
+          <option value="efectivo">💵 Efectivo</option>
+          <option value="dolares_fisicos">💵 Dólares físicos</option>
+          <option value="dolares_virtuales">💻 Dólares virtuales</option>
+          <option value="inversiones">📈 Inversiones / cartera</option>
+          <option value="mixto">🔀 Mixto</option>
+        </select>
+      </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
         <div class="form-group"><label>Monto objetivo ($)</label><input type="number" id="obj-meta" placeholder="0" inputmode="decimal"/></div>
         <div class="form-group"><label>Monto ahorrado inicial ($) <span style="font-weight:400;font-size:10px">si no usás instrumentos</span></label><input type="number" id="obj-actual" placeholder="0" inputmode="decimal"/></div>
@@ -2575,25 +2598,29 @@ function renderObjetivos(){
       </div>`;
     }
 
-    return`<div class="panel" style="border-top:3px solid ${esc(obj.color||'var(--accent)')}">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-        <span style="font-size:26px">${esc(obj.icono||'🎯')}</span>
-        <div style="flex:1">
+    const TIPO_AHORRO_LABEL={cuenta:'💳 Cuenta',efectivo:'💵 Efectivo',dolares_fisicos:'💵 Dólares físicos',dolares_virtuales:'💻 Dólares virtuales',inversiones:'📈 Inversiones',mixto:'🔀 Mixto'};
+    const imgHeader=obj.imagen
+      ?`<div style="width:100%;height:100px;overflow:hidden;border-radius:12px 12px 0 0;margin:-16px -16px 12px;width:calc(100% + 32px)"><img src="${obj.imagen}" style="width:100%;height:100%;object-fit:cover"></div>`
+      :`<div style="width:calc(100% + 32px);height:80px;margin:-16px -16px 12px;background:${esc(obj.color||'var(--accent)')};opacity:.18;border-radius:12px 12px 0 0;display:flex;align-items:center;justify-content:center;font-size:40px">${esc(obj.icono||'🎯')}</div>`;
+    return`<div class="panel" style="border-top:3px solid ${esc(obj.color||'var(--accent)')};overflow:hidden">
+      ${imgHeader}
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <span style="font-size:24px">${esc(obj.icono||'🎯')}</span>
+        <div style="flex:1;min-width:0">
           <div style="font-weight:700;font-size:15px">${esc(obj.nombre)}</div>
-          ${obj.fecha_limite?`<div style="font-size:11px;color:var(--text2)">${dias>0?dias+' días restantes':dias===0?'¡Hoy!':'Vencido'} · ${_fmtFecha(obj.fecha_limite)}</div>`:''}
+          ${obj.tipo_ahorro?`<span class="badge b-blue" style="font-size:10px">${TIPO_AHORRO_LABEL[obj.tipo_ahorro]||obj.tipo_ahorro}</span>`:''}
         </div>
-        <div style="text-align:right">
-          <div style="font-size:18px;font-weight:800;color:${pct>=100?'var(--accent2)':'var(--text)'}">${pct}%</div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:20px;font-weight:800;color:${pct>=100?'var(--accent2)':esc(obj.color||'var(--accent)')}">${pct}%</div>
         </div>
       </div>
       <div style="background:var(--bg2);border-radius:99px;height:10px;margin-bottom:8px;overflow:hidden">
         <div style="height:10px;border-radius:99px;background:${pct>=100?'var(--accent2)':esc(obj.color||'var(--accent)')};width:${pct}%;transition:width .4s"></div>
       </div>
-      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-bottom:6px">
-        <span>${$$(actual)} ahorrado</span>
-        <span>Meta: ${$$(meta)}</span>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:4px">
+        Ahorrado: <strong style="color:var(--text)">${$$(actual)}</strong> de <strong>${$$(meta)}</strong> · Falta: <strong style="color:${falta>0?'var(--accent4)':'var(--accent2)'}">${$$(falta)}</strong>
       </div>
-      ${falta>0?`<div style="font-size:12px;color:var(--text2);margin-bottom:4px">Te faltan <strong style="color:var(--text)">${$$(falta)}</strong> (~${Math.round(falta/meta*100)}% más)</div>`:'<div style="font-size:12px;color:var(--accent2);font-weight:700;margin-bottom:4px">✅ ¡Objetivo alcanzado!</div>'}
+      ${pct>=100?'<div style="font-size:12px;color:var(--accent2);font-weight:700;margin-bottom:4px">✅ ¡Meta alcanzada!</div>':obj.fecha_limite?`<div style="font-size:12px;color:var(--text2);margin-bottom:4px">⏰ ${dias>0?dias+' días restantes':dias===0?'¡Vence hoy!':'Fecha vencida'} · ${_fmtFecha(obj.fecha_limite)}</div>`:''}
       ${proyFecha&&!insts.length?`<div style="font-size:11px;color:var(--text2);margin-bottom:6px">A este ritmo lo lográs el <strong>${proyFecha}</strong></div>`:''}
       ${instsHTML}
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
@@ -2636,7 +2663,20 @@ function _proyeccionObjetivo(obj,actual,meta){
   return `${d}/${m}/${y}`;
 }
 
+function onObjImgChange(e){
+  const file=e.target.files[0];if(!file)return;
+  if(file.size>300000){alert('La imagen es muy grande, usá una menor a 300KB');return;}
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    objImgData=ev.target.result;
+    const preview=document.getElementById('obj-img-preview');
+    preview.innerHTML=`<img src="${objImgData}" style="width:100%;height:100%;object-fit:cover;border-radius:12px">`;
+    document.getElementById('obj-img-quitar').style.display='';
+  };
+  reader.readAsDataURL(file);
+}
 function openNuevoObjetivo(){
+  objImgData=null;
   document.getElementById('obj-id').value='';
   document.getElementById('modal-obj-title').textContent='Nuevo objetivo';
   document.getElementById('obj-nombre').value='';
@@ -2645,11 +2685,15 @@ function openNuevoObjetivo(){
   document.getElementById('obj-actual').value='0';
   document.getElementById('obj-fecha').value='';
   document.getElementById('obj-color').value='#3a6338';
+  document.getElementById('obj-img-preview').innerHTML='🎯';
+  document.getElementById('obj-img-quitar').style.display='none';
+  document.getElementById('obj-tipo-ahorro').value='';
   openModal('modal-objetivo');
 }
 
 function editObjetivo(id){
   const obj=S.objetivos.find(o=>o.id===id);if(!obj)return;
+  objImgData=obj.imagen||null;
   document.getElementById('obj-id').value=id;
   document.getElementById('modal-obj-title').textContent='Editar objetivo';
   document.getElementById('obj-nombre').value=obj.nombre;
@@ -2658,6 +2702,16 @@ function editObjetivo(id){
   document.getElementById('obj-actual').value=obj.monto_actual||0;
   document.getElementById('obj-fecha').value=obj.fecha_limite||'';
   document.getElementById('obj-color').value=obj.color||'#3a6338';
+  document.getElementById('obj-tipo-ahorro').value=obj.tipo_ahorro||'';
+  const preview=document.getElementById('obj-img-preview');
+  if(obj.imagen){
+    objImgData=obj.imagen;
+    preview.innerHTML=`<img src="${obj.imagen}" style="width:100%;height:100%;object-fit:cover;border-radius:12px">`;
+    document.getElementById('obj-img-quitar').style.display='';
+  } else {
+    preview.innerHTML=obj.icono||'🎯';
+    document.getElementById('obj-img-quitar').style.display='none';
+  }
   openModal('modal-objetivo');
 }
 
@@ -2670,7 +2724,9 @@ function guardarObjetivo(){
   const data={nombre,icono:document.getElementById('obj-icono').value||'🎯',
     monto_objetivo:meta,monto_actual:+document.getElementById('obj-actual').value||0,
     fecha_limite:document.getElementById('obj-fecha').value||null,
-    color:document.getElementById('obj-color').value,activo:true};
+    color:document.getElementById('obj-color').value,activo:true,
+    imagen:objImgData||null,
+    tipo_ahorro:document.getElementById('obj-tipo-ahorro')?.value||''};
   if(editId){
     const existing=S.objetivos.find(o=>o.id===editId);
     Object.assign(existing,data);
@@ -2806,6 +2862,7 @@ function eliminarInstrumento(objId,instId){
 }
 
 // ====== CARTERAS ======
+let objImgData=null;
 let _carteraActual=null; // null = Todas
 
 function populateCarteraSels(){
@@ -2831,7 +2888,7 @@ function renderCarterasTabs(){
       style="${_carteraActual===c.id?`background:${esc(c.color||'var(--accent)')};border-color:${esc(c.color||'var(--accent)')};`:''}"
       onclick="setCarteraActual('${c.id}')">${esc(c.nombre)}</button>`).join('')+
     `<button class="btn btn-ghost btn-sm" onclick="openNuevaCartera()">+ Cartera</button>`+
-    (carteras.length>1&&_carteraActual?`<button class="btn btn-danger btn-xs" onclick="eliminarCartera('${_carteraActual}')">✕ Eliminar cartera</button>`:'');
+    (carteras.length>1&&_carteraActual?`<button class="btn btn-ghost btn-xs" onclick="duplicarCartera('${_carteraActual}')">⧉ Duplicar</button><button class="btn btn-danger btn-xs" onclick="eliminarCartera('${_carteraActual}')">✕ Eliminar cartera</button>`:'');
 }
 
 function setCarteraActual(id){
@@ -2873,6 +2930,17 @@ function eliminarCartera(id){
   S.carteras=S.carteras.filter(c=>c.id!==id);
   if(_carteraActual===id)_carteraActual=null;
   save();renderCarterasTabs();renderInversiones();
+}
+
+function duplicarCartera(id){
+  const original=S.carteras.find(c=>c.id===id);if(!original)return;
+  const nuevaId=uid();
+  S.carteras.push({...original,id:nuevaId,nombre:original.nombre+' (copia)'});
+  const invsCopia=(S.inversiones||[]).filter(inv=>inv.carteraId===id).map(inv=>({...inv,id:uid(),carteraId:nuevaId}));
+  S.inversiones=[...(S.inversiones||[]),...invsCopia];
+  _carteraActual=nuevaId;
+  save();renderCarterasTabs();renderInversiones();
+  showToast('✅ Cartera duplicada');
 }
 
 // ====== CUENTAS ======
