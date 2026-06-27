@@ -3328,7 +3328,15 @@ function populateCatSelects(){
     if([...el.options].some(o=>o.value===cur))el.value=cur;
   };
   const cg=getCatsGasto(),ci=getCatsIngreso();
-  fillSel('g-cat',cg);fillSel('i-cat-sel',ci);
+  fillSel('g-cat',cg);
+  const gCatEl=document.getElementById('g-cat');
+  if(gCatEl&&![...gCatEl.options].some(o=>o.value==='')){
+    const blank=document.createElement('option');
+    blank.value='';blank.textContent='-- Seleccioná una categoría --';blank.disabled=true;
+    if(!gCatEl.value)blank.selected=true;
+    gCatEl.prepend(blank);
+  }
+  fillSel('i-cat-sel',ci);
   fillSel('eg-cat',cg);fillSel('ei-cat',ci);
   fillSel('filtro-cat-g',cg,true);fillSel('filtro-cat-i',ci,true);
 }
@@ -3538,7 +3546,7 @@ function resetGastoForm(){
     const first=grid.querySelector('.mob-cat-btn');
     if(first)first.classList.add('active');
   }
-  document.getElementById('g-cat').value='Comida';
+  document.getElementById('g-cat').value='';
 }
 function agregarGasto(){
   if(!currentUser)return;
@@ -5279,7 +5287,7 @@ function renderDashboard(){
     ...S.ingresos.map(i=>({...i,tipo_mov:'ingreso'}))
   ].sort((a,b)=>b.fecha.localeCompare(a.fecha)).slice(0,7);
   document.getElementById('dash-ultimos').innerHTML=movs.length?movs.map(m=>`
-    <div onclick="${m.tipo_mov==='ingreso'?'navMob(\'ingresos\')':'navMob(\'gastos\')'}" style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(128,128,128,.07);cursor:pointer">
+    <div onclick="${m.tipo_mov==='ingreso'?"navMob('ingresos');setTimeout(()=>{const el=document.getElementById('i-desc');if(el){el.scrollIntoView({behavior:'smooth'});el.focus();}},300)":"navMob('gastos');setTimeout(()=>{const el=document.getElementById('g-desc');if(el){el.scrollIntoView({behavior:'smooth'});el.focus();}},300)"}" style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(128,128,128,.07);cursor:pointer">
       <div>
         <div style="font-size:13px;font-weight:500">${m.descripcion}</div>
         <div style="font-size:11px;color:var(--text2)">${ff(m.fecha)} · ${m.categoria}</div>
