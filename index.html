@@ -563,6 +563,10 @@ input[type=checkbox]{width:auto;margin-right:5px}
       <span class="nav-icon-wrap"><i data-lucide="trending-down"></i></span>
       <span class="nav-label" style="flex:1">Gastos</span>
     </div>
+    <div class="nav-item" onclick="nav('movimientos',this)">
+      <span class="nav-icon-wrap"><i data-lucide="list"></i></span>
+      <span class="nav-label" style="flex:1">Movimientos</span>
+    </div>
     <div class="nav-item" onclick="nav('tarjetas',this)">
       <span class="nav-icon-wrap"><i data-lucide="credit-card"></i></span>
       <span class="nav-label" style="flex:1">Tarjetas</span>
@@ -639,7 +643,7 @@ input[type=checkbox]{width:auto;margin-right:5px}
       <div class="panel"><div class="panel-title"><span><span class="dash-drag-handle">⠿</span>Cuotas próximas</span><span class="sub" id="cuotas-prox-count"></span></div><div id="dash-cuotas"></div></div>
     </div>
     <div data-widget="ultimos">
-      <div class="panel"><div class="panel-title"><span><span class="dash-drag-handle">⠿</span>Últimos movimientos</span></div><div id="dash-ultimos"></div></div>
+      <div class="panel"><div class="panel-title" style="cursor:pointer" onclick="navMob('movimientos')" title="Ver todos"><span><span class="dash-drag-handle">⠿</span>Últimos movimientos<span style="font-size:11px;color:var(--accent);margin-left:6px">Ver todos →</span></span></div><div id="dash-ultimos"></div></div>
     </div>
     <div data-widget="objetivos" id="dash-objetivos-row" style="display:none">
       <div class="panel" onclick="navMob('objetivos')" style="cursor:pointer">
@@ -698,6 +702,26 @@ input[type=checkbox]{width:auto;margin-right:5px}
     </div>
     <div class="table-scroll"><table><thead><tr><th>Fecha</th><th>Descripción</th><th>Categoría</th><th>Notas</th><th>Recurrente</th><th style="text-align:right">Monto</th><th></th></tr></thead>
     <tbody id="ingresos-tbody"></tbody></table></div>
+  </div>
+</div>
+
+<!-- MOVIMIENTOS -->
+<div id="section-movimientos" class="section">
+  <div class="page-header">
+    <div class="page-header-left"><h2>📋 Movimientos</h2><p>Todos tus ingresos y gastos</p></div>
+  </div>
+  <div class="panel">
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+      <input type="text" id="mov-search" placeholder="🔍 Buscar..." oninput="renderMovimientos()" style="flex:1;min-width:140px">
+      <select id="mov-mes" onchange="renderMovimientos()"></select>
+      <select id="mov-tipo" onchange="renderMovimientos()">
+        <option value="">Todo</option>
+        <option value="ingreso">Ingresos</option>
+        <option value="gasto">Gastos</option>
+      </select>
+    </div>
+    <div id="mov-total-label" style="font-size:12px;color:var(--text2);margin-bottom:10px"></div>
+    <div id="mov-list"></div>
   </div>
 </div>
 
@@ -1074,6 +1098,10 @@ input[type=checkbox]{width:auto;margin-right:5px}
   <div class="bottom-sheet">
     <div class="bottom-sheet-handle"></div>
     <div class="bs-grid">
+      <div class="bs-item" onclick="navMob('movimientos');closeSheet('sheet-mas')">
+        <i data-lucide="list"></i>
+        Movimientos
+      </div>
       <div class="bs-item" id="bsm-cuentas" onclick="navMob('cuentas',null);closeSheet('sheet-mas')">
         <i data-lucide="landmark"></i>
         Cuentas
@@ -2345,12 +2373,57 @@ function navMob(id){
   window.scrollTo({top:0,behavior:'smooth'});
   if(window.lucide)lucide.createIcons();
 }
+function renderMovimientos(){
+  const mesSelect=document.getElementById('mov-mes');
+  if(mesSelect&&!mesSelect.options.length){
+    const meses=new Set([
+      ...S.gastos.map(g=>g.fecha?.slice(0,7)),
+      ...S.ingresos.map(i=>i.fecha?.slice(0,7))
+    ].filter(Boolean));
+    const sorted=[...meses].sort().reverse();
+    mesSelect.innerHTML='<option value="">Todos los meses</option>'+
+      sorted.map(m=>`<option value="${m}"${m===today().slice(0,7)?' selected':''}>${m}</option>`).join('');
+  }
+  const buscar=document.getElementById('mov-search')?.value.toLowerCase()||'';
+  const mes=document.getElementById('mov-mes')?.value||'';
+  const tipo=document.getElementById('mov-tipo')?.value||'';
+  const movs=[
+    ...S.gastos.map(g=>({...g,tipo_mov:'gasto'})),
+    ...S.ingresos.map(i=>({...i,tipo_mov:'ingreso'}))
+  ]
+  .filter(m=>!mes||m.fecha?.startsWith(mes))
+  .filter(m=>!tipo||m.tipo_mov===tipo)
+  .filter(m=>!buscar||m.descripcion?.toLowerCase().includes(buscar)||m.categoria?.toLowerCase().includes(buscar))
+  .sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+  const totalIngresos=movs.filter(m=>m.tipo_mov==='ingreso').reduce((a,m)=>a+(+m.monto||0),0);
+  const totalGastos=movs.filter(m=>m.tipo_mov==='gasto').reduce((a,m)=>a+(+m.monto||0),0);
+  const label=document.getElementById('mov-total-label');
+  if(label)label.innerHTML=`${movs.length} movimientos · <span style="color:var(--accent2)">+${$$(totalIngresos)}</span> · <span style="color:var(--accent4)">−${$$(totalGastos)}</span>`;
+  const list=document.getElementById('mov-list');
+  if(!list)return;
+  if(!movs.length){list.innerHTML='<div class="empty"><p>Sin movimientos para los filtros seleccionados.</p></div>';return;}
+  list.innerHTML=movs.map(m=>`
+    <div style="display:grid;grid-template-columns:1fr auto;gap:2px 8px;padding:10px 0;border-bottom:1px solid var(--border)">
+      <div style="font-size:13px;font-weight:600;grid-column:1;grid-row:1">${esc(m.descripcion)}</div>
+      <div style="font-size:13px;font-weight:700;text-align:right;grid-column:2;grid-row:1;color:${m.tipo_mov==='ingreso'?'var(--accent2)':'var(--text)'};white-space:nowrap">
+        ${m.tipo_mov==='ingreso'?'+':'−'}${$$(m.monto)}
+      </div>
+      <div style="font-size:11px;color:var(--text2);grid-column:1;grid-row:2">
+        ${ff(m.fecha)} · <span class="badge ${m.tipo_mov==='ingreso'?'b-green':'b-purple'}" style="font-size:10px">${esc(m.categoria)}</span>
+      </div>
+      <div style="grid-column:2;grid-row:2;text-align:right;white-space:nowrap">
+        <button class="btn btn-ghost btn-xs" onclick="${m.tipo_mov==='ingreso'?`editIngreso('${esc(m.id)}')`:`editGasto('${esc(m.id)}')`}">✏️</button>
+        <button class="btn btn-danger btn-xs" onclick="${m.tipo_mov==='ingreso'?`eliminarIngreso('${esc(m.id)}')`:`eliminarGasto('${esc(m.id)}')`}">✕</button>
+      </div>
+    </div>
+  `).join('');
+}
 function renderSection(id){
   ({dashboard:renderDashboard,ingresos:renderIngresos,gastos:renderGastos,
-    tarjetas:renderTarjetas,cuotas:renderCuotas,inversiones:renderInversiones,
-    presupuesto:renderPresupuesto,categorias:renderCategorias,
-    configuracion:renderConfiguracion,cuentas:renderCuentas,
-    objetivos:renderObjetivos}[id]||(() => {}))();
+    movimientos:renderMovimientos,tarjetas:renderTarjetas,cuotas:renderCuotas,
+    inversiones:renderInversiones,presupuesto:renderPresupuesto,
+    categorias:renderCategorias,configuracion:renderConfiguracion,
+    cuentas:renderCuentas,objetivos:renderObjetivos}[id]||(() => {}))();
 }
 function renderConfiguracion(){
   renderKeyWidget('cfg-ai-key-container');
