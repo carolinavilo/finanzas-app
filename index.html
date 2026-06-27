@@ -3629,7 +3629,12 @@ function guardarEditIngreso(){
   item.monto=monto;
   item.notas=document.getElementById('ei-notas').value.trim();
   item.recurrente=document.getElementById('ei-recurrente').checked;
-  save();closeModal('modal-edit-ingreso');renderIngresos();refreshDashIfVisible();
+  save();
+  closeModal('modal-edit-ingreso');
+  renderIngresos();
+  refreshDashIfVisible();
+  if(document.getElementById('section-movimientos')?.classList.contains('active')) renderMovimientos();
+  showToast('✅ Ingreso actualizado');
 }
 
 function eliminarIngreso(id){
@@ -3777,8 +3782,12 @@ function guardarEditGasto(){
   g.tarjetaId=g.tipo==='tarjeta'?document.getElementById('eg-tarjeta').value:null;
   g.notas=document.getElementById('eg-notas').value.trim();
   g.recurrente=document.getElementById('eg-recurrente').checked;
-  save();if(userRole==='usuario')syncGastoUpdate(g);
-  closeModal('modal-edit-gasto');renderGastos();refreshDashIfVisible();
+  save();
+  if(userRole==='usuario') syncGastoUpdate(g);
+  closeModal('modal-edit-gasto');
+  renderGastos();
+  refreshDashIfVisible();
+  if(document.getElementById('section-movimientos')?.classList.contains('active')) renderMovimientos();
   showToast('✅ Gasto actualizado');
 }
 
