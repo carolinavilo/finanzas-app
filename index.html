@@ -720,6 +720,11 @@ input[type=checkbox]{width:auto;margin-right:5px}
         </div>
       </div>
       <input type="hidden" id="g-tipo" value="efectivo"/>
+      <div id="g-efectivo-extra" class="extra-section">
+        <div class="form-group"><label>Descontar de <span style="font-weight:400;font-size:11px">(opcional)</span></label>
+          <select id="g-cuenta-efectivo" style="font-size:16px;padding:12px"></select>
+        </div>
+      </div>
       <div id="g-debito-extra" class="extra-section" style="display:none">
         <div class="form-group"><label>Cuenta / Billetera</label>
           <select id="g-cuenta-debito" style="font-size:16px;padding:12px"></select>
@@ -1404,6 +1409,7 @@ input[type=checkbox]{width:auto;margin-right:5px}
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
         <div class="form-group"><label>Tipo</label>
           <select id="cu-tipo">
+            <option value="efectivo">💵 Efectivo</option>
             <option value="banco">🏦 Banco</option>
             <option value="billetera">💜 Billetera virtual</option>
             <option value="caja_ahorro">🏧 Caja de ahorro</option>
@@ -2789,6 +2795,7 @@ function eliminarCartera(id){
 
 // ====== CUENTAS ======
 const CUENTAS_SUGERIDAS=[
+  {nombre:'Efectivo',tipo:'efectivo',moneda:'ARS',color:'#4ade80',icono:'💵'},
   {nombre:'Mercado Pago',tipo:'billetera',moneda:'ARS',color:'#00b1ea',icono:'💜'},
   {nombre:'Naranja X',tipo:'billetera',moneda:'ARS',color:'#ff6b00',icono:'🟠'},
   {nombre:'Ualá',tipo:'billetera',moneda:'ARS',color:'#7c3aed',icono:'💜'},
@@ -2797,11 +2804,19 @@ const CUENTAS_SUGERIDAS=[
   {nombre:'BBVA',tipo:'banco',moneda:'ARS',color:'#004899',icono:'🏦'},
   {nombre:'Brubank',tipo:'banco',moneda:'ARS',color:'#1a1aff',icono:'📱'},
 ];
-const TIPO_CUENTA_LABEL={banco:'🏦 Banco',billetera:'💜 Billetera',caja_ahorro:'🏧 Caja de ahorro',inversion:'📈 Inversión'};
+const TIPO_CUENTA_LABEL={efectivo:'💵 Efectivo',banco:'🏦 Banco',billetera:'💜 Billetera',caja_ahorro:'🏧 Caja de ahorro',inversion:'📈 Inversión'};
 
 function populateCuentaSels(){
   const cuentas=S.cuentas||[];
   const ninguna='<option value="">— Sin cuenta —</option>';
+  // Gastos efectivo
+  const efSel=document.getElementById('g-cuenta-efectivo');
+  if(efSel){
+    const prev=efSel.value;
+    const ef=cuentas.filter(c=>c.tipo==='efectivo'&&c.activa!==false);
+    efSel.innerHTML='<option value="">No asignar</option>'+ef.map(c=>`<option value="${c.id}">${esc(c.icono||'💵')} ${esc(c.nombre)}</option>`).join('');
+    if(prev)efSel.value=prev;
+  }
   // Gastos débito
   const gSel=document.getElementById('g-cuenta-debito');
   if(gSel){
@@ -3346,6 +3361,7 @@ function setGastoTipo(tipo){
   populateCuentaSels();
   document.getElementById('g-tipo').value=tipo;
   document.querySelectorAll('.tipo-btn').forEach(b=>b.classList.toggle('active',b.dataset.tipo===tipo));
+  document.getElementById('g-efectivo-extra').style.display=tipo==='efectivo'?'block':'none';
   document.getElementById('g-debito-extra').style.display=tipo==='debito'?'block':'none';
   document.getElementById('g-tarjeta-extra').style.display=tipo==='tarjeta'?'block':'none';
   // Ocultar fila monto+fecha normal cuando es tarjeta (tiene sus propios campos)
@@ -3530,6 +3546,7 @@ function resetGastoForm(){
   document.getElementById('g-fecha-primer-pago').value='';
   const gs=document.getElementById('g-subcat');if(gs)gs.value='';
   const gsw=document.getElementById('g-subcat-wrap');if(gsw)gsw.style.display='none';
+  const gce=document.getElementById('g-cuenta-efectivo');if(gce)gce.value='';
   setGastoTipo('efectivo'); // restaura g-fecha-wrap y oculta extras
   const grid=document.getElementById('mob-cat-grid');
   if(grid){
@@ -3573,7 +3590,7 @@ function agregarGasto(){
     return;
   }
 
-  const cuentaId=tipo==='debito'?document.getElementById('g-cuenta-debito').value:null;
+  const cuentaId=tipo==='debito'?document.getElementById('g-cuenta-debito').value:tipo==='efectivo'?(document.getElementById('g-cuenta-efectivo')?.value||null):null;
   const nuevo={id:uid(),fecha,descripcion:desc,categoria:cat,subcategoria,monto,tipo,
     tarjetaId:null,cuentaId,notas,recurrente:false};
   const dupG2=S.gastos.find(g=>g.descripcion===nuevo.descripcion&&g.monto===nuevo.monto&&g.fecha===nuevo.fecha&&g.categoria===nuevo.categoria);
