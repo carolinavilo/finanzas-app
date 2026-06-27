@@ -2428,8 +2428,8 @@ function renderMovimientos(){
         ${ff(m.fecha)} · <span class="badge ${m.tipo_mov==='ingreso'?'b-green':m.tipo_mov==='cuota'?'b-blue':'b-purple'}" style="font-size:10px">${m.tipo_mov==='cuota'?'💳 Cuotas':esc(m.categoria)}</span>
       </div>
       <div style="grid-column:2;grid-row:2;text-align:right;white-space:nowrap">
-        <button class="btn btn-ghost btn-xs" onclick="${m.tipo_mov==='ingreso'?`editIngreso('${esc(m.id)}')`:`editGasto('${esc(m.id)}')`}">✏️</button>
-        <button class="btn btn-danger btn-xs" onclick="${m.tipo_mov==='ingreso'?`eliminarIngreso('${esc(m.id)}')`:`eliminarGasto('${esc(m.id)}')`}">✕</button>
+        <button class="btn btn-ghost btn-xs mov-edit-btn" data-id="${esc(m.id)}" data-tipo="${m.tipo_mov}">✏️</button>
+        <button class="btn btn-danger btn-xs mov-del-btn" data-id="${esc(m.id)}" data-tipo="${m.tipo_mov}">✕</button>
       </div>
     </div>
   `).join('');
@@ -6403,6 +6403,37 @@ document.addEventListener('click', e => {
     const cat = delSubcat.dataset.cat;
     const nombre = delSubcat.dataset.nombre;
     removeSubcat(cat, nombre);
+    return;
+  }
+
+  // Editar desde movimientos
+  const movEdit = e.target.closest('.mov-edit-btn');
+  if (movEdit) {
+    const id = movEdit.dataset.id;
+    const tipo = movEdit.dataset.tipo;
+    if (tipo === 'ingreso') editIngreso(id);
+    else if (tipo === 'cuota') editCompraCuotas(id);
+    else editGasto(id);
+    return;
+  }
+
+  // Eliminar desde movimientos
+  const movDel = e.target.closest('.mov-del-btn');
+  if (movDel) {
+    const id = movDel.dataset.id;
+    const tipo = movDel.dataset.tipo;
+    if (tipo === 'ingreso') {
+      if (!confirm('¿Eliminar este ingreso?')) return;
+      eliminarIngreso(id);
+    } else if (tipo === 'cuota') {
+      if (!confirm('¿Eliminar esta compra en cuotas?')) return;
+      S.comprasCuotas = S.comprasCuotas.filter(c => c.id !== id);
+      save(); renderMovimientos(); showToast('Eliminado');
+    } else {
+      if (!confirm('¿Eliminar este gasto?')) return;
+      eliminarGasto(id);
+      renderMovimientos();
+    }
     return;
   }
 });
