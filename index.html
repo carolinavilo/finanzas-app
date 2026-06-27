@@ -378,21 +378,15 @@ input[type=checkbox]{width:auto;margin-right:5px}
   #section-ingresos .table-scroll{overflow-x:visible}
   #section-gastos .table-scroll table,
   #section-ingresos .table-scroll table{width:100%}
-  #gastos-tbody tr,
-  #ingresos-tbody tr{display:block;border-bottom:1px solid var(--border);padding:10px 0;position:relative}
-  #gastos-tbody td,
-  #ingresos-tbody td{display:none;border:none;padding:0}
-  #gastos-tbody td:nth-child(2),
-  #ingresos-tbody td:nth-child(2){display:block;font-size:13px;font-weight:600;padding-right:80px;margin-bottom:3px}
-  #gastos-tbody td:nth-child(1),
-  #ingresos-tbody td:nth-child(1){display:block;font-size:11px;color:var(--text2);margin-bottom:3px}
-  #gastos-tbody td:nth-child(3),
-  #ingresos-tbody td:nth-child(3){display:block;margin-bottom:2px}
-  #gastos-tbody td:nth-child(7){display:block;position:absolute;top:10px;right:0;font-size:13px;font-weight:700;text-align:right;white-space:nowrap}
-  #ingresos-tbody td:nth-child(6){display:block;position:absolute;top:10px;right:0;font-size:13px;font-weight:700;color:var(--accent2);text-align:right;white-space:nowrap}
+  #gastos-tbody tr,#ingresos-tbody tr{display:block;border-bottom:1px solid var(--border);padding:10px 0;position:relative;min-height:64px}
+  #gastos-tbody td,#ingresos-tbody td{display:none;border:none;padding:0}
+  #gastos-tbody td:nth-child(2),#ingresos-tbody td:nth-child(2){display:block;font-size:13px;font-weight:600;padding-right:90px;margin-bottom:2px}
+  #gastos-tbody td:nth-child(1),#ingresos-tbody td:nth-child(1){display:block;font-size:11px;color:var(--text2);margin-bottom:3px}
+  #gastos-tbody td:nth-child(3),#ingresos-tbody td:nth-child(3){display:block;margin-bottom:0}
+  #gastos-tbody td:nth-child(7){display:block;position:absolute;top:10px;right:0;font-size:13px;font-weight:700;white-space:nowrap}
+  #ingresos-tbody td:nth-child(6){display:block;position:absolute;top:10px;right:0;font-size:13px;font-weight:700;color:var(--accent2);white-space:nowrap}
   #gastos-tbody td:nth-child(8){display:block;position:absolute;bottom:8px;right:0;white-space:nowrap}
   #ingresos-tbody td:nth-child(7){display:block;position:absolute;bottom:8px;right:0;white-space:nowrap}
-  .btn-editar-gasto,.btn-eliminar-gasto,.btn.btn-ghost.btn-xs,.btn.btn-danger.btn-xs{font-size:12px;padding:2px 5px;min-width:26px;min-height:26px}
 }
 /* ── MOBILE GASTOS ENRIQUECIDO ── */
 @media(max-width:768px){
@@ -3568,12 +3562,13 @@ function onGastoTarjetaChange(){
 // ====== FILTROS MES ======
 function buildMesSel(selId,items,dateField='fecha',futureMeses=0){
   const sel=document.getElementById(selId);if(!sel)return;
-  const meses=new Set(items.map(i=>i[dateField].slice(0,7)));
+  const meses=new Set(items.map(i=>i[dateField]?.slice(0,7)).filter(Boolean));
   const actual=today().slice(0,7);meses.add(actual);
   for(let i=1;i<=futureMeses;i++) meses.add(addMeses(actual,i));
   const arr=[...meses].sort().reverse();
-  const cur=sel.value&&arr.includes(sel.value)?sel.value:actual;
-  sel.innerHTML=arr.map(m=>`<option value="${m}" ${m===cur?'selected':''}>${mesPretty(m)}</option>`).join('');
+  const prevVal=sel.value;
+  sel.innerHTML='<option value="">Todos los meses</option>'+arr.map(m=>`<option value="${m}">${mesPretty(m)}</option>`).join('');
+  sel.value=prevVal||actual;
 }
 
 // ====== INGRESOS ======
