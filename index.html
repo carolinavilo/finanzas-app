@@ -370,12 +370,18 @@ input[type=checkbox]{width:auto;margin-right:5px}
 
 /* ── TABLA RESPONSIVA MÓVIL ── */
 @media(max-width:600px){
-  .table-scroll th:nth-child(4),
-  .table-scroll td:nth-child(4),
-  .table-scroll th:nth-child(5),
-  .table-scroll td:nth-child(5){display:none}
-  .table-scroll{overflow-x:visible}
-  .table-scroll table{width:100%;table-layout:fixed}
+  #section-ingresos .table-scroll th:nth-child(4),
+  #section-ingresos .table-scroll td:nth-child(4),
+  #section-ingresos .table-scroll th:nth-child(5),
+  #section-ingresos .table-scroll td:nth-child(5){display:none}
+  #section-ingresos .table-scroll{overflow-x:visible}
+  #section-ingresos .table-scroll table{width:100%;table-layout:fixed}
+  #section-gastos .table-scroll th:nth-child(4),
+  #section-gastos .table-scroll td:nth-child(4),
+  #section-gastos .table-scroll th:nth-child(5),
+  #section-gastos .table-scroll td:nth-child(5){display:none}
+  #section-gastos .table-scroll{overflow-x:visible}
+  #section-gastos .table-scroll table{width:100%;table-layout:fixed}
   .table-scroll th:nth-child(1),
   .table-scroll td:nth-child(1){width:70px;font-size:11px}
   .table-scroll th:nth-child(2),
@@ -5256,7 +5262,7 @@ function renderDashboard(){
     ...S.ingresos.map(i=>({...i,tipo_mov:'ingreso'}))
   ].sort((a,b)=>b.fecha.localeCompare(a.fecha)).slice(0,7);
   document.getElementById('dash-ultimos').innerHTML=movs.length?movs.map(m=>`
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(128,128,128,.07)">
+    <div onclick="${m.tipo_mov==='ingreso'?'navMob(\'ingresos\')':'navMob(\'gastos\')'}" style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(128,128,128,.07);cursor:pointer">
       <div>
         <div style="font-size:13px;font-weight:500">${m.descripcion}</div>
         <div style="font-size:11px;color:var(--text2)">${ff(m.fecha)} · ${m.categoria}</div>
