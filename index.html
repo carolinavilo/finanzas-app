@@ -3385,6 +3385,9 @@ function agregarIngreso(){
   save();
   document.getElementById('i-desc').value='';document.getElementById('i-monto').value='';
   document.getElementById('i-notas').value='';document.getElementById('i-recurrente').checked=false;
+  document.getElementById('i-cat')&&(document.getElementById('i-cat').value='');
+  document.getElementById('i-fecha')&&(document.getElementById('i-fecha').value=today());
+  document.getElementById('i-cuenta-destino')&&(document.getElementById('i-cuenta-destino').value='');
   renderIngresos();refreshDashIfVisible();
 }
 
@@ -3470,6 +3473,13 @@ function resetGastoForm(){
   const gs=document.getElementById('g-subcat');if(gs)gs.value='';
   const gsw=document.getElementById('g-subcat-wrap');if(gsw)gsw.style.display='none';
   setGastoTipo('efectivo'); // restaura g-fecha-wrap y oculta extras
+  const grid=document.getElementById('mob-cat-grid');
+  if(grid){
+    grid.querySelectorAll('.mob-cat-btn').forEach(b=>b.classList.remove('active'));
+    const first=grid.querySelector('.mob-cat-btn');
+    if(first)first.classList.add('active');
+  }
+  document.getElementById('g-cat').value='Comida';
 }
 function agregarGasto(){
   if(!currentUser)return;
