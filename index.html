@@ -2382,7 +2382,7 @@ function renderMovimientos(){
     ].filter(Boolean));
     const sorted=[...meses].sort().reverse();
     mesSelect.innerHTML='<option value="">Todos los meses</option>'+
-      sorted.map(m=>`<option value="${m}"${m===today().slice(0,7)?' selected':''}>${m}</option>`).join('');
+      sorted.map(m=>`<option value="${m}"${m===today().slice(0,7)?' selected':''}>${mesPretty(m)}</option>`).join('');
   }
   const buscar=document.getElementById('mov-search')?.value.toLowerCase()||'';
   const mes=document.getElementById('mov-mes')?.value||'';
