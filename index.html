@@ -6491,18 +6491,29 @@ function renderImportResults(data) {
 
   let html = '<div class="ai-import-panel">';
 
+  const tarjetaOpts = (sel='') => S.tarjetas.length
+    ? S.tarjetas.map(t=>`<option value="${t.id}"${t.id===sel?' selected':''}>${escHtml(t.nombre)}</option>`).join('')
+    : '<option value="">Sin tarjetas</option>';
+
   if (gastos.length) {
     html += `<div class="ai-import-section">
       <div class="ai-import-title">💳 Gastos (${gastos.length})${selBtns('g')}</div>`;
     gastos.forEach((g, i) => {
-      const tipoBadge = g.medio_pago === 'debito' ? 'débito' : g.medio_pago === 'transferencia' ? 'transf.' : 'crédito';
+      const isCredito = g.medio_pago === 'credito' || g.medio_pago === 'tarjeta';
+      const primeraTarjeta = S.tarjetas[0]?.id || '';
       html += `<div class="ai-import-row">
         <input type="checkbox" class="ai-imp-chk" data-section="${panelId}-g" data-idx="${i}" checked/>
         <div class="ai-import-info">
           <input type="text" class="ai-import-edit-desc" id="aidesc-${panelId}-g-${i}" value="${escHtml(g.descripcion)}"/>
-          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-            <span class="ai-import-monto">${fmtARS(g.monto)}</span>
-            <span style="font-size:10px;padding:1px 5px;background:var(--accent-light);border-radius:10px;color:var(--accent)">${tipoBadge}</span>
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:4px">
+            <input type="number" id="aimonto-${panelId}-g-${i}" value="${g.monto}" style="width:84px;padding:3px 6px;font-size:11px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--accent);font-weight:600"/>
+            <select class="ai-import-cat" id="aitipo-${panelId}-g-${i}" onchange="aiToggleTarjeta(this,'${panelId}','${i}')">
+              <option value="efectivo"${g.medio_pago==='efectivo'?' selected':''}>Efectivo</option>
+              <option value="debito"${g.medio_pago==='debito'?' selected':''}>Débito</option>
+              <option value="transferencia"${g.medio_pago==='transferencia'?' selected':''}>Transf.</option>
+              <option value="credito"${isCredito?' selected':''}>Tarjeta</option>
+            </select>
+            <select class="ai-import-cat" id="aitarjeta-${panelId}-g-${i}" style="${isCredito&&S.tarjetas.length?'':'display:none'}">${tarjetaOpts(primeraTarjeta)}</select>
           </div>
         </div>
         <select class="ai-import-cat" id="aicat-${panelId}-g-${i}">${catOpts(g.categoria_sugerida)}</select>
@@ -6546,6 +6557,11 @@ function renderImportResults(data) {
   div.scrollTop = div.scrollHeight;
 }
 
+function aiToggleTarjeta(sel, panelId, idx) {
+  const tSel = document.getElementById(`aitarjeta-${panelId}-g-${idx}`);
+  if (tSel) tSel.style.display = sel.value === 'credito' && S.tarjetas.length ? '' : 'none';
+}
+
 function importarSeleccionados(panelId, btn) {
   console.log('[importar] panelId:', panelId);
   const fbEl = document.getElementById('ai-fb-' + panelId);
@@ -6575,10 +6591,13 @@ function importarSeleccionados(panelId, btn) {
       if (!g) return;
       const desc = document.getElementById(`aidesc-${panelId}-g-${i}`)?.value?.trim() || g.descripcion;
       const cat = document.getElementById(`aicat-${panelId}-g-${i}`)?.value || g.categoria_sugerida || getCatsGasto()[0] || 'Otros';
-      const tipoMap = { debito: 'debito', transferencia: 'debito', credito: 'tarjeta' };
-      const tipo = tipoMap[g.medio_pago] || 'tarjeta';
+      const monto = +(document.getElementById(`aimonto-${panelId}-g-${i}`)?.value) || g.monto;
+      const medioPago = document.getElementById(`aitipo-${panelId}-g-${i}`)?.value || g.medio_pago;
+      const tipoMap = { debito:'debito', transferencia:'debito', credito:'tarjeta', tarjeta:'tarjeta', efectivo:'efectivo' };
+      const tipo = tipoMap[medioPago] || 'efectivo';
+      const tarjetaId = tipo === 'tarjeta' ? (document.getElementById(`aitarjeta-${panelId}-g-${i}`)?.value || S.tarjetas[0]?.id || null) : null;
       S.gastos.push({ id: uid(), fecha: g.fecha || today(), descripcion: desc,
-        categoria: cat, monto: g.monto, tipo, tarjetaId: null, notas: '', recurrente: false });
+        categoria: cat, monto, tipo, tarjetaId, notas: '', recurrente: false });
       nGastos++;
     });
 
