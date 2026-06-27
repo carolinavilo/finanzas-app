@@ -90,9 +90,9 @@ nav{flex:1;padding:10px 10px;overflow-y:auto}
 
 /* ── CARDS GRID ── */
 .cards-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:22px}
-.cards-grid-5,.cards-grid-6{display:grid;gap:14px;margin-bottom:22px}
-.cards-grid-5{grid-template-columns:repeat(5,1fr)}.cards-grid-6{grid-template-columns:repeat(6,1fr)}
-.cards-grid-5>*,.cards-grid-6>*,.two-col>*,.three-col>*{min-width:0}
+.cards-grid-5,.cards-grid-6,.cards-grid-8{display:grid;gap:14px;margin-bottom:22px}
+.cards-grid-5{grid-template-columns:repeat(5,1fr)}.cards-grid-6{grid-template-columns:repeat(6,1fr)}.cards-grid-8{grid-template-columns:repeat(8,1fr)}
+.cards-grid-5>*,.cards-grid-6>*,.cards-grid-8>*,.two-col>*,.three-col>*{min-width:0}
 .stat-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px 22px;position:relative;box-shadow:var(--shadow);transition:box-shadow .2s,transform .2s}
 .stat-card:hover{box-shadow:var(--shadow-md);transform:translateY(-1px)}
 .stat-card .label{font-size:11px;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;font-weight:600}
@@ -100,6 +100,8 @@ nav{flex:1;padding:10px 10px;overflow-y:auto}
 .stat-card .sub{font-size:11px;color:var(--text2);margin-top:6px}
 .stat-card .icon{position:absolute;top:18px;right:18px;font-size:22px;opacity:.3}
 .c-purple .value{color:var(--accent)}.c-green .value{color:var(--accent2)}.c-yellow .value{color:var(--accent3)}.c-red .value{color:var(--accent4)}.c-blue .value{color:var(--accent5)}
+.stat-card.c-orange{background:color-mix(in srgb,#fb923c 12%,var(--card))}.stat-card.c-orange .value{color:#ea580c}
+.stat-card.c-gray{background:var(--card2)}.stat-card.c-gray .value{color:var(--text2)}
 
 /* ── LAYOUT ── */
 .two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
@@ -341,7 +343,7 @@ input[type=checkbox]{width:auto;margin-right:5px}
   body{flex-direction:column;overflow-x:hidden}
   #main{margin-left:0;padding:72px 16px 90px;min-height:100vh;width:100%;max-width:100vw;flex:none;overflow-x:hidden}
   canvas{max-width:100%!important}
-  .cards-grid,.cards-grid-5,.cards-grid-6{grid-template-columns:1fr 1fr;gap:8px}
+  .cards-grid,.cards-grid-5,.cards-grid-6,.cards-grid-8{grid-template-columns:1fr 1fr;gap:8px}
   .two-col,.three-col{grid-template-columns:1fr}
   .form-grid{grid-template-columns:1fr}
   .form-grid-2{grid-template-columns:1fr}
@@ -600,7 +602,7 @@ input[type=checkbox]{width:auto;margin-right:5px}
 <div id="section-dashboard" class="section active">
   <div class="page-header"><div class="page-header-left"><h2 id="dash-greeting">Dashboard</h2><p id="dash-sub"></p></div><div class="page-header-right" style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary" onclick="navMob('gastos');setTimeout(()=>{const el=document.getElementById('g-desc');if(el)el.focus();},200)">＋ Registrar gasto</button><button class="btn btn-primary" style="background:var(--accent2)" onclick="navMob('ingresos');setTimeout(()=>{const el=document.getElementById('i-desc');if(el)el.focus();},200)">＋ Registrar ingreso</button></div></div>
   <div id="dash-alerts"></div>
-  <div class="cards-grid-6" id="dash-cards"></div>
+  <div class="cards-grid-8" id="dash-cards"></div>
   <div id="dash-sortable">
     <div data-widget="cuentas" id="dash-cuentas-row" style="display:none">
       <div class="panel" onclick="navMob('cuentas')" style="cursor:pointer">
@@ -5307,6 +5309,29 @@ function renderDashboard(){
   const gananciaPort=tieneValorActual?valorPortfolio-totalInvARS:0;
   const gPctPort=totalInvARS?(gananciaPort/totalInvARS*100):0;
   const gColorPort=gananciaPort>=0?'var(--accent2)':'var(--accent4)';
+  // Portfolio por cartera
+  const carteras=S.carteras||[];
+  const calcValorCartera=(carteraId)=>{
+    const invs=S.inversiones.filter(i=>i.carteraId===carteraId);
+    const tickers={};
+    invs.filter(i=>i.ticker&&i.ticker!=='USD').forEach(i=>{const t=i.ticker.toUpperCase();tickers[t]=(tickers[t]||0)+(+i.cantidad||0);});
+    let valor=0;
+    Object.entries(tickers).forEach(([t,u])=>{const p=liveprices[t]?.priceARS||getPrecioManual(t)||0;valor+=p*u;});
+    const usd=invs.filter(i=>i.ticker==='USD').reduce((a,i)=>a+(+i.cantidad||0),0);
+    if(usd>0&&dolarRates.blue?.venta)valor+=usd*dolarRates.blue.venta;
+    const invertido=invs.reduce((a,i)=>a+toARS(+i.montoInvertido||0,i.moneda),0);
+    return{valor,invertido,ganancia:valor-invertido,nombre:carteras.find(c=>c.id===carteraId)?.nombre||'Portfolio'};
+  };
+  const cartera1=carteras[0]?calcValorCartera(carteras[0].id):null;
+  const cartera2=carteras[1]?calcValorCartera(carteras[1].id):null;
+  // Próximo mes
+  const proxMes=(()=>{const d=new Date(mes+'-01');d.setMonth(d.getMonth()+1);return d.toISOString().slice(0,7);})();
+  const totalProxMes=getCuotasDueInMonth(proxMes).reduce((a,d)=>a+d.monto,0)+
+    S.gastos.filter(g=>g.tipo==='tarjeta'&&g.fecha.startsWith(proxMes)).reduce((a,g)=>a+g.monto,0);
+  const comprometidoTarjeta=gMes.filter(g=>g.tipo==='tarjeta').reduce((a,g)=>a+g.monto,0);
+  const disponibleHoy=totalI-(totalG-comprometidoTarjeta)-totalCuotas;
+  const proxVenc=S.tarjetas.length?S.tarjetas.reduce((a,b)=>{const da=nextFechaDia(a.vencimiento),db=nextFechaDia(b.vencimiento);return da<db?a:b;},S.tarjetas[0]):null;
+  const vencLabel=proxVenc?`Vence: ${ff(nextFechaDia(proxVenc.vencimiento))}`:'Tarjeta + cuotas que vencen';
 
   // ALERTS presupuesto 80%
   const alertsDiv=document.getElementById('dash-alerts');
@@ -5322,30 +5347,46 @@ function renderDashboard(){
   alertsDiv.innerHTML=alertas80.map((a,i)=>`<div class="alert ${i<1?'a-danger':'a-warn'}">🔔 ${a}</div>`).join('');
 
   // STAT CARDS
+  const saldoCuentasARS=S.cuentas&&S.cuentas.length?$$(S.cuentas.filter(c=>c.activa!==false&&c.moneda==='ARS').reduce((a,c)=>a+(+c.saldo||0),0)+S.cuentas.filter(c=>c.activa!==false&&c.moneda==='USD').reduce((a,c)=>a+(+c.saldo||0),0)*(dolarRates.blue?.venta||0)):'—';
+  const cuentasLabel=S.cuentas&&S.cuentas.length?S.cuentas.filter(c=>c.activa!==false).length+' cuenta'+(S.cuentas.filter(c=>c.activa!==false).length!==1?'s':'')+' · Ver detalle →':'Sin cuentas cargadas';
+  const port1Val=cartera1?(cartera1.valor||cartera1.invertido):tieneValorActual?valorPortfolio:totalInvARS;
+  const port1Gan=cartera1?cartera1.ganancia:gananciaPort;
+  const port1Nombre=cartera1?cartera1.nombre:'Valor portfolio';
+  const port1Color=port1Gan>=0?'var(--accent2)':'var(--accent4)';
   document.getElementById('dash-cards').innerHTML=`
     <div class="stat-card c-green"><div class="icon">🟢</div><div class="label">Ingresos del mes</div><div class="value">${$$(totalI)}</div><div class="sub">${iMes.length} registros</div></div>
-    <div class="stat-card c-red"><div class="icon">💸</div><div class="label">Gastos del mes</div><div class="value">${$$(totalG)}</div><div class="sub">${gMes.length} transacciones · fecha de compra</div></div>
-    <div class="stat-card c-yellow" style="cursor:pointer" onclick="navMob('cuotas');setTimeout(()=>{const sel=document.getElementById('filtro-mes-cuotas');if(sel){const hoy=new Date();sel.value=hoy.getFullYear()+'-'+(String(hoy.getMonth()+1).padStart(2,'0'));sel.dispatchEvent(new Event('change'));}},300)"><div class="icon">💳</div><div class="label">A pagar este mes</div><div class="value">${$$(totalAPagar)}</div><div class="sub">Tarjeta + cuotas que vencen</div></div>
-    <div class="stat-card ${balance>=0?'c-green':'c-red'}"><div class="icon">⚖️</div><div class="label">Balance neto</div><div class="value ${balance>=0?'pos':'neg'}">${balance>=0?'+':''}${$$(balance)}</div><div class="sub">Ingresos − gastos − cuotas</div></div>
-    <div class="stat-card c-blue" onclick="navMob('inversiones')" style="cursor:pointer" title="Ver detalle de inversiones">
-      <div class="icon">📈</div>
-      <div class="label">Valor portfolio</div>
-      <div class="value">${tieneValorActual?$$(valorPortfolio):$$(totalInvARS)}</div>
+    <div class="stat-card c-red"><div class="icon">💸</div><div class="label">Gastos del mes</div><div class="value">${$$(totalG)}</div><div class="sub">${gMes.length} transacciones</div></div>
+    <div class="stat-card c-yellow" style="cursor:pointer" onclick="navMob('cuotas');setTimeout(()=>{const sel=document.getElementById('filtro-mes-cuotas');if(sel){const hoy=new Date();sel.value=hoy.getFullYear()+'-'+(String(hoy.getMonth()+1).padStart(2,'0'));sel.dispatchEvent(new Event('change'));}},300)"><div class="icon">💳</div><div class="label">A pagar este mes</div><div class="value">${$$(totalAPagar)}</div><div class="sub">${vencLabel}</div></div>
+    <div class="stat-card c-orange" onclick="navMob('cuotas')" style="cursor:pointer"><div class="icon">📅</div><div class="label">Próximo mes</div><div class="value">${$$(totalProxMes)}</div><div class="sub">${mesPretty(proxMes)} · cuotas y tarjeta</div></div>
+    <div class="stat-card ${balance>=0?'c-green':'c-red'}">
+      <div class="icon">⚖️</div><div class="label">Balance neto</div>
+      <div class="value ${balance>=0?'pos':'neg'}">${balance>=0?'+':''}${$$(balance)}</div>
+      <div class="sub">Ingresos − gastos − cuotas${comprometidoTarjeta>0?`<div style="display:flex;justify-content:space-between;margin-top:6px;padding-top:6px;border-top:1px solid rgba(128,128,128,.12);font-size:10px"><span style="color:var(--text2)">⏳ En tarjeta</span><span style="color:#d97706;font-weight:700">−${$$(comprometidoTarjeta)}</span></div><div style="display:flex;justify-content:space-between;margin-top:3px;font-size:10px"><span style="color:var(--text2)">💵 Disponible hoy</span><span style="color:var(--accent2);font-weight:700">${disponibleHoy>=0?'+':''}${$$(disponibleHoy)}</span></div>`:''}</div>
+    </div>
+    <div class="stat-card c-purple" onclick="navMob('cuentas')" style="cursor:pointer"><div class="icon">🏦</div><div class="label">Saldo en cuentas</div><div class="value">${saldoCuentasARS}</div><div class="sub">${cuentasLabel}</div></div>
+    <div class="stat-card c-blue" onclick="navMob('inversiones')" style="cursor:pointer">
+      <div class="icon">📈</div><div class="label">${esc(port1Nombre)}</div>
+      <div class="value">${$$(port1Val)}</div>
       <div class="sub" style="display:flex;flex-direction:column;gap:2px">
-        ${tieneValorActual&&!tickersSinPrecio.length
-          ?`<span style="color:${gColorPort}">${gananciaPort>=0?'+':''}${$$(gananciaPort)} (${gananciaPort>=0?'+':''}${Math.abs(gPctPort).toFixed(1)}%)</span>`
-          :tickersSinPrecio.length?`<span>⚠️ Actualizar cotizaciones</span>`:`<span>${S.inversiones.length} posiciones</span>`
-        }
-        <span style="color:var(--text2);font-size:9px">${S.inversiones.length} posicion${S.inversiones.length!==1?'es':''} · Ver detalle →</span>
+        ${(cartera1?cartera1.valor>0:tieneValorActual)&&!tickersSinPrecio.length?`<span style="color:${port1Color}">${port1Gan>=0?'+':''}${$$(port1Gan)} (${port1Gan>=0?'+':''}${totalInvARS?(Math.abs(port1Gan/(cartera1?cartera1.invertido:totalInvARS)*100)).toFixed(1):'0'}%)</span>`:tickersSinPrecio.length?`<span>⚠️ Actualizar cotizaciones</span>`:`<span>${S.inversiones.length} posiciones</span>`}
+        <span style="color:var(--text2);font-size:9px">Ver detalle →</span>
         <span id="dash-prox-div" style="color:var(--text2);font-size:9px"></span>
       </div>
     </div>
-    <div class="stat-card c-purple" onclick="navMob('cuentas')" style="cursor:pointer" title="Ver mis cuentas">
-      <div class="icon">🏦</div>
-      <div class="label">Saldo en cuentas</div>
-      <div class="value">${S.cuentas&&S.cuentas.length ? $$(S.cuentas.filter(c=>c.activa!==false&&c.moneda==='ARS').reduce((a,c)=>a+(+c.saldo||0),0) + S.cuentas.filter(c=>c.activa!==false&&c.moneda==='USD').reduce((a,c)=>a+(+c.saldo||0),0)*(dolarRates.blue?.venta||0)) : '—'}</div>
-      <div class="sub">${S.cuentas&&S.cuentas.length ? S.cuentas.filter(c=>c.activa!==false).length+' cuenta'+(S.cuentas.filter(c=>c.activa!==false).length!==1?'s':'')+' · Ver detalle →' : 'Sin cuentas cargadas'}</div>
-    </div>
+    ${cartera2?`
+    <div class="stat-card c-blue" onclick="navMob('inversiones')" style="cursor:pointer">
+      <div class="icon">📊</div><div class="label">${esc(cartera2.nombre)}</div>
+      <div class="value">${$$(cartera2.valor||cartera2.invertido)}</div>
+      <div class="sub" style="display:flex;flex-direction:column;gap:2px">
+        ${cartera2.valor>0?`<span style="color:${cartera2.ganancia>=0?'var(--accent2)':'var(--accent4)'}">${cartera2.ganancia>=0?'+':''}${$$(cartera2.ganancia)}</span>`:`<span>${S.inversiones.filter(i=>i.carteraId===carteras[1].id).length} posiciones</span>`}
+        <span style="color:var(--text2);font-size:9px">Ver detalle →</span>
+      </div>
+    </div>`:`
+    <div class="stat-card c-gray" onclick="navMob('inversiones')" style="cursor:pointer;opacity:.6">
+      <div class="icon">📊</div><div class="label">Portfolio 2</div>
+      <div class="value" style="font-size:14px">+ Agregar</div>
+      <div class="sub">Creá una segunda cartera</div>
+    </div>`}
   `;
 
   // CHART categorías
