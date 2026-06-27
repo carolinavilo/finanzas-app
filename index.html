@@ -2174,6 +2174,17 @@ async function _saveToSupabase(){
   }catch(e){ console.error('[sync] Excepción:', e.message); }
 }
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,5);}
+function getApiKey(){
+  const k=localStorage.getItem('anthropic_api_key')
+    ||localStorage.getItem('ai_key')
+    ||localStorage.getItem('aiKey')
+    ||localStorage.getItem('ai-key')
+    ||S.config?.aiKey
+    ||S.config?.anthropicKey
+    ||'';
+  console.log('[API KEY] fuentes:',{anthropic_api_key:!!localStorage.getItem('anthropic_api_key'),ai_key:!!localStorage.getItem('ai_key'),config_aiKey:!!S.config?.aiKey});
+  return k;
+}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 
 function showToast(msg,duration=2500){
@@ -5756,7 +5767,7 @@ async function obtenerRatioCEDEAR(ticker){
     if((Date.now()-c.timestamp)<30*24*3600000)return c.ratio;
   }
 
-  const apiKey=localStorage.getItem('anthropic_api_key')||localStorage.getItem('ai_key');
+  const apiKey=getApiKey();
   if(!apiKey)return null;
 
   try{
@@ -5829,7 +5840,7 @@ async function obtenerDividendoCEDEAR(ticker){
       else if((Date.now()-c.timestamp)<7*24*3600000)return c;
     }catch(e){localStorage.removeItem(cacheKey);}
   }
-  const apiKey=localStorage.getItem('anthropic_api_key')||localStorage.getItem('ai_key');
+  const apiKey=getApiKey();
   if(!apiKey)return null;
   try{
     registrarLlamadaAPI('dividendo');
@@ -5940,7 +5951,7 @@ async function cargarDividendosCEDEARs(){
     if(subEl)subEl.textContent='Sin inversiones con ticker configurado';
     return;
   }
-  const apiKey=localStorage.getItem('anthropic_api_key')||localStorage.getItem('ai_key');
+  const apiKey=getApiKey();
   if(!apiKey){
     const valEl=document.getElementById('prox-venc-value');
     const subEl=document.getElementById('prox-venc-sub');
@@ -5995,7 +6006,7 @@ async function obtenerVencimientoCEDEAR(ticker){
     const c=JSON.parse(cached);
     if((Date.now()-c.timestamp)<7*24*3600000)return c;
   }
-  const apiKey=localStorage.getItem('anthropic_api_key')||localStorage.getItem('ai_key');
+  const apiKey=getApiKey();
   if(!apiKey)return null;
   try{
     registrarLlamadaAPI('vencimiento');
@@ -6619,7 +6630,7 @@ function toggleAIPanel() {
   const panel = document.getElementById('ai-panel');
   panel.style.display = aiPanelOpen ? 'flex' : 'none';
   if (aiPanelOpen && aiMessages.length === 0) {
-    const _initKey = localStorage.getItem('anthropic_api_key') || localStorage.getItem('ai_key') || '';
+    const _initKey = getApiKey();
     if (!_initKey) {
       appendAIMsg('bot', '⚠️ API key no configurada. Andá a Ajustes → Asistente IA y pegá tu clave de Anthropic para empezar.');
     } else {
@@ -6633,7 +6644,7 @@ function toggleAIPanel() {
 function renderSbAiKeyStatus() {
   const el = document.getElementById('sb-ai-key-status');
   if (!el) return;
-  const key = localStorage.getItem('anthropic_api_key') || localStorage.getItem('ai_key') || '';
+  const key = getApiKey();
   if (key) {
     el.innerHTML = `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
       <span style="font-size:12px;color:var(--accent2)">✅ API key configurada</span>
@@ -6649,7 +6660,7 @@ function renderSbAiKeyStatus() {
 function renderKeyWidget(cid) {
   const el = document.getElementById(cid);
   if (!el) return;
-  const key = localStorage.getItem('anthropic_api_key') || localStorage.getItem('ai_key') || '';
+  const key = getApiKey();
   if (key) {
     el.innerHTML = `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
       <span style="font-size:12px;color:var(--accent2)">✅ Configurada</span>
@@ -6762,7 +6773,7 @@ function clearAIAttachments() {
 }
 
 async function analizarResumenBancario(attachments, loadingEl) {
-  const apiKey = localStorage.getItem('anthropic_api_key') || localStorage.getItem('ai_key');
+  const apiKey = getApiKey();
   const n = attachments.length;
 
   const fileBlocks = attachments.map(att => {
@@ -6986,7 +6997,7 @@ function importarSeleccionados(panelId, btn) {
 }
 
 async function llamarClaudeAPI(prompt) {
-  const apiKey = localStorage.getItem('anthropic_api_key') || localStorage.getItem('ai_key');
+  const apiKey = getApiKey();
   if (!apiKey) {
     return 'Error: no hay API key configurada. Andá a Ajustes y pegá tu API key de Anthropic.';
   }
@@ -7020,7 +7031,7 @@ async function sendAIMsg() {
   const input = document.getElementById('ai-input');
   const text = input.value.trim();
   if (!text && !aiAttachments.length) return;
-  const apiKey = localStorage.getItem('anthropic_api_key') || localStorage.getItem('ai_key') || '';
+  const apiKey = getApiKey();
   if (!apiKey) {
     appendAIMsg('bot', '⚠️ Configurá tu API key de Anthropic en Ajustes → Asistente IA para usar esta función.');
     return;
