@@ -3723,7 +3723,7 @@ function agregarGasto(){
     const dupG1=S.gastos.find(g=>g.descripcion===nuevo.descripcion&&g.monto===nuevo.monto&&g.fecha===nuevo.fecha&&g.categoria===nuevo.categoria);
     if(dupG1&&!confirm(`⚠️ Ya existe un gasto similar:\n"${nuevo.descripcion}" · $${nuevo.monto} · ${nuevo.fecha}\n\n¿Querés registrarlo de todas formas?`))return;
     S.gastos.push(nuevo);
-    if(userRole==='usuario'){syncGastoAdd(nuevo);}else{save();}
+    save();if(userRole==='usuario')syncGastoAdd(nuevo);
     resetGastoForm();renderGastos();refreshDashIfVisible();
     return;
   }
@@ -3739,7 +3739,7 @@ function agregarGasto(){
     if(cuenta){cuenta.saldo=(+cuenta.saldo||0)-monto;}
   }
   S.gastos.push(nuevo);
-  if(userRole==='usuario'){syncGastoAdd(nuevo);}else{save();}
+  save();if(userRole==='usuario')syncGastoAdd(nuevo);
   resetGastoForm();renderGastos();refreshDashIfVisible();
 }
 
@@ -3777,7 +3777,9 @@ function guardarEditGasto(){
   g.tarjetaId=g.tipo==='tarjeta'?document.getElementById('eg-tarjeta').value:null;
   g.notas=document.getElementById('eg-notas').value.trim();
   g.recurrente=document.getElementById('eg-recurrente').checked;
-  if(userRole==='usuario'){syncGastoUpdate(g);}else{save();}closeModal('modal-edit-gasto');renderGastos();refreshDashIfVisible();
+  save();if(userRole==='usuario')syncGastoUpdate(g);
+  closeModal('modal-edit-gasto');renderGastos();refreshDashIfVisible();
+  showToast('✅ Gasto actualizado');
 }
 
 function eliminarGasto(id){
@@ -3788,7 +3790,7 @@ function eliminarGasto(id){
     if(cuenta)cuenta.saldo=(+cuenta.saldo||0)+g.monto;
   }
   S.gastos=S.gastos.filter(g=>g.id!==id);
-  if(userRole==='usuario'){syncGastoDelete(id);}else{save();}
+  save();if(userRole==='usuario')syncGastoDelete(id);
   renderGastos();refreshDashIfVisible();
 }
 
