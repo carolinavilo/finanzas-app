@@ -366,6 +366,25 @@ input[type=checkbox]{width:auto;margin-right:5px}
   #mobile-header,#bottom-nav,#sheet-mas,#sheet-settings{display:none!important}
 }
 
+/* ── TABLA RESPONSIVA MÓVIL ── */
+@media(max-width:600px){
+  .table-scroll th:nth-child(4),
+  .table-scroll td:nth-child(4),
+  .table-scroll th:nth-child(5),
+  .table-scroll td:nth-child(5){display:none}
+  .table-scroll{overflow-x:visible}
+  .table-scroll table{width:100%;table-layout:fixed}
+  .table-scroll th:nth-child(1),
+  .table-scroll td:nth-child(1){width:70px;font-size:11px}
+  .table-scroll th:nth-child(2),
+  .table-scroll td:nth-child(2){width:auto}
+  .table-scroll th:nth-child(3),
+  .table-scroll td:nth-child(3){width:80px;font-size:11px}
+  .table-scroll th:last-child,
+  .table-scroll td:last-child{width:30px}
+  .table-scroll th:nth-child(6),
+  .table-scroll td:nth-child(6){width:90px;font-size:12px;text-align:right}
+}
 /* ── MOBILE GASTOS ENRIQUECIDO ── */
 @media(max-width:768px){
   .mob-cat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:10px 0 14px}
@@ -650,11 +669,13 @@ input[type=checkbox]{width:auto;margin-right:5px}
   </div>
   <div class="panel">
     <div class="panel-title">Historial de ingresos</div>
-    <div class="filter-bar">
-      <select id="filtro-mes-i" onchange="renderIngresos()"></select>
-      <select id="filtro-cat-i" onchange="renderIngresos()"><option value="">Todas las categorías</option></select>
-      <input type="text" id="filtro-buscar-i" placeholder="🔍 Buscar..." onkeyup="renderIngresos()" style="width:180px"/>
-      <span id="ingresos-total-label" style="margin-left:auto;color:var(--text2);font-size:12px"></span>
+    <div class="filter-bar" style="flex-direction:column;align-items:stretch">
+      <input type="text" id="filtro-buscar-i" placeholder="🔍 Buscar..." onkeyup="renderIngresos()" style="width:100%"/>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <select id="filtro-mes-i" onchange="renderIngresos()"></select>
+        <select id="filtro-cat-i" onchange="renderIngresos()"><option value="">Todas las categorías</option></select>
+        <span id="ingresos-total-label" style="margin-left:auto;color:var(--text2);font-size:12px"></span>
+      </div>
     </div>
     <div class="table-scroll"><table><thead><tr><th>Fecha</th><th>Descripción</th><th>Categoría</th><th>Notas</th><th>Recurrente</th><th style="text-align:right">Monto</th><th></th></tr></thead>
     <tbody id="ingresos-tbody"></tbody></table></div>
@@ -739,16 +760,18 @@ input[type=checkbox]{width:auto;margin-right:5px}
           style="padding:5px 12px;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;background:transparent;color:var(--text2);transition:.15s">💳 Por fecha de pago</button>
       </div>
     </div>
-    <div class="filter-bar">
-      <select id="filtro-mes-g" onchange="renderGastos()"></select>
-      <select id="filtro-cat-g" onchange="onFiltroCatGChange();renderGastos()"><option value="">Todas</option></select>
-      <select id="filtro-subcat-g" onchange="renderGastos()" style="display:none"><option value="">Todas las subcats</option></select>
-      <select id="filtro-tipo-g" onchange="renderGastos()">
-        <option value="">Todos los medios</option>
-        <option value="efectivo">Efectivo</option><option value="debito">Débito</option><option value="tarjeta">Tarjeta</option>
-      </select>
-      <input type="text" id="filtro-buscar-g" placeholder="🔍 Buscar..." onkeyup="renderGastos()" style="width:160px"/>
-      <span id="gastos-total-label" style="margin-left:auto;color:var(--text2);font-size:12px"></span>
+    <div class="filter-bar" style="flex-direction:column;align-items:stretch">
+      <input type="text" id="filtro-buscar-g" placeholder="🔍 Buscar..." onkeyup="renderGastos()" style="width:100%"/>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <select id="filtro-mes-g" onchange="renderGastos()"></select>
+        <select id="filtro-cat-g" onchange="onFiltroCatGChange();renderGastos()"><option value="">Todas</option></select>
+        <select id="filtro-subcat-g" onchange="renderGastos()" style="display:none"><option value="">Todas las subcats</option></select>
+        <select id="filtro-tipo-g" onchange="renderGastos()">
+          <option value="">Todos los medios</option>
+          <option value="efectivo">Efectivo</option><option value="debito">Débito</option><option value="tarjeta">Tarjeta</option>
+        </select>
+        <span id="gastos-total-label" style="margin-left:auto;color:var(--text2);font-size:12px"></span>
+      </div>
     </div>
     <div class="table-scroll"><table><thead><tr><th>Fecha</th><th>Descripción</th><th>Categoría</th><th>Medio</th><th>Notas</th><th>Rec.</th><th style="text-align:right">Monto</th><th></th></tr></thead>
     <tbody id="gastos-tbody"></tbody></table></div>
