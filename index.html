@@ -213,6 +213,8 @@ input[type=checkbox]{width:auto;margin-right:5px}
 .inv-cot-lista{max-height:0;overflow:hidden;transition:max-height .35s ease}
 .inv-cot-lista.abierto{max-height:1200px}
 .tarjeta-card{background:var(--card);border:1px solid var(--border);border-top:3px solid var(--accent);border-radius:var(--radius-card);padding:20px;margin-bottom:14px;box-shadow:var(--shadow)}
+.sort-drag-handle{cursor:grab;opacity:.4;font-size:16px;user-select:none;touch-action:none;-webkit-user-select:none;flex-shrink:0;padding:4px 6px;min-width:28px;min-height:28px;display:inline-flex;align-items:center;justify-content:center}
+.sort-drag-handle:active{cursor:grabbing}
 #tarjetas-list .table-scroll{overflow-x:visible}
 #tarjetas-list table{width:100%;table-layout:fixed}
 @media(max-width:600px){
@@ -662,7 +664,7 @@ input[type=checkbox]{width:auto;margin-right:5px}
       <div class="form-row" style="margin-top:4px">
         <div class="form-group"><label>Fecha</label><input type="date" id="i-fecha"/></div>
         <div class="form-group"><label>¿Recurrente?</label><label style="display:flex;align-items:center;gap:5px;padding-top:8px"><input type="checkbox" id="i-recurrente"/>Mensual</label></div>
-        <div class="form-group"><label>Cuenta destino <span style="font-weight:400;font-size:11px">(opcional)</span></label><select id="i-cuenta"></select></div>
+        <div class="form-group"><label>Cuenta destino <span style="font-weight:400;font-size:11px">(opcional)</span></label><select id="i-cuenta-destino"></select></div>
         <div class="form-group"><label>Notas</label><input type="text" id="i-notas" placeholder="Opcional"/></div>
       </div>
     </div>
@@ -2794,7 +2796,7 @@ function populateCuentaSels(){
     if(prev)gSel.value=prev;
   }
   // Ingresos cuenta destino
-  const iSel=document.getElementById('i-cuenta');
+  const iSel=document.getElementById('i-cuenta-destino');
   if(iSel){
     const prev=iSel.value;
     iSel.innerHTML=ninguna+cuentas.map(c=>`<option value="${c.id}">${esc(c.icono||'🏦')} ${esc(c.nombre)} (${c.moneda})</option>`).join('');
@@ -2847,14 +2849,16 @@ function renderCuentas(){
     grid.innerHTML='<div class="panel" style="grid-column:1/-1"><div class="empty"><div class="ei">🏦</div><p>No tenés cuentas registradas. Agregá una arriba.</p></div></div>';
     return;
   }
-  grid.innerHTML=cuentas.map(c=>{
+  const cOrder=S.config?.cuentasOrder||[];
+  const cuentasOrdenadas=cOrder.length?[...cuentas].sort((a,b)=>{const ia=cOrder.indexOf(a.id),ib=cOrder.indexOf(b.id);return(ia<0?999:ia)-(ib<0?999:ib);}):cuentas;
+  grid.innerHTML=cuentasOrdenadas.map(c=>{
     const saldo=+c.saldo||0;
     const color=c.color||'#60a5fa';
     const saldoFmt=c.moneda==='USD'?`U$S ${saldo.toLocaleString('es-AR',{minimumFractionDigits:2})}`:$$(saldo);
     const avatarHTML=c.imagen
       ?`<img src="${c.imagen}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;border:2px solid ${esc(color)}"/>`
       :`<div style="width:40px;height:40px;border-radius:50%;background:${esc(color)};display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">${esc(c.icono||'🏦')}</div>`;
-    return`<div class="panel" style="border-left:3px solid ${esc(color)};border-top:none">
+    return`<div data-cid="${esc(c.id)}"><div class="panel" style="border-left:3px solid ${esc(color)};border-top:none">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
         ${avatarHTML}
         <div style="flex:1;min-width:0">
@@ -2862,6 +2866,7 @@ function renderCuentas(){
           <div style="font-size:11px;color:var(--text2)">${TIPO_CUENTA_LABEL[c.tipo]||c.tipo} · ${c.moneda}</div>
         </div>
         <span class="badge ${c.moneda==='USD'?'b-blue':'b-green'}">${c.moneda}</span>
+        <span class="sort-drag-handle" title="Reordenar">⠿</span>
       </div>
       <div style="font-size:24px;font-weight:900;margin:10px 0;color:${saldo<0?'var(--accent4)':'var(--text)'}">${saldoFmt}</div>
       ${c.notas?`<div style="font-size:11px;color:var(--text2);margin-bottom:8px">${esc(c.notas)}</div>`:''}
@@ -2870,8 +2875,9 @@ function renderCuentas(){
         <button class="btn btn-ghost btn-xs" onclick="editCuenta('${c.id}')">✏️ Editar</button>
         <button class="btn btn-danger btn-xs" onclick="eliminarCuenta('${c.id}')">✕</button>
       </div>
-    </div>`;
+    </div></div>`;
   }).join('');
+  _initSort('cuentas-grid','data-cid','cuentasOrder');
 }
 
 function agregarCuentaSugerida(datos){
@@ -3398,7 +3404,7 @@ function agregarIngreso(){
   const monto=+document.getElementById('i-monto').value;
   if(!desc)return alert('Ingresá una descripción');
   if(!monto||monto<=0)return alert('El monto debe ser mayor a 0');
-  const cuentaId=document.getElementById('i-cuenta')?.value||null;
+  const cuentaId=document.getElementById('i-cuenta-destino')?.value||null;
   const nuevoIngreso={id:uid(),fecha:document.getElementById('i-fecha').value||today(),
     descripcion:desc,categoria:document.getElementById('i-cat-sel').value,
     monto,cuentaId:cuentaId||null,
@@ -4078,7 +4084,9 @@ function renderTarjetas(){
   if(!S.tarjetas.length){cont.innerHTML='<div class="empty"><div class="ei">💳</div><p>No tenés tarjetas registradas.</p></div>';return;}
   const mesHoy=today().slice(0,7);
   const searchBar='<input type="text" id="tarjetas-search" placeholder="🔍 Buscar movimiento..." oninput="filtrarMovimientosTarjetas()" style="width:100%;margin-bottom:14px">';
-  cont.innerHTML=searchBar+S.tarjetas.map(t=>{
+  const tOrder=S.config?.tarjetasOrder||[];
+  const tarjetas=tOrder.length?[...S.tarjetas].sort((a,b)=>{const ia=tOrder.indexOf(a.id),ib=tOrder.indexOf(b.id);return(ia<0?999:ia)-(ib<0?999:ib);}):S.tarjetas;
+  cont.innerHTML=searchBar+tarjetas.map(t=>{
     if(!tarjetaMesSelected[t.id])tarjetaMesSelected[t.id]=mesHoy;
     const mes=tarjetaMesSelected[t.id];
     const mesPrev=addMeses(mes,-1);
@@ -4105,13 +4113,14 @@ function renderTarjetas(){
         ${item.tipo==='fin'?`<button class="btn btn-ghost btn-xs" onclick="editGastoFin('${item.id}')">✏️</button><button class="btn btn-danger btn-xs" onclick="eliminarGastoFin('${item.id}')">✕</button>`:''}
       </td>
     </tr>`).join(''):`<tr><td colspan="5" style="text-align:center;color:var(--text2);padding:20px;white-space:normal;word-break:break-word">Sin movimientos para este período</td></tr>`;
-    return`<div class="tarjeta-card" style="border-top-color:${t.color};overflow:hidden">
+    return`<div data-tid="${esc(t.id)}"><div class="tarjeta-card" style="border-top-color:${t.color};overflow:hidden">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap">
         <div style="min-width:0;flex:1">
           <div style="font-size:16px;font-weight:700">${esc(t.nombre)}</div>
           <div style="font-size:12px;color:var(--text2);margin-top:2px">Próx. cierre: <strong>${nextFechaDia(t.cierre)}</strong> · Próx. venc: <strong>${nextFechaDia(t.vencimiento)}</strong></div>
         </div>
-        <div style="display:flex;gap:6px;flex-shrink:0">
+        <div style="display:flex;gap:6px;flex-shrink:0;align-items:center">
+          <span class="sort-drag-handle" title="Reordenar">⠿</span>
           <button class="btn btn-ghost btn-sm" onclick="editFechasTarjeta('${esc(t.id)}')" title="Editar fechas">📅</button>
           <button class="btn btn-ghost btn-sm" onclick="editTarjeta('${esc(t.id)}')">✏️ Editar</button>
           <button class="btn btn-danger btn-sm" onclick="eliminarTarjeta('${esc(t.id)}')">✕</button>
@@ -4178,8 +4187,9 @@ function renderTarjetas(){
           <button class="btn btn-primary btn-sm" style="margin-top:8px;width:100%" onclick="agregarCargo('${esc(t.id)}')">+ Agregar cargo</button>
         </div>
       </div>
-    </div>`;
+    </div></div>`;
   }).join('');
+  _initSort('tarjetas-list','data-tid','tarjetasOrder');
 }
 
 // ====== CUOTAS ======
@@ -5312,6 +5322,45 @@ function renderDashboard(){
 // ── Dashboard drag-to-reorder ──
 const _DASH_DEFAULT_ORDER=['cuentas','graficos-cat','graficos-mes','proyeccion','comparativa','cuotas','ultimos','objetivos','dolar','activos'];
 let _ddState=null;
+
+function _initSort(containerId,dataAttr,configKey){
+  const c=document.getElementById(containerId);if(!c)return;
+  let state=null;
+  c.addEventListener('pointerdown',e=>{
+    const h=e.target.closest('.sort-drag-handle');if(!h)return;
+    const w=h.closest('['+dataAttr+']');if(!w)return;
+    e.preventDefault();e.stopPropagation();
+    document.body.style.overflow='hidden';document.body.style.touchAction='none';
+    try{w.setPointerCapture(e.pointerId);}catch(_){}
+    state={w,y0:e.clientY};
+    w.style.width=w.getBoundingClientRect().width+'px';
+    w.classList.add('dash-dragging');
+  },{passive:false});
+  c.addEventListener('pointermove',e=>{
+    if(!state)return;e.preventDefault();e.stopPropagation();
+    const dy=e.clientY-state.y0;
+    state.w.style.transform=`translateY(${dy}px)`;
+    const {w}=state;const wR=w.getBoundingClientRect();const wMid=wR.top+wR.height/2;
+    [...c.querySelectorAll('['+dataAttr+']')].forEach(s=>{
+      if(s===w)return;const sR=s.getBoundingClientRect();const sMid=sR.top+sR.height/2;
+      const after=w.compareDocumentPosition(s)&Node.DOCUMENT_POSITION_FOLLOWING;
+      const before=w.compareDocumentPosition(s)&Node.DOCUMENT_POSITION_PRECEDING;
+      if(dy>0&&wMid>sMid&&after){c.insertBefore(s,w);state.y0=e.clientY;w.style.transform='';}
+      else if(dy<0&&wMid<sMid&&before){c.insertBefore(w,s);state.y0=e.clientY;w.style.transform='';}
+    });
+  },{passive:false});
+  const end=()=>{
+    if(!state)return;
+    document.body.style.overflow='';document.body.style.touchAction='';
+    state.w.style.transform='';state.w.style.width='';
+    state.w.classList.remove('dash-dragging');
+    const order=[...c.querySelectorAll('['+dataAttr+']')].map(el=>el.getAttribute(dataAttr));
+    if(!S.config)S.config={};S.config[configKey]=order;save();state=null;
+  };
+  c.addEventListener('pointerup',end,{passive:false});
+  c.addEventListener('pointercancel',end,{passive:false});
+  c.addEventListener('lostpointercapture',end,{passive:false});
+}
 
 function _applyDashOrder(){
   const c=document.getElementById('dash-sortable');if(!c)return;
