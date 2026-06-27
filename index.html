@@ -5951,7 +5951,18 @@ async function cargarDividendosCEDEARs(){
     if(subEl)subEl.textContent='Sin inversiones con ticker configurado';
     return;
   }
-  const apiKey=getApiKey();
+  const apiKey=(()=>{
+    const k=localStorage.getItem('anthropic_api_key')
+      ||localStorage.getItem('ai_key')
+      ||localStorage.getItem('aiKey')
+      ||sessionStorage.getItem('anthropic_api_key')
+      ||S?.config?.aiKey
+      ||S?.config?.anthropicKey
+      ||'';
+    console.log('[dividendos] API key encontrada:',k?'✅ sí ('+k.slice(0,8)+'...)':'❌ no');
+    console.log('[dividendos] localStorage keys:',Object.keys(localStorage).filter(k=>k.includes('key')||k.includes('api')));
+    return k;
+  })();
   if(!apiKey){
     const valEl=document.getElementById('prox-venc-value');
     const subEl=document.getElementById('prox-venc-sub');
@@ -6178,6 +6189,10 @@ function toggleCotPanel(){
 }
 
 function actualizarDividendosForzado(){
+  const _key=localStorage.getItem('anthropic_api_key')||localStorage.getItem('ai_key')||'';
+  console.log('[actualizarDividendos] key:',_key?'✅ '+_key.slice(0,12)+'...':'❌ vacía');
+  console.log('[actualizarDividendos] todas las keys en localStorage:',Object.keys(localStorage));
+  if(!_key){showToast('⚠️ No se encontró API key. Guardala de nuevo en Configuración.');return;}
   Object.keys(localStorage).filter(k=>k.startsWith('dividendo_')).forEach(k=>localStorage.removeItem(k));
   cedearDividendos={};
   const valEl=document.getElementById('prox-venc-value');
