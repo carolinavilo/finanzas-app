@@ -2013,6 +2013,7 @@ async function afterLogin() {
     const logoP = document.querySelector('.logo p'); if (logoP) logoP.textContent = 'Mis gastos';
     // Cargar gastos de Supabase
     await loadGastosFromSupabase();
+    await loadSharedData();
     seedSubcats();
     applyTheme();
     populateCatSelects();
@@ -2315,6 +2316,36 @@ async function _saveToSupabase(){
       console.log('[sync] Guardado en Supabase OK, rows:', data?.length);
     }
   }catch(e){ console.error('[sync] Excepción:', e.message); }
+  // Admin: sincronizar datos compartidos (cuentas, tarjetas, subcats) para usuarios
+  if(userRole==='admin'){
+    try{
+      const subcatsObj={};
+      for(let i=0;i<localStorage.length;i++){
+        const k=localStorage.key(i);
+        if(k&&k.startsWith('subcats_'))subcatsObj[k.replace('subcats_','')]=JSON.parse(localStorage.getItem(k)||'[]');
+      }
+      await sb.from('shared_data').upsert(
+        {id:'main',cuentas:S.cuentas||[],tarjetas:S.tarjetas||[],subcats:subcatsObj,updated_at:new Date().toISOString()},
+        {onConflict:'id'}
+      );
+    }catch(e){console.warn('[shared_data] Error sync:', e.message);}
+  }
+}
+
+async function loadSharedData(){
+  if(!currentUser)return;
+  try{
+    const {data,error}=await sb.from('shared_data').select('cuentas,tarjetas,subcats').eq('id','main').single();
+    if(error||!data)return;
+    if(data.cuentas?.length) S.cuentas=data.cuentas;
+    if(data.tarjetas?.length) S.tarjetas=data.tarjetas;
+    if(data.subcats){
+      Object.entries(data.subcats).forEach(([k,v])=>{
+        localStorage.setItem('subcats_'+k,JSON.stringify(v));
+      });
+    }
+    console.log('[shared_data] Cuentas:', S.cuentas?.length, '| Tarjetas:', S.tarjetas?.length);
+  }catch(e){console.warn('[shared_data] Error load:', e.message);}
 }
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,5);}
 function getApiKey(){
