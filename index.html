@@ -2647,7 +2647,13 @@ function abrirModalNuevoRecurrente(){
   document.getElementById('rec-icono').value='🔁';
   document.getElementById('rec-monto').value='';
   const catSel=document.getElementById('rec-cat');
-  if(catSel){catSel.innerHTML='';getCatsGasto().forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;catSel.appendChild(o);});}
+  if(catSel){
+    catSel.innerHTML='';
+    const cats=typeof getCatsGasto==='function'?getCatsGasto():
+      Object.keys(CAT_ICONS||{}).length?Object.keys(CAT_ICONS):
+      ['Comida','Transporte','Servicios','Hogar','Salud','Educación','Entretenimiento','Auto','Otros'];
+    cats.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;catSel.appendChild(o);});
+  }
   openModal('modal-nuevo-recurrente');
 }
 function editarRecurrente(id){
@@ -2658,7 +2664,14 @@ function editarRecurrente(id){
   document.getElementById('rec-icono').value=r.icono||'🔁';
   document.getElementById('rec-monto').value=r.montoEstimado||'';
   const catSel=document.getElementById('rec-cat');
-  if(catSel){catSel.innerHTML='';getCatsGasto().forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;catSel.appendChild(o);});catSel.value=r.categoria||'';}
+  if(catSel){
+    catSel.innerHTML='';
+    const cats=typeof getCatsGasto==='function'?getCatsGasto():
+      Object.keys(CAT_ICONS||{}).length?Object.keys(CAT_ICONS):
+      ['Comida','Transporte','Servicios','Hogar','Salud','Educación','Entretenimiento','Auto','Otros'];
+    cats.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;catSel.appendChild(o);});
+    catSel.value=r.categoria||'';
+  }
   openModal('modal-nuevo-recurrente');
 }
 function guardarRecurrente(){
