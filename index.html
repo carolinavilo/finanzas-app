@@ -1982,6 +1982,7 @@ async function afterLogin() {
     }
     document.getElementById('main').style.display = 'block';
     startApp();
+    setTimeout(()=>_syncSharedData(), 1500);
     setTimeout(loadCristianGastos, 800);
     // Mostrar FAB IA y secciones de API key (solo admin)
     const aiFab = document.getElementById('ai-fab');
@@ -2316,20 +2317,25 @@ async function _saveToSupabase(){
       console.log('[sync] Guardado en Supabase OK, rows:', data?.length);
     }
   }catch(e){ console.error('[sync] Excepción:', e.message); }
-  // Admin: sincronizar datos compartidos (cuentas, tarjetas, subcats) para usuarios
-  if(userRole==='admin'){
-    try{
-      const subcatsObj={};
-      for(let i=0;i<localStorage.length;i++){
-        const k=localStorage.key(i);
-        if(k&&k.startsWith('subcats_'))subcatsObj[k.replace('subcats_','')]=JSON.parse(localStorage.getItem(k)||'[]');
-      }
-      await sb.from('shared_data').upsert(
-        {id:'main',cuentas:S.cuentas||[],tarjetas:S.tarjetas||[],subcats:subcatsObj,updated_at:new Date().toISOString()},
-        {onConflict:'id'}
-      );
-    }catch(e){console.warn('[shared_data] Error sync:', e.message);}
-  }
+  // Admin: sincronizar datos compartidos
+  if(userRole==='admin') _syncSharedData();
+}
+
+async function _syncSharedData(){
+  if(userRole!=='admin'||!currentUser)return;
+  try{
+    const subcatsObj={};
+    for(let i=0;i<localStorage.length;i++){
+      const k=localStorage.key(i);
+      if(k&&k.startsWith('subcats_'))subcatsObj[k.replace('subcats_','')]=JSON.parse(localStorage.getItem(k)||'[]');
+    }
+    const {error}=await sb.from('shared_data').upsert(
+      {id:'main',cuentas:S.cuentas||[],tarjetas:S.tarjetas||[],subcats:subcatsObj,updated_at:new Date().toISOString()},
+      {onConflict:'id'}
+    );
+    if(error)console.warn('[shared_data] Error sync:', error.message);
+    else console.log('[shared_data] Sync OK — cuentas:', S.cuentas?.length, '| tarjetas:', S.tarjetas?.length);
+  }catch(e){console.warn('[shared_data] Error sync:', e.message);}
 }
 
 async function loadSharedData(){
