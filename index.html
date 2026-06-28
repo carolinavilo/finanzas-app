@@ -2338,19 +2338,23 @@ async function _syncSharedData(){
   }catch(e){console.warn('[shared_data] Error sync:', e.message);}
 }
 
+let _sharedData = null;
+
 async function loadSharedData(){
   if(!currentUser)return;
   try{
     const {data,error}=await sb.from('shared_data').select('cuentas,tarjetas,subcats').eq('id','main').single();
     if(error||!data)return;
-    if(data.cuentas?.length) S.cuentas=data.cuentas;
-    if(data.tarjetas?.length) S.tarjetas=data.tarjetas;
+    _sharedData = {
+      cuentas: data.cuentas||[],
+      tarjetas: data.tarjetas||[]
+    };
     if(data.subcats){
       Object.entries(data.subcats).forEach(([k,v])=>{
         localStorage.setItem('subcats_'+k,JSON.stringify(v));
       });
     }
-    console.log('[shared_data] Cuentas:', S.cuentas?.length, '| Tarjetas:', S.tarjetas?.length);
+    console.log('[shared_data] Cuentas:', _sharedData.cuentas.length, '| Tarjetas:', _sharedData.tarjetas.length);
   }catch(e){console.warn('[shared_data] Error load:', e.message);}
 }
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,5);}
@@ -3361,7 +3365,7 @@ const CUENTAS_SUGERIDAS=[
 const TIPO_CUENTA_LABEL={efectivo:'💵 Efectivo',banco:'🏦 Banco',billetera:'💜 Billetera',caja_ahorro:'🏧 Caja de ahorro',inversion:'📈 Inversión'};
 
 function populateCuentaSels(){
-  const cuentas=S.cuentas||[];
+  const cuentas=(_sharedData?.cuentas?.length?_sharedData.cuentas:null)||S.cuentas||[];
   const ninguna='<option value="">— Sin cuenta —</option>';
   // Gastos efectivo
   const efSel=document.getElementById('g-cuenta-efectivo');
@@ -3910,7 +3914,8 @@ function populateTarjetaSels(){
     const el=document.getElementById(id);if(!el)return;
     const cur=el.value;
     const pre=id==='c-tarjeta'?'<option value="">Sin tarjeta</option>':'';
-    el.innerHTML=pre+S.tarjetas.map(t=>`<option value="${t.id}">${t.nombre}</option>`).join('');
+    const tarjetas=(_sharedData?.tarjetas?.length?_sharedData.tarjetas:null)||S.tarjetas||[];
+    el.innerHTML=pre+tarjetas.map(t=>`<option value="${t.id}">${t.nombre}</option>`).join('');
     if([...el.options].some(o=>o.value===cur))el.value=cur;
   });
 }
