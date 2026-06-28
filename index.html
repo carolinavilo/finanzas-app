@@ -752,7 +752,12 @@ input[type=checkbox]{width:auto;margin-right:5px}
       <div class="form-group" id="pagar-rec-tarjeta-wrap" style="display:none"><label>Tarjeta</label>
         <select id="pagar-rec-tarjeta"><option value="">-- Sin asignar --</option></select>
       </div>
-      <div class="form-group"><label>Fecha</label><input type="date" id="pagar-rec-fecha"></div>
+      <div class="form-group" id="pagar-rec-debito-wrap" style="display:none">
+        <label>¿Cuándo se debita de la tarjeta?</label>
+        <input type="date" id="pagar-rec-fecha-debito">
+        <div style="font-size:11px;color:var(--text2);margin-top:4px">Fecha en que se debitará de tu cuenta bancaria</div>
+      </div>
+      <div class="form-group"><label>Fecha del pago</label><input type="date" id="pagar-rec-fecha"></div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-neutral" onclick="closeModal('modal-pagar-recurrente')">Cancelar</button>
@@ -2629,7 +2634,7 @@ function renderRecurrentes(){
     html+=pagados.map(r=>{const p=pagosDeMes(r.id);return`<div class="panel" style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 14px;margin-bottom:8px;opacity:.75">
       <div style="font-size:22px">${esc(r.icono||'🔁')}</div>
       <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">${esc(r.nombre)}</div>
-        <div style="font-size:11px;color:var(--text2)">${ff(p?.fecha)} · ${p?.medioPago||''}</div></div>
+        <div style="font-size:11px;color:var(--text2)">${ff(p?.fecha)} · ${p?.medioPago||''}${p?.fechaDebito?` · <span style="color:var(--accent4)">débito ${ff(p.fechaDebito)}</span>`:''}</div></div>
       <div style="text-align:right;flex-shrink:0">
         <div style="font-size:14px;font-weight:700;color:var(--accent2)">${$$(p?.montoReal||r.montoEstimado||0)}</div>
         <div style="display:flex;gap:4px;margin-top:4px;justify-content:flex-end">
@@ -2696,6 +2701,7 @@ function abrirModalPagarRecurrente(recId,mes){
   document.getElementById('modal-pagar-rec-titulo').textContent='Pagar — '+r.nombre;
   document.getElementById('pagar-rec-monto').value=r.montoEstimado||'';
   document.getElementById('pagar-rec-fecha').value=today();
+  document.getElementById('pagar-rec-fecha-debito').value='';
   const cSel=document.getElementById('pagar-rec-cuenta');
   cSel.innerHTML='<option value="">-- Sin asignar --</option>'+(S.cuentas||[]).filter(c=>c.activa!==false).map(c=>`<option value="${esc(c.id)}">${c.icono||'🏦'} ${esc(c.nombre)}</option>`).join('');
   const tSel=document.getElementById('pagar-rec-tarjeta');
@@ -2705,8 +2711,10 @@ function abrirModalPagarRecurrente(recId,mes){
 }
 function onPagarRecMedioChange(){
   const medio=document.getElementById('pagar-rec-medio')?.value;
-  document.getElementById('pagar-rec-tarjeta-wrap').style.display=medio==='tarjeta'?'':'none';
-  document.getElementById('pagar-rec-cuenta-wrap').style.display=medio==='tarjeta'?'none':'';
+  const esTarjeta=medio==='tarjeta';
+  document.getElementById('pagar-rec-tarjeta-wrap').style.display=esTarjeta?'':'none';
+  document.getElementById('pagar-rec-cuenta-wrap').style.display=esTarjeta?'none':'';
+  document.getElementById('pagar-rec-debito-wrap').style.display=esTarjeta?'':'none';
 }
 function guardarPagoRecurrente(){
   const recId=document.getElementById('pagar-rec-id').value;
@@ -2716,10 +2724,11 @@ function guardarPagoRecurrente(){
   const cuentaId=document.getElementById('pagar-rec-cuenta').value;
   const tarjetaId=document.getElementById('pagar-rec-tarjeta').value;
   const fecha=document.getElementById('pagar-rec-fecha').value||today();
+  const fechaDebito=document.getElementById('pagar-rec-fecha-debito').value||'';
   if(!montoReal)return showToast('⚠️ Ingresá el monto');
   if(!S.pagosRecurrentes)S.pagosRecurrentes=[];
   const idx=S.pagosRecurrentes.findIndex(p=>p.recurrenteId===recId&&p.mes===mes);
-  const pago={id:idx>=0?S.pagosRecurrentes[idx].id:uid(),recurrenteId:recId,mes,montoReal,medioPago,cuentaId,tarjetaId,fecha,pagado:true};
+  const pago={id:idx>=0?S.pagosRecurrentes[idx].id:uid(),recurrenteId:recId,mes,montoReal,medioPago,cuentaId,tarjetaId,fecha,fechaDebito:medioPago==='tarjeta'?fechaDebito:'',pagado:true};
   if(idx>=0)S.pagosRecurrentes[idx]=pago;else S.pagosRecurrentes.push(pago);
   if(cuentaId&&montoReal>0&&medioPago!=='tarjeta'){const c=S.cuentas?.find(c=>c.id===cuentaId);if(c)c.saldo=(+c.saldo||0)-montoReal;}
   save();closeModal('modal-pagar-recurrente');renderRecurrentes();showToast('✅ Pago registrado');
