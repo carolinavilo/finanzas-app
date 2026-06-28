@@ -2746,6 +2746,13 @@ function guardarPagoRecurrente(){
   const idx=S.pagosRecurrentes.findIndex(p=>p.recurrenteId===recId&&p.mes===mes);
   const pago={id:idx>=0?S.pagosRecurrentes[idx].id:uid(),recurrenteId:recId,mes,montoReal,medioPago,cuentaId,tarjetaId,fecha,pagado:true};
   if(idx>=0)S.pagosRecurrentes[idx]=pago;else S.pagosRecurrentes.push(pago);
+  // Crear gasto real en S.gastos para que aparezca en movimientos y balance
+  const rec=S.recurrentes.find(r=>r.id===recId);
+  if(rec){
+    S.gastos=S.gastos.filter(g=>g.recurrenteId!==recId||!g.fecha?.startsWith(mes));
+    const nuevoGasto={id:uid(),descripcion:rec.nombre,monto:montoReal,categoria:rec.categoria||'Otros',icono:rec.icono||'📋',fecha,tipo:medioPago==='tarjeta'?'tarjeta':medioPago==='debito'?'debito':'efectivo',tarjetaId:medioPago==='tarjeta'?tarjetaId:null,cuentaId:cuentaId||null,recurrenteId:recId,notas:'Gasto recurrente'};
+    S.gastos.push(nuevoGasto);
+  }
   if(cuentaId&&montoReal>0&&medioPago!=='tarjeta'){const c=S.cuentas?.find(c=>c.id===cuentaId);if(c)c.saldo=(+c.saldo||0)-montoReal;}
   save();closeModal('modal-pagar-recurrente');renderRecurrentes();
   let _toastPago='✅ Pago registrado';
