@@ -7354,6 +7354,34 @@ ${jsonSchema}`;
   }
 }
 
+function _strSimilar(a,b){
+  a=(a||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+  b=(b||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+  if(!a||!b)return 0;if(a===b)return 1;
+  if(a.includes(b)||b.includes(a))return 0.85;
+  const words=a.split(' ').filter(w=>w.length>3);
+  const matches=words.filter(w=>b.includes(w));
+  return words.length?matches.length/words.length:0;
+}
+function _buscarDuplicado(desc,monto,fecha){
+  const fechaD=new Date(fecha||today());
+  const gastoDup=(S.gastos||[]).find(g=>{
+    const sim=_strSimilar(g.descripcion,desc);
+    const montoCercano=Math.abs((+g.monto||0)-(+monto||0))/(+monto||1)<0.05;
+    const diasDif=Math.abs((fechaD-new Date(g.fecha))/(1000*60*60*24));
+    return sim>0.7&&montoCercano&&diasDif<=15;
+  });
+  if(gastoDup)return{tipo:'gasto',item:gastoDup};
+  const cuotaDup=(S.comprasCuotas||[]).find(c=>{
+    const sim=_strSimilar(c.descripcion,desc);
+    const montoC=c.montoTotal||(c.montoCuota*c.cuotas)||0;
+    const montoCercano=Math.abs(montoC-(+monto||0))/(+monto||1)<0.05;
+    const diasDif=Math.abs((fechaD-new Date(c.fecha))/(1000*60*60*24));
+    return sim>0.7&&montoCercano&&diasDif<=45;
+  });
+  if(cuotaDup)return{tipo:'cuota',item:cuotaDup};
+  return null;
+}
 function actualizarDatosTarjetaDesdeResumen(tarjetaId,cierre,vencimiento){
   const t=(S.tarjetas||[]).find(t=>t.id===tarjetaId);if(!t)return;
   if(cierre)t.cierre=String(cierre);
@@ -7405,10 +7433,12 @@ function renderImportResults(data) {
       const isCredito = g.medio_pago === 'credito' || g.medio_pago === 'tarjeta';
       const tMatch = (S.tarjetas||[]).find(t=>{const tn=t.nombre.toUpperCase();const gtn=(g.tarjeta_nombre||'').toUpperCase();return gtn&&(tn.includes(gtn)||gtn.includes(tn)||tn.split(' ').some(w=>w.length>3&&gtn.includes(w)));});
       const primeraTarjeta = tMatch?.id || S.tarjetas[0]?.id || '';
+      const dupG = _buscarDuplicado(g.descripcion, g.monto, g.fecha);
       html += `<div class="ai-import-row">
-        <input type="checkbox" class="ai-imp-chk" data-section="${panelId}-g" data-idx="${i}" checked/>
+        <input type="checkbox" class="ai-imp-chk" data-section="${panelId}-g" data-idx="${i}" ${dupG?'':'checked'}/>
         <div class="ai-import-info">
           <input type="text" class="ai-import-edit-desc" id="aidesc-${panelId}-g-${i}" value="${escHtml(g.descripcion)}"/>
+          ${dupG?`<div style="display:flex;align-items:center;gap:6px;margin-top:4px;padding:4px 8px;background:rgba(248,113,113,.1);border-radius:6px;border-left:3px solid var(--accent4)"><span style="font-size:10px;color:var(--accent4);font-weight:700">⚠️ Posible duplicado</span><span style="font-size:10px;color:var(--text2)">Ya existe: "${esc(dupG.item.descripcion)}" · ${$$(dupG.item.monto||dupG.item.montoCuota)} · ${ff(dupG.item.fecha)}</span></div>`:''}
           <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:4px">
             <input type="number" id="aimonto-${panelId}-g-${i}" value="${g.monto}" style="width:84px;padding:3px 6px;font-size:11px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--accent);font-weight:600"/>
             <select class="ai-import-cat" id="aitipo-${panelId}-g-${i}" onchange="aiToggleTarjeta(this,'${panelId}','${i}')">
@@ -7432,10 +7462,12 @@ function renderImportResults(data) {
       <div class="ai-import-title">📅 Cuotas (${cuotas.length})${selBtns('c')}</div>`;
     cuotas.forEach((c, i) => {
       const total = c.monto_total || (c.monto_cuota * c.total_cuotas);
+      const dupC = _buscarDuplicado(c.descripcion, total, c.fecha);
       html += `<div class="ai-import-row">
-        <input type="checkbox" class="ai-imp-chk" data-section="${panelId}-c" data-idx="${i}" checked/>
+        <input type="checkbox" class="ai-imp-chk" data-section="${panelId}-c" data-idx="${i}" ${dupC?'':'checked'}/>
         <div class="ai-import-info">
           <input type="text" class="ai-import-edit-desc" id="aidesc-${panelId}-c-${i}" value="${escHtml(c.descripcion)}"/>
+          ${dupC?`<div style="display:flex;align-items:center;gap:6px;margin-top:4px;padding:4px 8px;background:rgba(248,113,113,.1);border-radius:6px;border-left:3px solid var(--accent4)"><span style="font-size:10px;color:var(--accent4);font-weight:700">⚠️ Posible duplicado</span><span style="font-size:10px;color:var(--text2)">Ya existe: "${esc(dupC.item.descripcion)}" · ${$$(dupC.item.montoTotal||dupC.item.monto||dupC.item.montoCuota)}</span></div>`:''}
           <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
             <span class="ai-import-monto">${fmtARS(c.monto_cuota)}/cuota</span>
             <span style="font-size:11px;color:var(--text2)">cuota ${c.cuota_actual}/${c.total_cuotas} · total ${fmtARS(total)}</span>
@@ -7451,6 +7483,9 @@ function renderImportResults(data) {
   if (!gastos.length && !cuotas.length) {
     html += '<p style="font-size:13px;color:var(--text2);padding:4px 0">No se detectaron movimientos en el documento.</p>';
   } else {
+    const nDups=gastos.filter(g=>_buscarDuplicado(g.descripcion,g.monto,g.fecha)).length+
+      cuotas.filter(c=>_buscarDuplicado(c.descripcion,c.monto_total||(c.monto_cuota*c.total_cuotas),c.fecha)).length;
+    if(nDups>0)html+=`<div style="font-size:11px;color:var(--accent4);padding:8px 0">⚠️ ${nDups} posible(s) duplicado(s) detectado(s) — desmarcados por defecto. Revisalos antes de importar.</div>`;
     html += `<button class="btn btn-primary ai-import-btn" data-panel-id="${panelId}" style="width:100%;margin-top:8px">↓ Importar seleccionados</button>
     <div class="ai-import-feedback" id="ai-fb-${panelId}"></div>`;
   }
