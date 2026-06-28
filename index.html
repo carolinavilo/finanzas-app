@@ -443,6 +443,7 @@ input[type=checkbox]{width:auto;margin-right:5px}
 .ai-import-row{display:flex;align-items:flex-start;gap:8px;padding:8px 12px;border-top:1px solid var(--border);transition:background .15s}
 .ai-import-row:hover{background:var(--accent-light)}
 .ai-import-row>input[type=checkbox]{width:15px;height:15px;flex-shrink:0;accent-color:var(--accent);cursor:pointer;margin-top:5px}
+#mov-list .mov-chk{width:18px;height:18px;flex-shrink:0;cursor:pointer;accent-color:var(--accent);margin-right:4px}
 .ai-import-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
 .ai-import-edit-desc{width:100%;padding:4px 7px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:12px;box-sizing:border-box}
 .ai-import-edit-desc:focus{border-color:var(--accent);outline:none}
@@ -2561,7 +2562,7 @@ function renderMovimientos(){
   if(!movs.length){list.innerHTML='<div class="empty"><p>Sin movimientos para los filtros seleccionados.</p></div>';return;}
   list.innerHTML=movs.map(m=>`
     <div style="display:grid;grid-template-columns:${_movSeleccionMode?'auto ':''}1fr auto;gap:2px 8px;padding:10px 0;border-bottom:1px solid var(--border)">
-      ${_movSeleccionMode?`<input type="checkbox" class="mov-chk" data-id="${esc(m.id)}" data-tipo="${m.tipo_mov}" onchange="toggleMovSeleccion(this)" style="width:16px;height:16px;flex-shrink:0;cursor:pointer;grid-row:1/3;align-self:center">`:``}
+      ${_movSeleccionMode?`<input type="checkbox" class="mov-chk" data-id="${esc(m.id)}" data-tipo="${m.tipo_mov}" style="grid-row:1/3;align-self:center">`:``}
       <div style="font-size:13px;font-weight:600;grid-column:${_movSeleccionMode?2:1};grid-row:1">${esc(m.descripcion)}</div>
       <div style="font-size:13px;font-weight:700;text-align:right;grid-column:2;grid-row:1;color:${m.tipo_mov==='ingreso'?'var(--accent2)':'var(--text)'};white-space:nowrap">
         ${m.tipo_mov==='ingreso'?'+':'−'}${$$(m.monto)}
@@ -2580,7 +2581,13 @@ let _movSeleccionMode=false;let _movSeleccionados=new Set();
 function toggleModoSeleccionMovimientos(){_movSeleccionMode=!_movSeleccionMode;_movSeleccionados.clear();document.getElementById('mov-seleccion-bar').style.display=_movSeleccionMode?'flex':'none';const btn=document.getElementById('mov-btn-seleccionar');if(btn)btn.textContent=_movSeleccionMode?'✕ Cancelar':'☑ Seleccionar';renderMovimientos();}
 function cancelarSeleccionMovimientos(){_movSeleccionMode=false;_movSeleccionados.clear();const bar=document.getElementById('mov-seleccion-bar');if(bar)bar.style.display='none';const btn=document.getElementById('mov-btn-seleccionar');if(btn)btn.textContent='☑ Seleccionar';renderMovimientos();}
 function toggleMovSeleccion(chk){const key=chk.dataset.tipo+'_'+chk.dataset.id;if(chk.checked)_movSeleccionados.add(key);else _movSeleccionados.delete(key);const c=document.getElementById('mov-sel-count');if(c)c.textContent=_movSeleccionados.size+' seleccionados';}
-function seleccionarTodosMovimientos(){document.querySelectorAll('.mov-chk').forEach(chk=>{chk.checked=true;_movSeleccionados.add(chk.dataset.tipo+'_'+chk.dataset.id);});const c=document.getElementById('mov-sel-count');if(c)c.textContent=_movSeleccionados.size+' seleccionados';}
+function seleccionarTodosMovimientos(){
+  const todos=document.querySelectorAll('#mov-list .mov-chk');
+  const todosChecked=todos.length>0&&[...todos].every(c=>c.checked);
+  todos.forEach(chk=>{chk.checked=!todosChecked;const key=chk.dataset.tipo+'_'+chk.dataset.id;if(!todosChecked)_movSeleccionados.add(key);else _movSeleccionados.delete(key);});
+  const c=document.getElementById('mov-sel-count');if(c)c.textContent=_movSeleccionados.size+' seleccionados';
+  const btn=document.querySelector('[onclick="seleccionarTodosMovimientos()"]');if(btn)btn.textContent=todosChecked?'Todos':'Ninguno';
+}
 function eliminarMovimientosSeleccionados(){
   if(!_movSeleccionados.size){showToast('⚠️ Seleccioná al menos un movimiento');return;}
   if(!confirm(`¿Eliminar ${_movSeleccionados.size} movimiento(s)?`))return;
@@ -6876,6 +6883,12 @@ function startApp(){
 }
 
 
+document.addEventListener('change',e=>{
+  const chk=e.target.closest('.mov-chk');if(!chk)return;
+  const key=chk.dataset.tipo+'_'+chk.dataset.id;
+  if(chk.checked)_movSeleccionados.add(key);else _movSeleccionados.delete(key);
+  const c=document.getElementById('mov-sel-count');if(c)c.textContent=_movSeleccionados.size+' seleccionados';
+});
 // ── Handler delegado central ──
 document.addEventListener('click', e => {
   // Editar gasto
