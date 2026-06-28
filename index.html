@@ -2540,7 +2540,7 @@ function renderMovimientos(){
     ...S.ingresos.map(i=>({...i,tipo_mov:'ingreso'})),
     ...(S.comprasCuotas||[]).map(c=>({...c,tipo_mov:'cuota',monto:c.montoTotal||(c.montoCuota*c.cuotas),categoria:c.categoria||'Sin categoría'}))
   ]
-  .filter(m=>!mes||m.fecha?.startsWith(mes))
+  .filter(m=>!mes||(m.tipo_mov==='gasto'?calcFechaImpactoGasto(m)?.startsWith(mes):m.fecha?.startsWith(mes)))
   .filter(m=>!tipo||m.tipo_mov===tipo)
   .filter(m=>!buscar||m.descripcion?.toLowerCase().includes(buscar)||m.categoria?.toLowerCase().includes(buscar))
   .sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
@@ -2731,7 +2731,13 @@ function guardarPagoRecurrente(){
   const pago={id:idx>=0?S.pagosRecurrentes[idx].id:uid(),recurrenteId:recId,mes,montoReal,medioPago,cuentaId,tarjetaId,fecha,fechaDebito:medioPago==='tarjeta'?fechaDebito:'',pagado:true};
   if(idx>=0)S.pagosRecurrentes[idx]=pago;else S.pagosRecurrentes.push(pago);
   if(cuentaId&&montoReal>0&&medioPago!=='tarjeta'){const c=S.cuentas?.find(c=>c.id===cuentaId);if(c)c.saldo=(+c.saldo||0)-montoReal;}
-  save();closeModal('modal-pagar-recurrente');renderRecurrentes();showToast('✅ Pago registrado');
+  save();closeModal('modal-pagar-recurrente');renderRecurrentes();
+  let _toastPago='✅ Pago registrado';
+  if(medioPago==='tarjeta'&&tarjetaId){
+    const _tar=(S.tarjetas||[]).find(t=>t.id===tarjetaId);
+    if(_tar){const _fi=calcFechaImpactoGasto({fecha,tarjetaId});_toastPago=`✅ Registrado · impacta en ${mesPretty(_fi.slice(0,7))}`;}
+  }
+  showToast(_toastPago);
 }
 function eliminarPagoRecurrente(pagoId){
   if(!pagoId)return;
@@ -4174,7 +4180,7 @@ function renderGastos(){
     // ── MODO FECHA DE PAGO ──
     // Gastos normales (no multi-cuota) que caen en el mes
     let gastosMes=S.gastos.filter(g=>{
-      if(mes&&!g.fecha.startsWith(mes))return false;
+      if(mes&&!calcFechaImpactoGasto(g).startsWith(mes))return false;
       if(cat&&g.categoria!==cat)return false;
       if(subcat&&g.subcategoria!==subcat)return false;
       if(tipo&&g.tipo!==tipo)return false;
@@ -4276,9 +4282,12 @@ function renderGastos(){
 
   const filasGastos=items.map(g=>{
     const tar=g.tarjetaId?S.tarjetas.find(t=>t.id===g.tarjetaId):null;
+    const fImpacto=g.tarjetaId?calcFechaImpactoGasto(g):g.fecha;
+    const impactaBadge=g.tarjetaId&&fImpacto.slice(0,7)!==g.fecha.slice(0,7)
+      ?`<div style="font-size:10px;color:var(--accent);margin-top:2px">💳 Impacta: ${mesPretty(fImpacto.slice(0,7))}</div>`:'';
     return{fecha:g.fecha,html:`<tr>
       <td>${ff(g.fecha)}</td>
-      <td><strong>${esc(g.descripcion)}</strong></td>
+      <td><strong>${esc(g.descripcion)}</strong>${impactaBadge}</td>
       <td><span class="badge b-purple">${esc(g.categoria)}</span>${g.subcategoria?`<div class="subcat-badge">${esc(g.subcategoria)}</div>`:''}</td>
       <td><span class="badge b-gray">${esc(tLabel[g.tipo]||g.tipo)}${tar?` · ${esc(tar.nombre)}`:''}</span></td>
       <td><span class="nota-preview">${esc(g.notas)||'—'}</span></td>
@@ -4402,6 +4411,26 @@ function calcFechaVencTarjeta(t,mesYYYYMM){
   const[y,m]=mes.split('-').map(Number);
   const maxDia=new Date(y,m,0).getDate();
   return mes+'-'+String(Math.min(vencDia,maxDia)).padStart(2,'0');
+}
+
+function calcFechaImpactoGasto(g){
+  if(!g||!g.tarjetaId)return g?.fecha||today();
+  const tarjeta=(S.tarjetas||[]).find(t=>t.id===g.tarjetaId);
+  if(!tarjeta)return g.fecha;
+  const fechaCompra=g.fecha||today();
+  const[anio,mes,dia]=fechaCompra.split('-').map(Number);
+  const cierre=+tarjeta.cierre||1;
+  // Antes del cierre → entra en el resumen que cierra este mes
+  // En o después del cierre → entra en el resumen del mes siguiente
+  let mesResumen;
+  if(dia<cierre){
+    mesResumen=`${anio}-${String(mes).padStart(2,'0')}`;
+  }else{
+    const nm=mes+1>12?1:mes+1;
+    const na=mes+1>12?anio+1:anio;
+    mesResumen=`${na}-${String(nm).padStart(2,'0')}`;
+  }
+  return calcFechaVencTarjeta(tarjeta,mesResumen);
 }
 
 // ── Cargos e impuestos de tarjeta ──
@@ -5665,7 +5694,7 @@ function renderDashboard(){
   if(greetEl) greetEl.textContent='Hola, '+(currentNombre.split(' ')[0]||currentNombre)+' 👋';
   document.getElementById('dash-sub').textContent=mesPretty(mes);
 
-  const gMes=S.gastos.filter(g=>g.fecha.startsWith(mes));
+  const gMes=S.gastos.filter(g=>calcFechaImpactoGasto(g)?.startsWith(mes));
   const iMes=S.ingresos.filter(i=>i.fecha.startsWith(mes));
   const totalG=gMes.reduce((a,g)=>a+g.monto,0);
   const totalI=iMes.reduce((a,i)=>a+i.monto,0);
