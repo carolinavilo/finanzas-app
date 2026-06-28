@@ -2679,6 +2679,7 @@ function renderRecurrentes(){
         <div style="display:flex;gap:4px;margin-top:4px;justify-content:flex-end">
           <button class="btn btn-ghost btn-xs" onclick="editarRecurrente('${r.id}')">✏️</button>
           <button class="btn btn-danger btn-xs" onclick="eliminarPagoRecurrente('${p?.id}')">↩️</button>
+          <button class="btn btn-danger btn-xs" onclick="eliminarRecurrente('${r.id}')" title="Eliminar recurrente"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
         </div>
       </div>
     </div>`}).join('');}
@@ -2728,10 +2729,9 @@ function guardarRecurrente(){
   save();closeModal('modal-nuevo-recurrente');renderRecurrentes();showToast('✅ Recurrente guardado');
 }
 function eliminarRecurrente(id){
-  if(!confirm('¿Eliminar este recurrente?'))return;
+  if(!confirm('¿Eliminar este gasto recurrente? Se eliminará de todos los meses futuros pero no afecta los pagos ya registrados.'))return;
   S.recurrentes=(S.recurrentes||[]).filter(r=>r.id!==id);
-  S.pagosRecurrentes=(S.pagosRecurrentes||[]).filter(p=>p.recurrenteId!==id);
-  save();renderRecurrentes();
+  save();renderRecurrentes();refreshDashIfVisible();showToast('✅ Recurrente eliminado');
 }
 function abrirModalPagarRecurrente(recId,mes){
   const r=(S.recurrentes||[]).find(r=>r.id===recId);if(!r)return;
