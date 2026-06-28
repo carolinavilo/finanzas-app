@@ -785,6 +785,12 @@ input[type=checkbox]{width:auto;margin-right:5px}
     <div class="page-header-left"><h2>📋 Movimientos</h2><p>Todos tus ingresos y gastos</p></div>
   </div>
   <div class="panel">
+    <div id="mov-seleccion-bar" style="display:none;align-items:center;gap:8px;padding:8px 0;margin-bottom:8px;border-bottom:1px solid var(--border)">
+      <span id="mov-sel-count" style="font-size:12px;color:var(--text2);flex:1">0 seleccionados</span>
+      <button onclick="seleccionarTodosMovimientos()" style="font-size:11px;padding:4px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card2);cursor:pointer">Todos</button>
+      <button onclick="eliminarMovimientosSeleccionados()" style="font-size:11px;padding:4px 10px;border-radius:8px;border:none;background:var(--accent4);color:#fff;cursor:pointer;font-weight:700">🗑 Eliminar</button>
+      <button onclick="cancelarSeleccionMovimientos()" style="font-size:11px;padding:4px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card2);cursor:pointer">Cancelar</button>
+    </div>
     <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
       <input type="text" id="mov-search" placeholder="🔍 Buscar..." oninput="renderMovimientos()" style="flex:1;min-width:140px">
       <select id="mov-mes" onchange="renderMovimientos()"></select>
@@ -793,6 +799,7 @@ input[type=checkbox]{width:auto;margin-right:5px}
         <option value="ingreso">Ingresos</option>
         <option value="gasto">Gastos</option>
       </select>
+      <button onclick="toggleModoSeleccionMovimientos()" id="mov-btn-seleccionar" style="padding:8px 12px;border-radius:10px;border:1px solid var(--border);background:var(--card2);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">☑ Seleccionar</button>
     </div>
     <div id="mov-total-label" style="font-size:12px;color:var(--text2);margin-bottom:10px"></div>
     <div id="mov-list"></div>
@@ -2553,8 +2560,9 @@ function renderMovimientos(){
   if(!list)return;
   if(!movs.length){list.innerHTML='<div class="empty"><p>Sin movimientos para los filtros seleccionados.</p></div>';return;}
   list.innerHTML=movs.map(m=>`
-    <div style="display:grid;grid-template-columns:1fr auto;gap:2px 8px;padding:10px 0;border-bottom:1px solid var(--border)">
-      <div style="font-size:13px;font-weight:600;grid-column:1;grid-row:1">${esc(m.descripcion)}</div>
+    <div style="display:grid;grid-template-columns:${_movSeleccionMode?'auto ':''}1fr auto;gap:2px 8px;padding:10px 0;border-bottom:1px solid var(--border)">
+      ${_movSeleccionMode?`<input type="checkbox" class="mov-chk" data-id="${esc(m.id)}" data-tipo="${m.tipo_mov}" onchange="toggleMovSeleccion(this)" style="width:16px;height:16px;flex-shrink:0;cursor:pointer;grid-row:1/3;align-self:center">`:``}
+      <div style="font-size:13px;font-weight:600;grid-column:${_movSeleccionMode?2:1};grid-row:1">${esc(m.descripcion)}</div>
       <div style="font-size:13px;font-weight:700;text-align:right;grid-column:2;grid-row:1;color:${m.tipo_mov==='ingreso'?'var(--accent2)':'var(--text)'};white-space:nowrap">
         ${m.tipo_mov==='ingreso'?'+':'−'}${$$(m.monto)}
       </div>
@@ -2567,6 +2575,25 @@ function renderMovimientos(){
       </div>
     </div>
   `).join('');
+}
+let _movSeleccionMode=false;let _movSeleccionados=new Set();
+function toggleModoSeleccionMovimientos(){_movSeleccionMode=!_movSeleccionMode;_movSeleccionados.clear();document.getElementById('mov-seleccion-bar').style.display=_movSeleccionMode?'flex':'none';const btn=document.getElementById('mov-btn-seleccionar');if(btn)btn.textContent=_movSeleccionMode?'✕ Cancelar':'☑ Seleccionar';renderMovimientos();}
+function cancelarSeleccionMovimientos(){_movSeleccionMode=false;_movSeleccionados.clear();const bar=document.getElementById('mov-seleccion-bar');if(bar)bar.style.display='none';const btn=document.getElementById('mov-btn-seleccionar');if(btn)btn.textContent='☑ Seleccionar';renderMovimientos();}
+function toggleMovSeleccion(chk){const key=chk.dataset.tipo+'_'+chk.dataset.id;if(chk.checked)_movSeleccionados.add(key);else _movSeleccionados.delete(key);const c=document.getElementById('mov-sel-count');if(c)c.textContent=_movSeleccionados.size+' seleccionados';}
+function seleccionarTodosMovimientos(){document.querySelectorAll('.mov-chk').forEach(chk=>{chk.checked=true;_movSeleccionados.add(chk.dataset.tipo+'_'+chk.dataset.id);});const c=document.getElementById('mov-sel-count');if(c)c.textContent=_movSeleccionados.size+' seleccionados';}
+function eliminarMovimientosSeleccionados(){
+  if(!_movSeleccionados.size){showToast('⚠️ Seleccioná al menos un movimiento');return;}
+  if(!confirm(`¿Eliminar ${_movSeleccionados.size} movimiento(s)?`))return;
+  _movSeleccionados.forEach(key=>{const[tipo,...rest]=key.split('_');const id=rest.join('_');
+    if(tipo==='gasto')S.gastos=S.gastos.filter(g=>g.id!==id);
+    else if(tipo==='ingreso')S.ingresos=S.ingresos.filter(i=>i.id!==id);
+    else if(tipo==='cuota')S.comprasCuotas=(S.comprasCuotas||[]).filter(c=>c.id!==id);
+  });
+  const n=_movSeleccionados.size;_movSeleccionados.clear();_movSeleccionMode=false;
+  save();renderMovimientos();refreshDashIfVisible();
+  const bar=document.getElementById('mov-seleccion-bar');if(bar)bar.style.display='none';
+  const btn=document.getElementById('mov-btn-seleccionar');if(btn)btn.textContent='☑ Seleccionar';
+  showToast(`✅ ${n} movimiento(s) eliminados`);
 }
 // ====== RECURRENTES ======
 let _recMes=today().slice(0,7);
@@ -4437,23 +4464,23 @@ function calcFechaVencTarjeta(t,mesYYYYMM){
 }
 
 function calcFechaImpactoGasto(g){
-  if(!g||!g.tarjetaId)return g?.fecha||today();
+  if(!g||!g.tarjetaId||g.tipo==='efectivo'||g.tipo==='debito')return g?.fecha||today();
   const tarjeta=(S.tarjetas||[]).find(t=>t.id===g.tarjetaId);
-  if(!tarjeta)return g.fecha;
+  if(!tarjeta)return g?.fecha||today();
   const fechaCompra=g.fecha||today();
-  const[anio,mes,dia]=fechaCompra.split('-').map(Number);
-  const cierre=+tarjeta.cierre||1;
-  // Antes del cierre → entra en el resumen que cierra este mes
-  // En o después del cierre → entra en el resumen del mes siguiente
-  let mesResumen;
-  if(dia<cierre){
-    mesResumen=`${anio}-${String(mes).padStart(2,'0')}`;
-  }else{
-    const nm=mes+1>12?1:mes+1;
-    const na=mes+1>12?anio+1:anio;
-    mesResumen=`${na}-${String(nm).padStart(2,'0')}`;
-  }
-  return calcFechaVencTarjeta(tarjeta,mesResumen);
+  const[anioC,mesC,diaC]=fechaCompra.split('-').map(Number);
+  const diaCierre=parseInt(tarjeta.cierre||tarjeta.fechaCierre||1);
+  const diaVenc=parseInt(tarjeta.vencimiento||tarjeta.fechaVencimiento?.toString().split('/')[0]||10);
+  const ultimoDiaMesCompra=new Date(anioC,mesC,0).getDate();
+  const cierreEfectivo=Math.min(diaCierre,ultimoDiaMesCompra);
+  let anioCierre,mesCierre;
+  if(diaC<=cierreEfectivo){anioCierre=anioC;mesCierre=mesC;}
+  else{if(mesC===12){mesCierre=1;anioCierre=anioC+1;}else{mesCierre=mesC+1;anioCierre=anioC;}}
+  let mesVenc,anioVenc;
+  if(mesCierre===12){mesVenc=1;anioVenc=anioCierre+1;}else{mesVenc=mesCierre+1;anioVenc=anioCierre;}
+  const ultimoDiaMesVenc=new Date(anioVenc,mesVenc,0).getDate();
+  const diaVencEfectivo=Math.min(diaVenc,ultimoDiaMesVenc);
+  return`${anioVenc}-${String(mesVenc).padStart(2,'0')}-${String(diaVencEfectivo).padStart(2,'0')}`;
 }
 
 // ── Cargos e impuestos de tarjeta ──
@@ -7264,16 +7291,23 @@ async function analizarResumenBancario(attachments, loadingEl) {
       : { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: att.base64 } };
   });
 
-  const jsonSchema = `{"gastos":[{"fecha":"YYYY-MM-DD","descripcion":"nombre limpio del comercio","monto":0,"categoria_sugerida":"Otros","medio_pago":"credito"}],"cuotas":[{"fecha":"YYYY-MM-DD","descripcion":"nombre limpio del comercio","monto_cuota":0,"monto_total":0,"cuota_actual":1,"total_cuotas":12,"categoria_sugerida":"Otros"}]}`;
+  const tarjetasDisp = S.tarjetas.length ? `Las tarjetas disponibles son: ${S.tarjetas.map(t=>t.nombre).join(', ')}. Asigná en tarjeta_nombre el nombre MÁS SIMILAR de esa lista para cada gasto de crédito.` : '';
+  const jsonSchema = `{"gastos":[{"fecha":"YYYY-MM-DD","descripcion":"nombre limpio del comercio","monto":0,"categoria_sugerida":"Otros","medio_pago":"credito","tarjeta_nombre":""}],"cuotas":[{"fecha":"YYYY-MM-DD","descripcion":"nombre limpio del comercio","monto_cuota":0,"monto_total":0,"cuota_actual":1,"total_cuotas":12,"categoria_sugerida":"Otros"}],"tarjeta_info":{"nombre_tarjeta":"","fecha_cierre":0,"fecha_vencimiento":0}}`;
 
   const basePrompt = `Analizá ${n > 1 ? `estos ${n} resúmenes bancarios/fotos de tickets` : 'este resumen bancario o de tarjeta de crédito'} con máximo detalle.
+${tarjetasDisp}
 Para cada movimiento identificá:
 
 GASTOS (compras en 1 pago, débitos, transferencias salientes):
-- fecha (YYYY-MM-DD), descripcion (nombre limpio del comercio, sin códigos internos), monto (número positivo en ARS), categoria_sugerida (Comida/Transporte/Entretenimiento/Salud/Ropa/Hogar/Servicios/Supermercado/Otros), medio_pago (debito/credito/transferencia)
+- fecha (YYYY-MM-DD), descripcion (nombre limpio del comercio, sin códigos internos), monto (número positivo en ARS), categoria_sugerida (Comida/Transporte/Entretenimiento/Salud/Ropa/Hogar/Servicios/Supermercado/Otros), medio_pago (debito/credito/transferencia), tarjeta_nombre (nombre de la tarjeta si es crédito)
 
 CUOTAS (compras en N cuotas, identificadas por texto como '2/12', 'CTA 3/6', 'CUOTA'):
 - fecha (YYYY-MM-DD), descripcion (nombre limpio del comercio), monto_cuota (monto de esta cuota en ARS), monto_total (monto_cuota × total_cuotas), cuota_actual, total_cuotas, categoria_sugerida
+
+TARJETA INFO (del encabezado o pie del resumen):
+- tarjeta_info.nombre_tarjeta: nombre completo de la tarjeta
+- tarjeta_info.fecha_cierre: solo el número del día (1-31). Ej: "Cierre 28/06/2026" → 28
+- tarjeta_info.fecha_vencimiento: solo el número del día (1-31). Ej: "Vencimiento 10/07/2026" → 10
 
 ${n > 1 ? 'Consolidá TODOS los movimientos de todos los archivos en un único JSON sin duplicados.\n' : ''}IGNORAR: pagos de resumen, acreditaciones de sueldo, ajustes, intereses, descuentos promocionales.
 
@@ -7320,8 +7354,14 @@ ${jsonSchema}`;
   }
 }
 
+function actualizarDatosTarjetaDesdeResumen(tarjetaId,cierre,vencimiento){
+  const t=(S.tarjetas||[]).find(t=>t.id===tarjetaId);if(!t)return;
+  if(cierre)t.cierre=String(cierre);
+  if(vencimiento)t.vencimiento=String(vencimiento);
+  save();showToast(`✅ Tarjeta actualizada: cierre día ${cierre} · vencimiento día ${vencimiento}`);renderTarjetas();
+}
 function renderImportResults(data) {
-  const { gastos = [], cuotas = [] } = data;
+  const { gastos = [], cuotas = [], tarjeta_info: tarjetaInfo = null } = data;
   const allCats = getCatsGasto();
   const panelId = 'imp' + Date.now();
   _aiImportData[panelId] = data;
@@ -7337,6 +7377,23 @@ function renderImportResults(data) {
 
   let html = '<div class="ai-import-panel">';
 
+  // Aviso tarjeta_info
+  if (tarjetaInfo?.nombre_tarjeta && (tarjetaInfo.fecha_cierre || tarjetaInfo.fecha_vencimiento)) {
+    const tEncontrada = (S.tarjetas||[]).find(t => {
+      const tn = t.nombre.toUpperCase();
+      const gtn = (tarjetaInfo.nombre_tarjeta||'').toUpperCase();
+      return tn.includes(gtn) || gtn.includes(tn) || tn.split(' ').some(w=>w.length>3&&gtn.includes(w));
+    });
+    const difiere = tEncontrada && (String(tEncontrada.cierre)!==String(tarjetaInfo.fecha_cierre) || String(tEncontrada.vencimiento)!==String(tarjetaInfo.fecha_vencimiento));
+    if (tEncontrada && (difiere || !tEncontrada.cierre)) {
+      html += `<div style="background:var(--card2);border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:12px;border-left:3px solid var(--accent3)">
+        ⚠️ El resumen indica: <strong>${escHtml(tarjetaInfo.nombre_tarjeta)}</strong> · Cierre día <strong>${tarjetaInfo.fecha_cierre}</strong> · Vencimiento día <strong>${tarjetaInfo.fecha_vencimiento}</strong><br>
+        Tu registro tiene: Cierre día ${tEncontrada.cierre||'?'} · Vencimiento día ${tEncontrada.vencimiento||'?'}<br>
+        <button onclick="actualizarDatosTarjetaDesdeResumen('${tEncontrada.id}',${tarjetaInfo.fecha_cierre},${tarjetaInfo.fecha_vencimiento})" style="margin-top:6px;padding:4px 10px;background:var(--accent3);color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">✅ Actualizar datos de la tarjeta</button>
+      </div>`;
+    }
+  }
+
   const tarjetaOpts = (sel='') => S.tarjetas.length
     ? S.tarjetas.map(t=>`<option value="${t.id}"${t.id===sel?' selected':''}>${escHtml(t.nombre)}</option>`).join('')
     : '<option value="">Sin tarjetas</option>';
@@ -7346,7 +7403,8 @@ function renderImportResults(data) {
       <div class="ai-import-title">💳 Gastos (${gastos.length})${selBtns('g')}</div>`;
     gastos.forEach((g, i) => {
       const isCredito = g.medio_pago === 'credito' || g.medio_pago === 'tarjeta';
-      const primeraTarjeta = S.tarjetas[0]?.id || '';
+      const tMatch = (S.tarjetas||[]).find(t=>{const tn=t.nombre.toUpperCase();const gtn=(g.tarjeta_nombre||'').toUpperCase();return gtn&&(tn.includes(gtn)||gtn.includes(tn)||tn.split(' ').some(w=>w.length>3&&gtn.includes(w)));});
+      const primeraTarjeta = tMatch?.id || S.tarjetas[0]?.id || '';
       html += `<div class="ai-import-row">
         <input type="checkbox" class="ai-imp-chk" data-section="${panelId}-g" data-idx="${i}" checked/>
         <div class="ai-import-info">
@@ -7362,7 +7420,8 @@ function renderImportResults(data) {
             <select class="ai-import-cat" id="aitarjeta-${panelId}-g-${i}" style="${isCredito&&S.tarjetas.length?'':'display:none'}">${tarjetaOpts(primeraTarjeta)}</select>
           </div>
         </div>
-        <select class="ai-import-cat" id="aicat-${panelId}-g-${i}">${catOpts(g.categoria_sugerida)}</select>
+        <select class="ai-import-cat" id="aicat-${panelId}-g-${i}" onchange="aiUpdateSubcat('${panelId}','g','${i}')">${catOpts(g.categoria_sugerida)}</select>
+        <select class="ai-import-cat" id="aisubcat-${panelId}-g-${i}" style="font-size:10px;display:none"><option value="">Sin subcategoría</option></select>
       </div>`;
     });
     html += '</div>';
@@ -7382,6 +7441,8 @@ function renderImportResults(data) {
             <span style="font-size:11px;color:var(--text2)">cuota ${c.cuota_actual}/${c.total_cuotas} · total ${fmtARS(total)}</span>
           </div>
         </div>
+        <select class="ai-import-cat" id="aicat-${panelId}-c-${i}" onchange="aiUpdateSubcat('${panelId}','c','${i}')">${catOpts(c.categoria_sugerida||'')}</select>
+        <select class="ai-import-cat" id="aisubcat-${panelId}-c-${i}" style="font-size:10px;display:none"><option value="">Sin subcategoría</option></select>
       </div>`;
     });
     html += '</div>';
@@ -7406,6 +7467,14 @@ function renderImportResults(data) {
 function aiToggleTarjeta(sel, panelId, idx) {
   const tSel = document.getElementById(`aitarjeta-${panelId}-g-${idx}`);
   if (tSel) tSel.style.display = sel.value === 'credito' && S.tarjetas.length ? '' : 'none';
+}
+function aiUpdateSubcat(panelId, tipo, i) {
+  const cat = document.getElementById(`aicat-${panelId}-${tipo}-${i}`)?.value;
+  const subSel = document.getElementById(`aisubcat-${panelId}-${tipo}-${i}`);
+  if (!subSel) return;
+  const subs = typeof getSubcats === 'function' ? getSubcats(cat) : [];
+  subSel.innerHTML = '<option value="">Sin subcategoría</option>' + subs.map(s=>`<option value="${s}">${s}</option>`).join('');
+  subSel.style.display = subs.length ? '' : 'none';
 }
 
 function importarSeleccionados(panelId, btn) {
@@ -7442,8 +7511,9 @@ function importarSeleccionados(panelId, btn) {
       const tipoMap = { debito:'debito', transferencia:'debito', credito:'tarjeta', tarjeta:'tarjeta', efectivo:'efectivo' };
       const tipo = tipoMap[medioPago] || 'efectivo';
       const tarjetaId = tipo === 'tarjeta' ? (document.getElementById(`aitarjeta-${panelId}-g-${i}`)?.value || S.tarjetas[0]?.id || null) : null;
+      const subcat = document.getElementById(`aisubcat-${panelId}-g-${i}`)?.value||'';
       S.gastos.push({ id: uid(), fecha: g.fecha || today(), descripcion: desc,
-        categoria: cat, monto, tipo, tarjetaId, notas: '', recurrente: false });
+        categoria: cat, subcategoria: subcat, monto, tipo, tarjetaId, notas: '', recurrente: false });
       nGastos++;
     });
 
@@ -7452,9 +7522,11 @@ function importarSeleccionados(panelId, btn) {
       const c = cuotas[i];
       if (!c) return;
       const desc = document.getElementById(`aidesc-${panelId}-c-${i}`)?.value?.trim() || c.descripcion;
+      const catC = document.getElementById(`aicat-${panelId}-c-${i}`)?.value || c.categoria_sugerida || getCatsGasto()[0] || 'Otros';
+      const subcatC = document.getElementById(`aisubcat-${panelId}-c-${i}`)?.value||'';
       const montoTotal = c.monto_total || (c.monto_cuota * c.total_cuotas);
       S.comprasCuotas.push({ id: uid(), tarjetaId: null, fecha: c.fecha || today(),
-        descripcion: desc, categoria: c.categoria_sugerida || getCatsGasto()[0] || 'Otros',
+        descripcion: desc, categoria: catC, subcategoria: subcatC,
         montoTotal, cuotas: c.total_cuotas, montoCuota: c.monto_cuota,
         cuotasPagadas: Math.max(0, (c.cuota_actual || 1) - 1),
         fechaPrimerPago: c.fecha || today(), notas: '' });
