@@ -2015,6 +2015,7 @@ async function afterLogin() {
     // Cargar gastos de Supabase
     await loadGastosFromSupabase();
     await loadSharedData();
+    startSharedDataPolling();
     seedSubcats();
     applyTheme();
     populateCatSelects();
@@ -2120,6 +2121,7 @@ function enhanceMobileGastos() {
 
 async function doLogout() {
   if (!confirm('¿Cerrar sesión?')) return;
+  stopSharedDataPolling();
   await sb.auth.signOut();
   location.reload();
 }
@@ -2362,12 +2364,16 @@ async function _syncSharedData(){
 }
 
 let _sharedData = null;
+let _sharedDataLastUpdated = null;
+let _sharedDataInterval = null;
 
 async function loadSharedData(){
   if(!currentUser)return;
   try{
-    const {data,error}=await sb.from('shared_data').select('cuentas,tarjetas,subcats,categorias').eq('id','main').single();
+    const {data,error}=await sb.from('shared_data').select('cuentas,tarjetas,subcats,categorias,updated_at').eq('id','main').single();
     if(error||!data)return;
+    if(_sharedDataLastUpdated&&data.updated_at&&data.updated_at===_sharedDataLastUpdated)return;
+    _sharedDataLastUpdated=data.updated_at||null;
     _sharedData = {
       cuentas: data.cuentas||[],
       tarjetas: data.tarjetas||[]
@@ -2381,7 +2387,19 @@ async function loadSharedData(){
       localStorage.setItem('shared_categorias',JSON.stringify(data.categorias));
     }
     console.log('[shared_data] Cuentas:', _sharedData.cuentas.length, '| Tarjetas:', _sharedData.tarjetas.length, '| Cats:', data.categorias?.length);
+    populateCuentaSels();populateTarjetaSels();populateCatSelects();
   }catch(e){console.warn('[shared_data] Error load:', e.message);}
+}
+
+function startSharedDataPolling(){
+  if(_sharedDataInterval)clearInterval(_sharedDataInterval);
+  _sharedDataInterval=setInterval(()=>{
+    if(userRole==='usuario'&&currentUser)loadSharedData();
+  },60000);
+}
+
+function stopSharedDataPolling(){
+  if(_sharedDataInterval){clearInterval(_sharedDataInterval);_sharedDataInterval=null;}
 }
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,5);}
 function getApiKey(){
@@ -3578,6 +3596,7 @@ function guardarCuenta(){
   if(editId){Object.assign(S.cuentas.find(c=>c.id===editId),data);}
   else{S.cuentas.push({id:uid(),...data});}
   save();closeModal('modal-cuenta');renderCuentas();populateCuentaSels();
+  if(userRole==='admin')setTimeout(_syncSharedData,500);
   showToast('✅ Cuenta guardada');
 }
 
@@ -3585,6 +3604,7 @@ function eliminarCuenta(id){
   if(!confirm('¿Eliminar esta cuenta?'))return;
   S.cuentas=S.cuentas.filter(c=>c.id!==id);
   save();renderCuentas();populateCuentaSels();
+  if(userRole==='admin')setTimeout(_syncSharedData,500);
 }
 
 function editarSaldoCuenta(id){
@@ -3625,6 +3645,7 @@ function guardarTransferencia(){
     fecha:document.getElementById('tr-fecha').value||today(),
     notas:document.getElementById('tr-notas').value.trim()});
   save();closeModal('modal-transferencia');renderCuentas();
+  if(userRole==='admin')setTimeout(_syncSharedData,500);
   showToast(`✅ Transferencia: ${origen.nombre} → ${destino.nombre}`);
 }
 
@@ -3710,6 +3731,7 @@ async function addCat(tipo){
   if(arr.includes(v)){showCatMsg('⚠️ Ya existe esa categoría',true);return;}
   arr.push(v);
   save();
+  if(userRole==='admin')setTimeout(_syncSharedData,500);
   inp.value='';
   renderCategorias();populateCatSelects();
   showCatMsg('⏳ Guardando...');
@@ -3729,6 +3751,7 @@ async function removeCat(tipo,cat){
   if(tipo==='gasto')S.catsGasto=S.catsGasto.filter(c=>c!==cat);
   else S.catsIngreso=S.catsIngreso.filter(c=>c!==cat);
   save();
+  if(userRole==='admin')setTimeout(_syncSharedData,500);
   renderCategorias();populateCatSelects();
   showCatMsg('⏳ Eliminando...');
   try{
@@ -3775,6 +3798,7 @@ function confirmEditCat(tipo,idx,oldName){
     if(tipo==='gasto')S.gastos.filter(g=>g.categoria===oldName).forEach(g=>g.categoria=newName);
     else S.ingresos.filter(i=>i.categoria===oldName).forEach(i=>i.categoria=newName);
     save();
+    if(userRole==='admin')setTimeout(_syncSharedData,500);
     _catSupabaseRename(oldName,newName,tipo);
     populateCatSelects();renderCategorias();
     showCatMsg('✅ Categoría renombrada');
@@ -4524,11 +4548,13 @@ function guardarTarjeta(){
   if(editId){Object.assign(S.tarjetas.find(t=>t.id===editId),data);}
   else{S.tarjetas.push({id:uid(),...data});}
   save();closeModal('modal-tarjeta');renderTarjetas();
+  if(userRole==='admin')setTimeout(_syncSharedData,500);
 }
 
 function eliminarTarjeta(id){
   if(!confirm('¿Eliminar esta tarjeta?'))return;
   S.tarjetas=S.tarjetas.filter(t=>t.id!==id);save();renderTarjetas();
+  if(userRole==='admin')setTimeout(_syncSharedData,500);
 }
 function editFechasTarjeta(id){
   const t=S.tarjetas.find(t=>t.id===id);if(!t)return;
@@ -4546,6 +4572,7 @@ function guardarFechasTarjeta(){
   t.vencimiento=+document.getElementById('tf-venc').value||15;
   t.vencMesSiguiente=document.getElementById('tf-venc-mes-sig').checked;
   save();closeModal('modal-tarjeta-fechas');renderTarjetas();renderCuotas();
+  if(userRole==='admin')setTimeout(_syncSharedData,500);
 }
 
 // ====== COMPRAS EN CUOTAS + GASTOS FINANCIEROS ======
@@ -4947,6 +4974,7 @@ function guardarAbonoTarjeta(){
   if(idx>=0)S.resumenTarjetas[idx]=resumen;else S.resumenTarjetas.push(resumen);
   if(cuentaId&&montoAbonado>0){const cuenta=S.cuentas?.find(c=>c.id===cuentaId);if(cuenta)cuenta.saldo=(+cuenta.saldo||0)-montoAbonado;}
   save();closeModal('modal-abonar-tarjeta');renderTarjetas();refreshDashIfVisible();
+  if(userRole==='admin')setTimeout(_syncSharedData,500);
   showToast(montoAbonado>=montoResumen?'✅ Resumen abonado completamente':`✅ Abonado ${$$(montoAbonado)} — quedan ${$$(montoResumen-montoAbonado)}`);
 }
 
@@ -7504,6 +7532,7 @@ function actualizarDatosTarjetaDesdeResumen(tarjetaId,cierre,vencimiento){
   if(cierre)t.cierre=String(cierre);
   if(vencimiento)t.vencimiento=String(vencimiento);
   save();showToast(`✅ Tarjeta actualizada: cierre día ${cierre} · vencimiento día ${vencimiento}`);renderTarjetas();
+  if(userRole==='admin')setTimeout(_syncSharedData,500);
 }
 function renderImportResults(data) {
   const { gastos = [], cuotas = [], tarjeta_info: tarjetaInfo = null } = data;
