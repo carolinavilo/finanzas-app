@@ -5715,7 +5715,7 @@ function renderDashboard(){
   const totalG=gMes.reduce((a,g)=>a+g.monto,0);
   const totalI=iMes.reduce((a,i)=>a+i.monto,0);
   // "A pagar este mes": gastos tarjeta del mes + cuotas de comprasCuotas que vencen este mes
-  const tarjetaDirectaMes=gMes.filter(g=>g.tipo==='tarjeta').reduce((a,g)=>a+g.monto,0);
+  const tarjetaDirectaMes=S.gastos.filter(g=>g.tarjetaId&&calcFechaImpactoGasto(g)?.startsWith(mes)).reduce((a,g)=>a+g.monto,0);
   const cuotasDueMes=getCuotasDueInMonth(mes).reduce((a,d)=>a+d.monto,0);
   const totalAPagar=tarjetaDirectaMes+cuotasDueMes;
   const saldoPendienteTarjetas=(S.resumenTarjetas||[]).filter(r=>r.mes===mes).reduce((a,r)=>a+Math.max(0,(r.montoResumen||0)-(r.montoAbonado||0)),0);
@@ -5763,7 +5763,7 @@ function renderDashboard(){
   // Próximo mes
   const proxMes=(()=>{const d=new Date(mes+'-01');d.setMonth(d.getMonth()+1);return d.toISOString().slice(0,7);})();
   const totalProxMes=getCuotasDueInMonth(proxMes).reduce((a,d)=>a+d.monto,0)+
-    S.gastos.filter(g=>g.tipo==='tarjeta'&&g.fecha.startsWith(proxMes)).reduce((a,g)=>a+g.monto,0);
+    S.gastos.filter(g=>g.tarjetaId&&calcFechaImpactoGasto(g)?.startsWith(proxMes)).reduce((a,g)=>a+g.monto,0);
   const comprometidoTarjeta=gMes.filter(g=>g.tipo==='tarjeta').reduce((a,g)=>a+g.monto,0);
   const disponibleHoy=totalI-(totalG-comprometidoTarjeta)-totalCuotas;
   const proxVenc=S.tarjetas.length?S.tarjetas.reduce((a,b)=>{const da=nextFechaDia(a.vencimiento),db=nextFechaDia(b.vencimiento);return da<db?a:b;},S.tarjetas[0]):null;
