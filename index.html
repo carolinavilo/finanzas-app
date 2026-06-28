@@ -799,10 +799,10 @@ input[type=checkbox]{width:auto;margin-right:5px}
       </div>
       <div id="mov-total-label" style="font-size:12px;color:var(--text2)"></div>
     </div>
-    <div id="mov-seleccion-bar" style="display:none;align-items:center;gap:8px;padding:10px 14px;background:var(--card2);border-radius:12px;margin-bottom:12px;border:1px solid var(--border)">
+    <div id="mov-seleccion-bar" style="display:none;align-items:center;gap:8px;padding:10px 14px;background:var(--accent-light);border-radius:12px;margin-bottom:12px;border:1px solid var(--accent-border)">
       <div style="flex:1;display:flex;align-items:center;gap:10px">
         <span id="mov-sel-count" style="font-size:13px;font-weight:700;color:var(--accent)">0 seleccionados</span>
-        <button onclick="seleccionarTodosMovimientos()" id="mov-btn-todos" style="padding:5px 12px;border-radius:8px;border:1px solid var(--border);background:var(--card);font-size:11px;font-weight:600;cursor:pointer;color:var(--accent)">Todos</button>
+        <button onclick="seleccionarTodosMovimientos()" id="mov-btn-todos" style="padding:5px 12px;border-radius:8px;border:1px solid var(--accent-border);background:var(--card);font-size:11px;font-weight:600;cursor:pointer;color:var(--accent)">Todos</button>
       </div>
       <button onclick="eliminarMovimientosSeleccionados()" style="padding:6px 14px;border-radius:8px;border:none;background:var(--accent4);color:#fff;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>Eliminar</button>
       <button onclick="cancelarSeleccionMovimientos()" style="padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:var(--card);font-size:12px;font-weight:600;cursor:pointer;color:var(--text2)">Cancelar</button>
