@@ -1992,22 +1992,22 @@ async function afterLogin() {
     if (aiKeySection) { aiKeySection.style.display = ''; renderKeyWidget('mob-ai-key-container'); }
     // sb-ai-key-section eliminado del sidebar
   } else {
-    // USUARIO: solo sección de gastos
+    // USUARIO: sección de gastos + ingresos
     // Solo mostrar sidebar en desktop
     if (!isMobile) {
       document.getElementById('sidebar').style.display = 'flex';
     }
     document.getElementById('main').style.display = 'block';
-    // Ocultar nav items excepto Gastos (sidebar desktop)
+    // Ocultar nav items excepto Gastos e Ingresos (sidebar desktop)
     document.querySelectorAll('.nav-item').forEach(el => el.style.display = 'none');
     const gastosNav = document.querySelector('.nav-item[onclick*="\'gastos\'"]') || document.querySelector('.nav-item[onclick*="gastos"]');
     if (gastosNav) gastosNav.style.display = 'flex';
-    // Ocultar bottom-nav items excepto Gastos (mobile)
-    ['bn-dashboard','bn-ingresos','bn-tarjetas','bn-mas'].forEach(id => {
+    const ingresosNav = document.querySelector('.nav-item[onclick*="\'ingresos\'"]') || document.querySelector('.nav-item[onclick*="ingresos"]');
+    if (ingresosNav) ingresosNav.style.display = 'flex';
+    // Ocultar bottom-nav items excepto Gastos e Ingresos (mobile)
+    ['bn-dashboard','bn-tarjetas','bn-mas'].forEach(id => {
       const el = document.getElementById(id); if (el) el.style.display = 'none';
     });
-    // Ocultar ajustes avanzados para usuario no-admin
-    // btn-ajustes-adv eliminado del sidebar
     // Cambiar logo (desktop)
     const logoH1 = document.querySelector('.logo h1'); if (logoH1) logoH1.textContent = currentNombre;
     const logoP = document.querySelector('.logo p'); if (logoP) logoP.textContent = 'Mis gastos';
@@ -2016,7 +2016,10 @@ async function afterLogin() {
     seedSubcats();
     applyTheme();
     populateCatSelects();
+    populateCuentaSels();
+    populateTarjetaSels();
     document.getElementById('g-fecha').value = today();
+    document.getElementById('i-fecha').value = today();
     nav('gastos', gastosNav);
     // Enriquecer UI mobile si aplica
     if (isMobile) setTimeout(enhanceMobileGastos, 100);
