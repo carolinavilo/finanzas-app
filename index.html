@@ -4178,13 +4178,29 @@ function guardarEditGasto(){
 function eliminarGasto(id){
   if(!confirm('¿Eliminar este gasto? Esta acción no se puede deshacer.'))return;
   const g=S.gastos.find(g=>g.id===id);
-  if(g?.cuentaId){
-    const cuenta=S.cuentas.find(c=>c.id===g.cuentaId);
-    if(cuenta)cuenta.saldo=(+cuenta.saldo||0)+g.monto;
+  if(!g)return;
+
+  if(g.cuentaId&&g.tipo!=='tarjeta'){
+    const cuenta=S.cuentas?.find(c=>c.id===g.cuentaId);
+    if(cuenta)cuenta.saldo=(+cuenta.saldo||0)+(+g.monto||0);
   }
+
+  if(g.tarjetaId){
+    const fechaImpacto=calcFechaImpactoGasto(g);
+    const mesImpacto=fechaImpacto?.slice(0,7);
+    const mesActual=today().slice(0,7);
+    if(mesImpacto&&mesImpacto!==mesActual){
+      showToast(`✅ Gasto eliminado · Recordá que impactaba en ${mesPretty(mesImpacto)}`);
+    }
+  }
+
   S.gastos=S.gastos.filter(g=>g.id!==id);
-  save();if(userRole==='usuario')syncGastoDelete(id);
-  renderGastos();refreshDashIfVisible();
+  save();
+  if(userRole==='usuario')syncGastoDelete(id);
+  renderGastos();
+  refreshDashIfVisible();
+  if(document.getElementById('section-movimientos')?.classList.contains('active'))renderMovimientos();
+  if(!g.tarjetaId)showToast('✅ Gasto eliminado');
 }
 
 function setHistorialModo(modo){
