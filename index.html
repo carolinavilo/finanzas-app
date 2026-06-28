@@ -750,10 +750,15 @@ input[type=checkbox]{width:auto;margin-right:5px}
         <select id="pagar-rec-cuenta"><option value="">-- Sin asignar --</option></select>
       </div>
       <div class="form-group" id="pagar-rec-tarjeta-wrap" style="display:none"><label>Tarjeta</label>
-        <select id="pagar-rec-tarjeta"><option value="">-- Sin asignar --</option></select>
+        <select id="pagar-rec-tarjeta" onchange="actualizarImpactoRecurrente()"><option value="">-- Sin asignar --</option></select>
+        <div id="pagar-rec-impacto-info" style="display:none;margin-top:8px;padding:10px 12px;background:var(--card2);border-radius:10px;font-size:12px;border-left:3px solid var(--accent3)">
+          <span style="color:var(--text2)">📅 Este gasto impacta en el balance de:</span>
+          <span id="pagar-rec-impacto-mes" style="font-weight:800;color:var(--accent3);margin-left:6px"></span>
+          <div id="pagar-rec-cierre-info" style="font-size:11px;color:var(--text2);margin-top:2px"></div>
+        </div>
       </div>
 
-      <div class="form-group"><label>Fecha del pago</label><input type="date" id="pagar-rec-fecha"></div>
+      <div class="form-group"><label>Fecha del pago</label><input type="date" id="pagar-rec-fecha" onchange="actualizarImpactoRecurrente()"></div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-neutral" onclick="closeModal('modal-pagar-recurrente')">Cancelar</button>
@@ -2702,7 +2707,25 @@ function abrirModalPagarRecurrente(recId,mes){
   const tSel=document.getElementById('pagar-rec-tarjeta');
   tSel.innerHTML='<option value="">-- Sin asignar --</option>'+(S.tarjetas||[]).map(t=>`<option value="${esc(t.id)}">${esc(t.nombre)}</option>`).join('');
   onPagarRecMedioChange();
+  actualizarImpactoRecurrente();
   openModal('modal-pagar-recurrente');
+}
+function actualizarImpactoRecurrente(){
+  const tarjetaId=document.getElementById('pagar-rec-tarjeta')?.value;
+  const fechaPago=document.getElementById('pagar-rec-fecha')?.value||today();
+  const infoDiv=document.getElementById('pagar-rec-impacto-info');
+  const mesMostrar=document.getElementById('pagar-rec-impacto-mes');
+  const cierreInfo=document.getElementById('pagar-rec-cierre-info');
+  if(!tarjetaId||!infoDiv){if(infoDiv)infoDiv.style.display='none';return;}
+  const tarjeta=(S.tarjetas||[]).find(t=>t.id===tarjetaId);
+  if(!tarjeta){infoDiv.style.display='none';return;}
+  const fechaImpacto=calcFechaImpactoGasto({tarjetaId,fecha:fechaPago,tipo:'tarjeta'});
+  const mesImpacto=fechaImpacto.slice(0,7);
+  if(mesMostrar)mesMostrar.textContent=mesPretty(mesImpacto);
+  const cierre=tarjeta.cierre||'?';
+  const venc=tarjeta.vencimiento||'?';
+  if(cierreInfo)cierreInfo.textContent=`Cierre día ${cierre} · Vencimiento día ${venc}`;
+  infoDiv.style.display='block';
 }
 function onPagarRecMedioChange(){
   const medio=document.getElementById('pagar-rec-medio')?.value;
