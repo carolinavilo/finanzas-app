@@ -2013,6 +2013,7 @@ async function afterLogin() {
     const logoP = document.querySelector('.logo p'); if (logoP) logoP.textContent = 'Mis gastos';
     // Cargar gastos de Supabase
     await loadGastosFromSupabase();
+    seedSubcats();
     applyTheme();
     populateCatSelects();
     document.getElementById('g-fecha').value = today();
@@ -2040,7 +2041,7 @@ function enhanceMobileGastos() {
 
   // Ocultar campo descripción label y hacer el formulario más compacto en mobile
   const montoInp = document.getElementById('g-monto');
-  const catSel = document.getElementById('g-categoria');
+  const catSel = document.getElementById('g-cat');
   if (!montoInp || !catSel) return;
 
   // ── Grilla de categorías visuales ──
@@ -2064,6 +2065,7 @@ function enhanceMobileGastos() {
         grid.querySelectorAll('.mob-cat-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         catSel.value = btn.dataset.cat;
+        onGastoCatChange();
       });
     });
   }
