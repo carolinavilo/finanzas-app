@@ -5932,10 +5932,11 @@ function renderDashboard(){
     ...S.ingresos.map(i=>({...i,tipo_mov:'ingreso'}))
   ].sort((a,b)=>b.fecha.localeCompare(a.fecha)).slice(0,7);
   document.getElementById('dash-ultimos').innerHTML=movs.length?movs.map(m=>{
+    const _tl={banco:'Débito',caja_ahorro:'Débito',billetera:'Billetera Virtual',efectivo:'Efectivo',inversion:'Inversión'};
+    const _cl=id=>{const c=(S.cuentas||[]).find(c=>c.id===id);if(!c)return null;const tl=_tl[c.tipo]||'';const nb=c.nombre||'';const full=(tl&&!nb.toLowerCase().includes(tl.toLowerCase()))?`${tl} ${nb}`:nb;return`${c.icono||'🏦'} ${full}`;};
     const medioLabel=m.tipo_mov==='ingreso'?'':
       m.tipo==='tarjeta'?`💳 ${(S.tarjetas||[]).find(t=>t.id===m.tarjetaId)?.nombre||'Tarjeta'}`:
-      m.tipo==='debito'?`🏦 ${(S.cuentas||[]).find(c=>c.id===m.cuentaId)?.nombre||'Débito'}`:
-      m.tipo==='efectivo'?'💵 Efectivo':
+      (m.tipo==='debito'||m.tipo==='efectivo')?(_cl(m.cuentaId)||(m.tipo==='efectivo'?'💵 Efectivo':'🏦 Débito')):
       m.billetera?`🏦 ${m.billetera}`:'';
     return`<div onclick="${m.tipo_mov==='ingreso'?"navMob('ingresos')":"navMob('gastos')"}" style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(128,128,128,.07);cursor:pointer">
       <div>
