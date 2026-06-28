@@ -5931,14 +5931,20 @@ function renderDashboard(){
     ...S.gastos.map(g=>({...g,tipo_mov:'gasto'})),
     ...S.ingresos.map(i=>({...i,tipo_mov:'ingreso'}))
   ].sort((a,b)=>b.fecha.localeCompare(a.fecha)).slice(0,7);
-  document.getElementById('dash-ultimos').innerHTML=movs.length?movs.map(m=>`
-    <div onclick="${m.tipo_mov==='ingreso'?"navMob('ingresos')":"navMob('gastos')"}" style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(128,128,128,.07);cursor:pointer">
+  document.getElementById('dash-ultimos').innerHTML=movs.length?movs.map(m=>{
+    const medioLabel=m.tipo_mov==='ingreso'?'':
+      m.tipo==='tarjeta'?`💳 ${(S.tarjetas||[]).find(t=>t.id===m.tarjetaId)?.nombre||'Tarjeta'}`:
+      m.tipo==='debito'?`🏦 ${(S.cuentas||[]).find(c=>c.id===m.cuentaId)?.nombre||'Débito'}`:
+      m.tipo==='efectivo'?'💵 Efectivo':
+      m.billetera?`🏦 ${m.billetera}`:'';
+    return`<div onclick="${m.tipo_mov==='ingreso'?"navMob('ingresos')":"navMob('gastos')"}" style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(128,128,128,.07);cursor:pointer">
       <div>
         <div style="font-size:13px;font-weight:500">${m.descripcion}</div>
-        <div style="font-size:11px;color:var(--text2)">${ff(m.fecha)} · ${m.categoria}</div>
+        <div style="font-size:11px;color:var(--text2)">${ff(m.fecha)} · ${m.categoria}${medioLabel?`<span style="margin-left:4px">· ${medioLabel}</span>`:''}</div>
       </div>
       <div style="font-weight:700;color:${m.tipo_mov==='ingreso'?'var(--accent2)':'var(--text)'}">${m.tipo_mov==='ingreso'?'+':'−'}${$$(m.monto)}</div>
-    </div>`).join(''):'<div class="empty" style="padding:16px"><p>Sin movimientos aún.</p></div>';
+    </div>`;
+  }).join(''):'<div class="empty" style="padding:16px"><p>Sin movimientos aún.</p></div>';
   // Dashboard live activos widget — solo mostrar si hay inversiones con ticker
   renderDolarWidget();
   // Widget de objetivos en dashboard
