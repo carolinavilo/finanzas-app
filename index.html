@@ -2025,6 +2025,28 @@ async function afterLogin() {
     nav('gastos', gastosNav);
     // Enriquecer UI mobile si aplica
     if (isMobile) setTimeout(enhanceMobileGastos, 100);
+    // Re-popular después de un delay por si Supabase tardó
+    setTimeout(()=>{
+      populateCatSelects();populateCuentaSels();populateTarjetaSels();
+      if(isMobile)enhanceMobileGastos();
+    },1500);
+    // Regenerar grilla mobile con categorías del admin
+    setTimeout(()=>{
+      const grid=document.getElementById('mob-cat-grid');
+      if(grid&&userRole==='usuario'){
+        const cats=getCatsGasto();
+        const CI={'Comida':'🍔','Supermercado':'🛒','Transporte':'🚌','Salud':'💊','Ropa':'👗','Entretenimiento':'🎬','Educación':'📚','Servicios':'💡','Tecnología':'💻','Viajes':'✈️','Deporte':'🏋️','Hogar':'🏠','Mascota':'🐾','Ahorro':'💰','Suscripción':'📱','Seguros':'🛡️','Otros':'📦'};
+        grid.innerHTML=cats.map(cat=>`<button type="button" class="mob-cat-btn" data-cat="${cat}"><span class="ci">${CI[cat]||'📦'}</span>${cat}</button>`).join('');
+        grid.querySelectorAll('.mob-cat-btn').forEach(btn=>{
+          btn.addEventListener('click',()=>{
+            grid.querySelectorAll('.mob-cat-btn').forEach(b=>b.classList.remove('active'));
+            btn.classList.add('active');
+            const catSel=document.getElementById('g-cat');
+            if(catSel){catSel.value=btn.dataset.cat;onGastoCatChange();}
+          });
+        });
+      }
+    },2000);
   }
   // Notificaciones + URL params
   pedirPermisoNotificaciones();
@@ -2329,12 +2351,13 @@ async function _syncSharedData(){
       const k=localStorage.key(i);
       if(k&&k.startsWith('subcats_'))subcatsObj[k.replace('subcats_','')]=JSON.parse(localStorage.getItem(k)||'[]');
     }
+    const catsPersonalizadas=typeof getCatsGasto==='function'?getCatsGasto():[];
     const {error}=await sb.from('shared_data').upsert(
-      {id:'main',cuentas:S.cuentas||[],tarjetas:S.tarjetas||[],subcats:subcatsObj,updated_at:new Date().toISOString()},
+      {id:'main',cuentas:S.cuentas||[],tarjetas:S.tarjetas||[],subcats:subcatsObj,categorias:catsPersonalizadas,updated_at:new Date().toISOString()},
       {onConflict:'id'}
     );
     if(error)console.warn('[shared_data] Error sync:', error.message);
-    else console.log('[shared_data] Sync OK — cuentas:', S.cuentas?.length, '| tarjetas:', S.tarjetas?.length);
+    else console.log('[shared_data] Sync OK — cuentas:', S.cuentas?.length, '| tarjetas:', S.tarjetas?.length, '| cats:', catsPersonalizadas.length);
   }catch(e){console.warn('[shared_data] Error sync:', e.message);}
 }
 
@@ -2343,7 +2366,7 @@ let _sharedData = null;
 async function loadSharedData(){
   if(!currentUser)return;
   try{
-    const {data,error}=await sb.from('shared_data').select('cuentas,tarjetas,subcats').eq('id','main').single();
+    const {data,error}=await sb.from('shared_data').select('cuentas,tarjetas,subcats,categorias').eq('id','main').single();
     if(error||!data)return;
     _sharedData = {
       cuentas: data.cuentas||[],
@@ -2354,7 +2377,10 @@ async function loadSharedData(){
         localStorage.setItem('subcats_'+k,JSON.stringify(v));
       });
     }
-    console.log('[shared_data] Cuentas:', _sharedData.cuentas.length, '| Tarjetas:', _sharedData.tarjetas.length);
+    if(data.categorias?.length){
+      localStorage.setItem('shared_categorias',JSON.stringify(data.categorias));
+    }
+    console.log('[shared_data] Cuentas:', _sharedData.cuentas.length, '| Tarjetas:', _sharedData.tarjetas.length, '| Cats:', data.categorias?.length);
   }catch(e){console.warn('[shared_data] Error load:', e.message);}
 }
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,5);}
@@ -3603,7 +3629,12 @@ function guardarTransferencia(){
 }
 
 // ====== CATEGORÍAS ======
-function getCatsGasto(){return S.catsGasto||DEFAULT_CATS_GASTO;}
+function getCatsGasto(){
+  if(userRole==='usuario'){
+    try{const sc=JSON.parse(localStorage.getItem('shared_categorias')||'[]');if(sc.length)return sc;}catch(e){}
+  }
+  return S.catsGasto||DEFAULT_CATS_GASTO;
+}
 function getCatsIngreso(){return S.catsIngreso||DEFAULT_CATS_INGRESO;}
 
 // ── Sincronización de categorías con Supabase ──
