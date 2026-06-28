@@ -1663,7 +1663,8 @@ input[type=checkbox]{width:auto;margin-right:5px}
       <div class="form-grid-2">
         <div class="form-group"><label>Fecha de compra</label><input type="date" id="cc-fecha"/></div>
         <div class="form-group" style="grid-column:1/-1"><label>Descripción</label><input id="cc-desc" placeholder="TV Samsung, Notebook, etc."/></div>
-        <div class="form-group"><label>Categoría</label><select id="cc-cat"></select></div>
+        <div class="form-group"><label>Categoría</label><select id="cc-cat" onchange="onCcCatChange()"></select></div>
+        <div class="form-group" id="cc-subcat-wrap" style="display:none"><label>Subcategoría</label><select id="cc-subcat"><option value="">Sin subcategoría</option></select></div>
         <div class="form-group"><label>Monto total (ARS)</label><input id="cc-monto" type="number" placeholder="120000" inputmode="decimal" oninput="calcMontoCuota()"/></div>
         <div class="form-group"><label>N° de cuotas</label><input id="cc-cuotas" type="number" placeholder="12" min="1" inputmode="numeric" oninput="calcMontoCuota()"/></div>
         <div class="form-group"><label>Monto por cuota</label><input id="cc-monto-cuota" type="number" readonly style="background:var(--bg2);cursor:not-allowed"/></div>
@@ -2034,7 +2035,7 @@ function enhanceMobileGastos() {
     'Comida':'🍔','Supermercado':'🛒','Transporte':'🚌','Salud':'💊',
     'Ropa':'👗','Entretenimiento':'🎬','Educación':'📚','Servicios':'💡',
     'Tecnología':'💻','Viajes':'✈️','Deporte':'🏋️','Hogar':'🏠',
-    'Mascota':'🐾','Ahorro':'💰','Suscripción':'📱','Otros':'📦'
+    'Mascota':'🐾','Ahorro':'💰','Suscripción':'📱','Seguros':'🛡️','Otros':'📦'
   };
 
   // Ocultar campo descripción label y hacer el formulario más compacto en mobile
@@ -3718,7 +3719,8 @@ function seedSubcats(){
   const defaults={
     'AUTO':['Nafta','Peajes','Seguro','Patente','Service','Gas GNC','Estacionamiento','Otros'],
     'SERVICIOS':['Luz','Gas','Internet','Agua','Expensas','Otros'],
-    'SERVICIOS MIRA':['Alquiler','Luz','Internet','Limpieza','Otros']
+    'SERVICIOS MIRA':['Alquiler','Luz','Internet','Limpieza','Otros'],
+    'SEGUROS':['Seguro de vida','Seguro automotor','Seguro médico','Seguro del hogar','Seguro por robo','Prepaga','Otros']
   };
   Object.entries(defaults).forEach(([k,v])=>{
     if(!localStorage.getItem('subcats_'+k))setSubcats(k,v);
@@ -3739,6 +3741,9 @@ function onGastoCatChange(){
 }
 function onEditGastoCatChange(){
   _fillSubcatSel('eg-subcat','eg-subcat-wrap',document.getElementById('eg-cat').value,'');
+}
+function onCcCatChange(){
+  _fillSubcatSel('cc-subcat','cc-subcat-wrap',document.getElementById('cc-cat').value,'');
 }
 function onFiltroCatGChange(){
   const cat=document.getElementById('filtro-cat-g').value;
@@ -4591,7 +4596,7 @@ function agregarCompraCuotas(){
   const pagadas=Math.min(+document.getElementById('cc-pagadas').value||0,cuotas);
   const data={
     tarjetaId,fecha:document.getElementById('cc-fecha').value||today(),
-    descripcion:desc,categoria:document.getElementById('cc-cat').value,
+    descripcion:desc,categoria:document.getElementById('cc-cat').value,subcategoria:document.getElementById('cc-subcat')?.value||'',
     montoTotal:monto,cuotas,montoCuota:Math.round(monto/cuotas),
     cuotasPagadas:pagadas,
     fechaPrimerPago,notas:document.getElementById('cc-notas').value.trim()
@@ -4616,6 +4621,7 @@ function editCompraCuotas(id){
   document.getElementById('cc-pagadas').value=c.cuotasPagadas||0;
   document.getElementById('cc-fecha-primer-pago').value=c.fechaPrimerPago||(c.primerMes?c.primerMes+'-01':today());
   document.getElementById('cc-notas').value=c.notas||'';
+  _fillSubcatSel('cc-subcat','cc-subcat-wrap',c.categoria,c.subcategoria||'');
   openModal('modal-compra-cuotas');
 }
 
@@ -7316,7 +7322,7 @@ ${tarjetasDisp}
 Para cada movimiento identificá:
 
 GASTOS (compras en 1 pago, débitos, transferencias salientes):
-- fecha (YYYY-MM-DD), descripcion (nombre limpio del comercio, sin códigos internos), monto (número positivo en ARS), categoria_sugerida (Comida/Transporte/Entretenimiento/Salud/Ropa/Hogar/Servicios/Supermercado/Otros), medio_pago (debito/credito/transferencia), tarjeta_nombre (nombre de la tarjeta si es crédito)
+- fecha (YYYY-MM-DD), descripcion (nombre limpio del comercio, sin códigos internos), monto (número positivo en ARS), categoria_sugerida (Comida/Transporte/Entretenimiento/Salud/Ropa/Hogar/Servicios/Supermercado/Seguros/Otros), medio_pago (debito/credito/transferencia), tarjeta_nombre (nombre de la tarjeta si es crédito). Los seguros de vida, robo, automotor, médico y similares que aparezcan en el resumen deben clasificarse como categoria_sugerida: Seguros
 
 CUOTAS (compras en N cuotas, identificadas por texto como '2/12', 'CTA 3/6', 'CUOTA'):
 - fecha (YYYY-MM-DD), descripcion (nombre limpio del comercio), monto_cuota (monto de esta cuota en ARS), monto_total (monto_cuota × total_cuotas), cuota_actual, total_cuotas, categoria_sugerida
@@ -7443,13 +7449,26 @@ function renderImportResults(data) {
     ? S.tarjetas.map(t=>`<option value="${t.id}"${t.id===sel?' selected':''}>${escHtml(t.nombre)}</option>`).join('')
     : '<option value="">Sin tarjetas</option>';
 
+  const tarjetaInfoMatch = tarjetaInfo ? (S.tarjetas||[]).find(t=>{
+    const tn=t.nombre.toUpperCase();const gtn=(tarjetaInfo.nombre_tarjeta||'').toUpperCase();
+    return tn.includes(gtn)||gtn.includes(tn)||tn.split(/\s+/).some(w=>w.length>=3&&gtn.includes(w));
+  }) : null;
+  const tarjetaMatcheada = tarjetaInfoMatch?.id || S.tarjetas[0]?.id || '';
+
   if (gastos.length) {
     html += `<div class="ai-import-section">
       <div class="ai-import-title">💳 Gastos (${gastos.length})${selBtns('g')}</div>`;
     gastos.forEach((g, i) => {
       const isCredito = g.medio_pago === 'credito' || g.medio_pago === 'tarjeta';
-      const tMatch = (S.tarjetas||[]).find(t=>{const tn=t.nombre.toUpperCase();const gtn=(g.tarjeta_nombre||'').toUpperCase();return gtn&&(tn.includes(gtn)||gtn.includes(tn)||tn.split(' ').some(w=>w.length>3&&gtn.includes(w)));});
-      const primeraTarjeta = tMatch?.id || S.tarjetas[0]?.id || '';
+      const tMatch = (S.tarjetas||[]).find(t=>{
+        const tn=t.nombre.toUpperCase().replace(/[^A-Z0-9\s]/g,'');
+        const gtn=(g.tarjeta_nombre||'').toUpperCase().replace(/[^A-Z0-9\s]/g,'');
+        if(!gtn)return false;if(tn===gtn)return true;if(tn.includes(gtn)||gtn.includes(tn))return true;
+        const wordsT=tn.split(/\s+/).filter(w=>w.length>=3);const wordsG=gtn.split(/\s+/).filter(w=>w.length>=3);
+        const matches=wordsT.filter(w=>wordsG.some(wg=>wg.includes(w)||w.includes(wg)));
+        return matches.length>=Math.min(1,Math.floor(wordsT.length/2));
+      });
+      const primeraTarjeta = tMatch?.id || tarjetaMatcheada;
       const dupG = _buscarDuplicado(g.descripcion, g.monto, g.fecha);
       html += `<div class="ai-import-row">
         <input type="checkbox" class="ai-imp-chk" data-section="${panelId}-g" data-idx="${i}" ${dupG?'':'checked'}/>
@@ -7475,6 +7494,7 @@ function renderImportResults(data) {
   }
 
   if (cuotas.length) {
+    const tarjetaPreselC = tarjetaMatcheada;
     html += `<div class="ai-import-section">
       <div class="ai-import-title">📅 Cuotas (${cuotas.length})${selBtns('c')}</div>`;
     cuotas.forEach((c, i) => {
