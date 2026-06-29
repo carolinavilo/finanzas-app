@@ -4615,7 +4615,11 @@ function renderGastos(){
     if(tipo&&g.tipo!==tipo)return false;
     if(buscar&&![g.descripcion,g.categoria,g.subcategoria,g.notas].some(f=>norm(f||'').includes(buscar)))return false;
     return true;
-  }).sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  }).sort((a,b)=>{
+    const fa=calcFechaImpactoGasto(a)||a.fecha||'';
+    const fb=calcFechaImpactoGasto(b)||b.fecha||'';
+    return fb.localeCompare(fa);
+  });
 
   // Compras en cuotas compradas en el mes seleccionado
   const cuotasMes=(!tipo||tipo==='tarjeta')
