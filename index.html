@@ -547,6 +547,22 @@ input[type=checkbox]{width:auto;margin-right:5px}
   </div>
 </div>
 
+<div class="modal-overlay" id="modal-distribuir-ingreso">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header"><h3 id="modal-dist-titulo">Distribuir ingreso</h3><button class="modal-close" onclick="omitirDistribucion()">×</button></div>
+    <div class="modal-body">
+      <div id="modal-dist-info" style="font-size:13px;color:var(--text2);margin-bottom:12px"></div>
+      <div id="modal-dist-filas" style="display:flex;flex-direction:column;gap:8px"></div>
+      <div id="modal-dist-restante" style="font-size:12px;margin-top:10px;padding:8px 12px;border-radius:8px;background:var(--card2)"></div>
+      <button onclick="agregarFilaDistribucion()" style="margin-top:10px;width:100%;padding:8px;border-radius:8px;border:1px dashed var(--border);background:none;cursor:pointer;font-size:13px;color:var(--accent)">+ Agregar cuenta</button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-neutral" onclick="omitirDistribucion()">Omitir</button>
+      <button class="btn btn-success" onclick="confirmarDistribucion()">Confirmar distribución</button>
+    </div>
+  </div>
+</div>
+
 <div id="sidebar">
   <div class="logo">
     <div style="display:flex;align-items:center;gap:10px">
@@ -4378,11 +4394,6 @@ function agregarIngreso(){
   const dupI=S.ingresos.find(i=>i.descripcion===nuevoIngreso.descripcion&&i.monto===nuevoIngreso.monto&&i.fecha===nuevoIngreso.fecha);
   if(dupI&&!confirm(`⚠️ Ya existe un ingreso similar:\n"${nuevoIngreso.descripcion}" · $${nuevoIngreso.monto} · ${nuevoIngreso.fecha}\n\n¿Querés registrarlo de todas formas?`))return;
   S.ingresos.push(nuevoIngreso);
-  // Sumar saldo a la cuenta destino si se eligió una
-  if(cuentaId){
-    const cuenta=S.cuentas.find(c=>c.id===cuentaId);
-    if(cuenta){cuenta.saldo=(+cuenta.saldo||0)+monto;}
-  }
   save();
   document.getElementById('i-desc').value='';document.getElementById('i-monto').value='';
   document.getElementById('i-notas').value='';document.getElementById('i-recurrente').checked=false;
@@ -4390,6 +4401,62 @@ function agregarIngreso(){
   document.getElementById('i-fecha')&&(document.getElementById('i-fecha').value=today());
   document.getElementById('i-cuenta-destino')&&(document.getElementById('i-cuenta-destino').value='');
   renderIngresos();refreshDashIfVisible();
+  abrirModalDistribucion(nuevoIngreso.id,monto,desc);
+}
+
+let _distIngresoId=null;
+let _distMonto=0;
+
+function abrirModalDistribucion(ingresoId,monto,desc){
+  _distIngresoId=ingresoId;
+  _distMonto=monto;
+  document.getElementById('modal-dist-titulo').textContent='¿A qué cuenta acreditás?';
+  document.getElementById('modal-dist-info').textContent=desc+' · '+$$(monto);
+  document.getElementById('modal-dist-filas').innerHTML='';
+  agregarFilaDistribucion();
+  actualizarRestante();
+  openModal('modal-distribuir-ingreso');
+}
+
+function agregarFilaDistribucion(){
+  const cont=document.getElementById('modal-dist-filas');
+  const opts=(S.cuentas||[]).filter(c=>c.activa!==false).map(c=>`<option value="${esc(c.id)}">${c.icono||'🏦'} ${esc(c.nombre)}</option>`).join('');
+  const fila=document.createElement('div');
+  fila.style.cssText='display:flex;gap:8px;align-items:center';
+  fila.innerHTML=`<select style="flex:1;font-size:13px" onchange="actualizarRestante()">${opts}</select>
+    <input type="number" placeholder="Monto" inputmode="decimal" style="width:110px;font-size:13px" oninput="actualizarRestante()">
+    <button onclick="this.parentElement.remove();actualizarRestante()" style="background:none;border:none;cursor:pointer;color:var(--accent4);font-size:18px;padding:0 4px">×</button>`;
+  cont.appendChild(fila);
+  actualizarRestante();
+}
+
+function actualizarRestante(){
+  const filas=document.querySelectorAll('#modal-dist-filas input[type=number]');
+  const asignado=[...filas].reduce((a,i)=>a+(+i.value||0),0);
+  const restante=_distMonto-asignado;
+  const el=document.getElementById('modal-dist-restante');
+  el.innerHTML=`Asignado: <strong style="color:${asignado<=_distMonto?'var(--accent2)':'var(--accent4)'}">${$$( asignado)}</strong> de <strong>${$$(_distMonto)}</strong>${restante>0?` · Restante: <strong>${$$(restante)}</strong>`:''}`;
+}
+
+function confirmarDistribucion(){
+  const filas=document.querySelectorAll('#modal-dist-filas > div');
+  filas.forEach(fila=>{
+    const sel=fila.querySelector('select');
+    const inp=fila.querySelector('input');
+    const cuentaId=sel?.value;
+    const monto=+inp?.value||0;
+    if(cuentaId&&monto>0){
+      const cuenta=S.cuentas.find(c=>c.id===cuentaId);
+      if(cuenta)cuenta.saldo=(+cuenta.saldo||0)+monto;
+    }
+  });
+  save();refreshDashIfVisible();
+  closeModal('modal-distribuir-ingreso');
+  showToast('✅ Ingreso distribuido');
+}
+
+function omitirDistribucion(){
+  closeModal('modal-distribuir-ingreso');
 }
 
 function editIngreso(id){
