@@ -2189,16 +2189,33 @@ async function loadGastosFromSupabase() {
 async function syncGastoAdd(gasto) {
   if (userRole !== 'usuario' || !currentUser) return;
   const _adminUid = localStorage.getItem('admin_user_id') || null;
-  await sb.from('gastos_sync').upsert({
-    id: gasto.id, user_id: currentUser.id,
-    admin_user_id: _adminUid,
-    registrado_por: currentUser.email,
-    fecha: gasto.fecha, descripcion: gasto.descripcion,
-    monto: gasto.monto, categoria: gasto.categoria,
-    moneda: gasto.moneda || 'ARS', notas: gasto.notas || '',
-    recurrente: gasto.recurrente || false, tipo: gasto.tipo || 'efectivo',
-    updated_at: new Date().toISOString()
-  }).catch(e=>console.warn('Supabase syncAdd:',e.message));
+  console.log('[syncGastoAdd] Guardando gasto:', gasto.id, '| admin_user_id:', _adminUid, '| user:', currentUser.email);
+  try {
+    const { data, error } = await sb.from('gastos_sync').upsert({
+      id: gasto.id,
+      user_id: currentUser.id,
+      admin_user_id: _adminUid,
+      registrado_por: currentUser.email,
+      fecha: gasto.fecha,
+      descripcion: gasto.descripcion,
+      monto: gasto.monto,
+      categoria: gasto.categoria,
+      moneda: gasto.moneda || 'ARS',
+      notas: gasto.notas || '',
+      recurrente: gasto.recurrente || false,
+      tipo: gasto.tipo || 'efectivo',
+      updated_at: new Date().toISOString()
+    });
+    if (error) {
+      console.error('[syncGastoAdd] ERROR:', error.message, '| code:', error.code, '| details:', error.details);
+      showToast('⚠️ Error al sincronizar gasto: ' + error.message);
+    } else {
+      console.log('[syncGastoAdd] OK — gasto guardado en Supabase');
+    }
+  } catch(e) {
+    console.error('[syncGastoAdd] Excepción:', e.message);
+    showToast('⚠️ Error: ' + e.message);
+  }
 }
 
 async function syncGastoUpdate(gasto) {
