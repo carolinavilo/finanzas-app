@@ -2853,7 +2853,7 @@ function renderMovimientos(){
   const list=document.getElementById('mov-list');
   if(!list)return;
   if(!movs.length){list.innerHTML='<div class="empty"><p>Sin movimientos para los filtros seleccionados.</p></div>';return;}
-  list.innerHTML=movs.map(m=>`
+  const renderFila=m=>`
     <div style="display:grid;grid-template-columns:${_movSeleccionMode?'auto ':''}1fr auto;gap:2px 8px;padding:10px ${_movSeleccionMode?'8px':'0'};border-bottom:1px solid var(--border);background:${_movSeleccionMode?'var(--card2)':'transparent'};border-radius:${_movSeleccionMode?'8px':'0'};transition:.15s">
       ${_movSeleccionMode?`<input type="checkbox" class="mov-chk" data-id="${esc(m.id)}" data-tipo="${m.tipo_mov}" style="grid-row:1/3;align-self:center">`:``}
       <div style="font-size:13px;font-weight:600;grid-column:${_movSeleccionMode?2:1};grid-row:1">${esc(m.descripcion)}</div>
@@ -2867,8 +2867,29 @@ function renderMovimientos(){
         <button class="btn btn-ghost btn-xs mov-edit-btn" data-id="${esc(m.id)}" data-tipo="${m.tipo_mov}">✏️</button>
         <button class="btn btn-danger btn-xs mov-del-btn" data-id="${esc(m.id)}" data-tipo="${m.tipo_mov}">✕</button>
       </div>
-    </div>
-  `).join('');
+    </div>`;
+
+  const renderSeccion=(titulo,icono,color,items)=>{
+    if(!items.length)return '';
+    const total=items.reduce((a,m)=>a+(+m.monto||0),0);
+    return `<div style="margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:2px solid ${color};margin-bottom:4px">
+        <span style="font-size:11px;font-weight:700;color:${color};text-transform:uppercase;letter-spacing:.5px">${icono} ${titulo}</span>
+        <span style="font-size:11px;font-weight:700;color:${color}">${items.length} · ${$$(total)}</span>
+      </div>
+      ${items.map(renderFila).join('')}
+    </div>`;
+  };
+
+  const ingresos=movs.filter(m=>m.tipo_mov==='ingreso');
+  const gastosDiarios=movs.filter(m=>m.tipo_mov==='gasto'&&m.tipo!=='tarjeta');
+  const gastosTarjeta=movs.filter(m=>m.tipo_mov==='gasto'&&m.tipo==='tarjeta');
+  const cuotas=movs.filter(m=>m.tipo_mov==='cuota');
+
+  list.innerHTML=
+    renderSeccion('Ingresos','📈','var(--accent2)',ingresos)+
+    renderSeccion('Gastos diarios','💵','var(--accent4)',gastosDiarios)+
+    renderSeccion('Tarjeta & cuotas','💳','#818cf8',[...gastosTarjeta,...cuotas].sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||'')));
 }
 let _movSeleccionMode=false;let _movSeleccionados=new Set();
 function toggleModoSeleccionMovimientos(){_movSeleccionMode=!_movSeleccionMode;_movSeleccionados.clear();document.getElementById('mov-seleccion-bar').style.display=_movSeleccionMode?'flex':'none';const btn=document.getElementById('mov-btn-seleccionar');if(btn)btn.textContent=_movSeleccionMode?'✕ Cancelar':'☑ Seleccionar';renderMovimientos();}
