@@ -554,6 +554,13 @@ input[type=checkbox]{width:auto;margin-right:5px}
       <div><h1 style="font-size:15px;font-weight:700;letter-spacing:-.2px">FinanzasApp</h1><p style="font-size:10px;color:var(--text2);margin-top:1px">Gestión financiera personal</p></div>
     </div>
   </div>
+  <div style="padding:8px 14px 4px">
+    <div onclick="toggleGlobalSearch()" style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:10px;border:1px solid var(--border);background:var(--card2);cursor:pointer;color:var(--text2);font-size:13px;transition:.15s" onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background='var(--card2)'">
+      <i data-lucide="search" style="width:15px;height:15px;flex-shrink:0"></i>
+      <span>Buscar...</span>
+      <span style="margin-left:auto;font-size:11px;opacity:.5">⌘K</span>
+    </div>
+  </div>
   <nav>
     <div class="nav-item active" onclick="nav('dashboard',this)">
       <span class="nav-icon-wrap"><i data-lucide="layout-dashboard"></i></span>
