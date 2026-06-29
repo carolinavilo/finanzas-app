@@ -2275,14 +2275,20 @@ async function loadCristianGastos() {
     .neq('user_id', currentUser.id)
     .order('fecha', { ascending: false });
 
-  if (!error && data?.length) {
+  if (!error) {
+    const idsUsuario = new Set((data||[]).map(g => g.id));
+    // Quitar gastos del usuario que ya no existen en Supabase (fueron borrados)
+    const emailsUsuarios = new Set((data||[]).map(g => g.registrado_por).filter(Boolean));
+    S.gastos = S.gastos.filter(g => {
+      if(!g.registrado_por || !emailsUsuarios.has(g.registrado_por)) return true; // gastos del admin, no tocar
+      return idsUsuario.has(g.id); // gastos del usuario: solo mantener los que siguen en Supabase
+    });
+    // Agregar los nuevos
     const idsExistentes = new Set(S.gastos.map(g => g.id));
-    const nuevos = data.filter(g => !idsExistentes.has(g.id));
-    if (nuevos.length) {
-      S.gastos = [...S.gastos, ...nuevos];
-      renderGastos();
-      refreshDashIfVisible();
-    }
+    const nuevos = (data||[]).filter(g => !idsExistentes.has(g.id));
+    if (nuevos.length) S.gastos = [...S.gastos, ...nuevos];
+    renderGastos();
+    refreshDashIfVisible();
   }
 
   // Actualizar panel admin si existe
