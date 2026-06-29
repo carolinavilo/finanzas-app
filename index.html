@@ -4448,7 +4448,15 @@ function guardarEditGasto(){
   g.notas=document.getElementById('eg-notas').value.trim();
   g.recurrente=document.getElementById('eg-recurrente').checked;
   save();
-  if(userRole==='usuario') syncGastoUpdate(g);
+  if(userRole==='usuario'){
+    syncGastoUpdate(g);
+  } else if(userRole==='admin'&&g.registrado_por&&!ADMIN_EMAILS.includes(g.registrado_por)){
+    sb.from('gastos_sync').update({
+      descripcion:g.descripcion,monto:g.monto,categoria:g.categoria,
+      subcategoria:g.subcategoria||'',fecha:g.fecha,tipo:g.tipo,
+      notas:g.notas||'',updated_at:new Date().toISOString()
+    }).eq('id',g.id).then(({error})=>{if(error)console.warn('[updateGastoSync]',error.message);});
+  }
   closeModal('modal-edit-gasto');
   renderGastos();
   refreshDashIfVisible();
@@ -7226,8 +7234,26 @@ document.addEventListener('click', e => {
   if (delGasto) {
     const id = delGasto.dataset.id; if (!id) return;
     if (!confirm('¿Eliminar este gasto?')) return;
+    const g = S.gastos.find(g => String(g.id) === String(id));
+    if (g?.cuentaId && g?.tipo !== 'tarjeta') {
+      const cuenta = S.cuentas?.find(c => c.id === g.cuentaId);
+      if (cuenta) cuenta.saldo = (+cuenta.saldo||0) + (+g.monto||0);
+    }
     S.gastos = S.gastos.filter(g => String(g.id) !== String(id));
-    save(); renderGastos(); showToast('Gasto eliminado');
+    save();
+    if (userRole === 'usuario') {
+      syncGastoDelete(id);
+    } else if (userRole === 'admin') {
+      if (g?.registrado_por && !ADMIN_EMAILS.includes(g.registrado_por)) {
+        sb.from('gastos_sync').delete().eq('id', id).then(({error}) => {
+          if (error) console.warn('[deleteGastoSync]', error.message);
+        });
+      }
+    }
+    renderGastos();
+    refreshDashIfVisible();
+    if (document.getElementById('section-movimientos')?.classList.contains('active')) renderMovimientos();
+    showToast('✅ Gasto eliminado');
     return;
   }
 
