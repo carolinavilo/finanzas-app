@@ -3029,6 +3029,8 @@ function abrirModalPagarRecurrente(recId,mes){
   document.getElementById('modal-pagar-rec-titulo').textContent='Pagar — '+r.nombre;
   document.getElementById('pagar-rec-monto').value=r.montoEstimado||'';
   document.getElementById('pagar-rec-fecha').value=today();
+  document.getElementById('pagar-rec-medio').value='efectivo';
+  document.getElementById('pagar-rec-cuotas').value='';
   const cSel=document.getElementById('pagar-rec-cuenta');
   cSel.innerHTML='<option value="">-- Sin asignar --</option>'+(S.cuentas||[]).filter(c=>c.activa!==false).map(c=>`<option value="${esc(c.id)}">${c.icono||'🏦'} ${esc(c.nombre)}</option>`).join('');
   const tSel=document.getElementById('pagar-rec-tarjeta');
