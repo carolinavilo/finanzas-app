@@ -3081,9 +3081,19 @@ function guardarPagoRecurrente(){
   const rec=S.recurrentes.find(r=>r.id===recId);
   if(rec){
     S.gastos=S.gastos.filter(g=>g.recurrenteId!==recId||!g.fecha?.startsWith(mes));
-    const cuotas=medioPago==='tarjeta'?parseInt(document.getElementById('pagar-rec-cuotas')?.value||'0'):1;
-    const nuevoGasto={id:uid(),descripcion:rec.nombre,monto:montoReal,categoria:rec.categoria||'Otros',icono:rec.icono||'📋',fecha,tipo:medioPago==='tarjeta'?'tarjeta':medioPago==='debito'?'debito':'efectivo',tarjetaId:medioPago==='tarjeta'?tarjetaId:null,cuentaId:cuentaId||null,recurrenteId:recId,notas:'Gasto recurrente',cuotas:cuotas>1?cuotas:null};
-    S.gastos.push(nuevoGasto);
+    const cuotas=medioPago==='tarjeta'?parseInt(document.getElementById('pagar-rec-cuotas')?.value||'1'):1;
+    if(medioPago==='tarjeta'&&cuotas>1){
+      // Crear compra en cuotas
+      const compra={id:uid(),tarjetaId,fecha,descripcion:rec.nombre,categoria:rec.categoria||'Otros',subcategoria:'',
+        montoTotal:montoReal,cuotas,montoCuota:Math.round(montoReal/cuotas),
+        cuotasPagadas:0,fechaPrimerPago:fecha,notas:'Gasto recurrente',recurrenteId:recId};
+      if(!S.comprasCuotas)S.comprasCuotas=[];
+      S.comprasCuotas=S.comprasCuotas.filter(c=>c.recurrenteId!==recId||!c.fecha?.startsWith(mes));
+      S.comprasCuotas.push(compra);
+    } else {
+      const nuevoGasto={id:uid(),descripcion:rec.nombre,monto:montoReal,categoria:rec.categoria||'Otros',icono:rec.icono||'📋',fecha,tipo:medioPago==='tarjeta'?'tarjeta':medioPago==='debito'?'debito':'efectivo',tarjetaId:medioPago==='tarjeta'?tarjetaId:null,cuentaId:cuentaId||null,recurrenteId:recId,notas:'Gasto recurrente',creadoEn:new Date().toISOString()};
+      S.gastos.push(nuevoGasto);
+    }
   }
   if(cuentaId&&montoReal>0&&medioPago!=='tarjeta'){const c=S.cuentas?.find(c=>c.id===cuentaId);if(c)c.saldo=(+c.saldo||0)-montoReal;}
   save();closeModal('modal-pagar-recurrente');renderRecurrentes();
