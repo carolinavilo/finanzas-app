@@ -4634,9 +4634,10 @@ function renderGastos(){
     if(buscar&&![g.descripcion,g.categoria,g.subcategoria,g.notas].some(f=>norm(f||'').includes(buscar)))return false;
     return true;
   }).sort((a,b)=>{
-    const fa=a.creadoEn||calcFechaImpactoGasto(a)||a.fecha||'';
-    const fb=b.creadoEn||calcFechaImpactoGasto(b)||b.fecha||'';
-    return fb.localeCompare(fa);
+    const fa=calcFechaImpactoGasto(a)||a.fecha||'';
+    const fb=calcFechaImpactoGasto(b)||b.fecha||'';
+    if(fb!==fa)return fb.localeCompare(fa);
+    return (b.creadoEn||'').localeCompare(a.creadoEn||'');
   });
 
   // Compras en cuotas compradas en el mes seleccionado
