@@ -4709,7 +4709,7 @@ function renderGastos(){
           <button class="btn-eliminar-cuota" data-id="${esc(c.id)}">🗑️</button>
         </div>
         <div class="mob-row-fecha">${ff(c.fecha)}</div>
-        <div class="mob-row-cat"><span class="badge b-purple">${esc(c.categoria)}</span></div>
+        <div class="mob-row-cat"><span class="badge b-purple">${esc(c.categoria)}</span>${c.subcategoria?`<span class="subcat-badge" style="margin-left:4px">${esc(c.subcategoria)}</span>`:''}</div>
       </div>`,
       html:`<tr style="background:rgba(99,102,241,.04)">
       <td>${ff(c.fecha)}</td>
