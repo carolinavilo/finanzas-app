@@ -376,18 +376,18 @@ input[type=checkbox]{width:auto;margin-right:5px}
 /* ── TABLA RESPONSIVA MÓVIL ── */
 @media(max-width:600px){
   #section-gastos thead, #section-ingresos thead { display:none; }
-  #section-gastos .table-scroll, #section-ingresos .table-scroll { overflow-x:visible; }
-  #section-gastos .table-scroll table, #section-ingresos .table-scroll table { width:100%; }
+  #section-gastos .table-scroll, #section-ingresos .table-scroll { overflow-x:hidden; }
+  #section-gastos .table-scroll table, #section-ingresos .table-scroll table { display:block; width:100%; box-sizing:border-box; }
 
   #gastos-tbody, #ingresos-tbody { display:block; width:100%; }
-  #gastos-tbody tr { display:grid; grid-template-columns:1fr auto; grid-template-rows:auto auto auto; border-bottom:1px solid var(--border); padding:10px 2px; gap:1px 8px; width:100%; box-sizing:border-box; }
+  #gastos-tbody tr { display:grid; grid-template-columns:1fr auto; grid-template-rows:auto auto auto; border-bottom:1px solid var(--border); padding:10px 4px; gap:2px 8px; width:100%; box-sizing:border-box; }
   #gastos-tbody td { display:none; border:none; padding:0; min-width:0; }
   #gastos-tbody td:nth-child(2) { display:block; font-size:13px; font-weight:600; grid-column:1; grid-row:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   #gastos-tbody td:nth-child(1) { display:block; font-size:11px; color:var(--text2); grid-column:1; grid-row:2; }
   #gastos-tbody td:nth-child(3) { display:block; grid-column:1; grid-row:3; }
-  #gastos-tbody td:nth-child(7) { display:flex; align-items:center; justify-content:flex-end; grid-column:2; grid-row:1 / span 3; white-space:nowrap; align-self:center; }
+  #gastos-tbody td:nth-child(7) { display:flex; align-items:center; justify-content:flex-end; gap:4px; grid-column:2; grid-row:1 / span 3; align-self:center; }
 
-  #ingresos-tbody tr { display:grid; grid-template-columns:1fr auto; grid-template-rows:auto auto; border-bottom:1px solid var(--border); padding:10px 2px; gap:1px 8px; width:100%; box-sizing:border-box; }
+  #ingresos-tbody tr { display:grid; grid-template-columns:1fr auto; grid-template-rows:auto auto; border-bottom:1px solid var(--border); padding:10px 4px; gap:2px 8px; width:100%; box-sizing:border-box; }
   #ingresos-tbody td { display:none; border:none; padding:0; min-width:0; }
   #ingresos-tbody td:nth-child(2) { display:block; font-size:13px; font-weight:600; grid-column:1; grid-row:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   #ingresos-tbody td:nth-child(1) { display:block; font-size:11px; color:var(--text2); grid-column:1; grid-row:2; }
