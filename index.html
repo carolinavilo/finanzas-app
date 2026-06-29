@@ -2886,10 +2886,60 @@ function renderMovimientos(){
   const gastosTarjeta=movs.filter(m=>m.tipo_mov==='gasto'&&m.tipo==='tarjeta');
   const cuotas=movs.filter(m=>m.tipo_mov==='cuota');
 
+  // Agrupar tarjeta & cuotas por tarjetaId
+  const tarjetaItems=[...gastosTarjeta,...cuotas].sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+  const byTarjeta={};
+  tarjetaItems.forEach(m=>{
+    const tid=m.tarjetaId||'__sin__';
+    if(!byTarjeta[tid])byTarjeta[tid]=[];
+    byTarjeta[tid].push(m);
+  });
+  const tarjetaCardsHTML=Object.entries(byTarjeta).map(([tid,items])=>{
+    const tar=tid==='__sin__'?null:S.tarjetas.find(t=>t.id===tid);
+    const nombre=tar?tar.nombre:'Sin tarjeta';
+    const total=items.reduce((a,m)=>a+(+m.monto||0),0);
+    const filasHTML=items.map(m=>`
+      <div style="padding:10px 16px;border-bottom:0.5px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:8px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.descripcion)}</div>
+          <div style="font-size:11px;color:var(--text2);margin-top:2px">${ff(m.fecha)} · <span class="badge ${m.tipo_mov==='cuota'?'b-blue':'b-purple'}" style="font-size:10px">${m.tipo_mov==='cuota'?'💳 Cuotas':esc(m.categoria)}</span></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">
+          <span style="font-size:13px;font-weight:600">−${$$(m.monto)}</span>
+          <button class="btn btn-ghost btn-xs mov-edit-btn" data-id="${esc(m.id)}" data-tipo="${m.tipo_mov}">✏️</button>
+          <button class="btn btn-danger btn-xs mov-del-btn" data-id="${esc(m.id)}" data-tipo="${m.tipo_mov}">✕</button>
+        </div>
+      </div>`).join('');
+    return `<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;margin-bottom:10px;overflow:hidden">
+      <div style="padding:12px 16px;border-bottom:0.5px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="width:34px;height:34px;border-radius:10px;background:rgba(129,140,248,.12);display:flex;align-items:center;justify-content:center;font-size:18px">💳</div>
+          <div>
+            <div style="font-size:14px;font-weight:700">${esc(nombre)}</div>
+            <div style="font-size:11px;color:var(--text2)">${tar?`Cierre ${tar.cierre} · Venc. ${tar.vencimiento}`:''}</div>
+          </div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:14px;font-weight:700">−${$$(total)}</div>
+          <div style="font-size:11px;color:var(--text2)">${items.length} movimiento${items.length!==1?'s':''}</div>
+        </div>
+      </div>
+      ${filasHTML}
+    </div>`;
+  }).join('');
+
+  const tarjetaSeccionHTML=tarjetaItems.length?`<div style="margin-bottom:16px">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:2px solid #818cf8;margin-bottom:8px">
+      <span style="font-size:11px;font-weight:700;color:#6366f1;text-transform:uppercase;letter-spacing:.5px">💳 Tarjeta & cuotas</span>
+      <span style="font-size:11px;font-weight:700;color:#6366f1">${tarjetaItems.length} · ${$$(tarjetaItems.reduce((a,m)=>a+(+m.monto||0),0))}</span>
+    </div>
+    ${tarjetaCardsHTML}
+  </div>`:'';
+
   list.innerHTML=
     renderSeccion('Ingresos','📈','var(--accent2)',ingresos)+
     renderSeccion('Gastos diarios','💵','var(--accent4)',gastosDiarios)+
-    renderSeccion('Tarjeta & cuotas','💳','#818cf8',[...gastosTarjeta,...cuotas].sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||'')));
+    tarjetaSeccionHTML;
 }
 let _movSeleccionMode=false;let _movSeleccionados=new Set();
 function toggleModoSeleccionMovimientos(){_movSeleccionMode=!_movSeleccionMode;_movSeleccionados.clear();document.getElementById('mov-seleccion-bar').style.display=_movSeleccionMode?'flex':'none';const btn=document.getElementById('mov-btn-seleccionar');if(btn)btn.textContent=_movSeleccionMode?'✕ Cancelar':'☑ Seleccionar';renderMovimientos();}
