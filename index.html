@@ -381,17 +381,17 @@ input[type=checkbox]{width:auto;margin-right:5px}
   #section-ingresos .table-scroll{overflow-x:visible}
   #section-gastos .table-scroll table,
   #section-ingresos .table-scroll table{width:100%}
-  #gastos-tbody tr,#ingresos-tbody tr{display:block;border-bottom:1px solid var(--border);padding:10px 0;position:relative;min-height:64px}
+  #gastos-tbody tr,#ingresos-tbody tr{display:block;border-bottom:1px solid var(--border);padding:10px 0}
   #gastos-tbody td,#ingresos-tbody td{display:none;border:none;padding:0}
-  #gastos-tbody td:nth-child(2),#ingresos-tbody td:nth-child(2){display:block;font-size:13px;font-weight:600;padding-right:90px;margin-bottom:2px}
   #gastos-tbody td:nth-child(1),#ingresos-tbody td:nth-child(1){display:block;font-size:11px;color:var(--text2);margin-bottom:3px}
-  #gastos-tbody td:nth-child(3),#ingresos-tbody td:nth-child(3){display:block;margin-bottom:0}
-  #gastos-tbody td:nth-child(7){display:block;position:absolute;top:10px;right:0;font-size:13px;font-weight:700;white-space:nowrap}
-  #ingresos-tbody td:nth-child(6){display:block;position:absolute;top:10px;right:0;font-size:13px;font-weight:700;color:var(--accent2);white-space:nowrap}
-  #gastos-tbody td:nth-child(8){display:block;position:absolute;bottom:8px;right:0;white-space:nowrap}
+  #gastos-tbody td:nth-child(2),#ingresos-tbody td:nth-child(2){display:block;font-size:13px;font-weight:600;margin-bottom:4px}
+  #gastos-tbody td:nth-child(3),#ingresos-tbody td:nth-child(3){display:block;margin-bottom:4px}
+  #gastos-tbody td:nth-child(7){display:block;font-size:14px;font-weight:700;white-space:nowrap;text-align:right}
+  #ingresos-tbody td:nth-child(6){display:block;font-size:14px;font-weight:700;color:var(--accent2);white-space:nowrap;text-align:right}
+  #gastos-tbody td:nth-child(8){display:flex;justify-content:flex-end;gap:4px;padding-top:4px}
   #gastos-tbody td:nth-child(8) .btn-editar-gasto,
   #gastos-tbody td:nth-child(8) .btn-eliminar-gasto{font-size:18px;min-width:36px;min-height:36px;padding:6px}
-  #ingresos-tbody td:nth-child(7){display:block;position:absolute;bottom:8px;right:0;white-space:nowrap}
+  #ingresos-tbody td:nth-child(7){display:flex;justify-content:flex-end;gap:4px;padding-top:4px}
 }
 /* ── MOBILE GASTOS ENRIQUECIDO ── */
 @media(max-width:768px){
