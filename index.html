@@ -3060,7 +3060,7 @@ function onPagarRecMedioChange(){
   document.getElementById('pagar-rec-tarjeta-wrap').style.display=esTarjeta?'':'none';
   document.getElementById('pagar-rec-cuenta-wrap').style.display=esTarjeta?'none':'';
   document.getElementById('pagar-rec-cuotas-wrap').style.display=esTarjeta?'':'none';
-  if(!esTarjeta)document.getElementById('pagar-rec-cuotas').value='1';
+  document.getElementById('pagar-rec-cuotas').value='';
 }
 function guardarPagoRecurrente(){
   const recId=document.getElementById('pagar-rec-id').value;
@@ -3079,7 +3079,7 @@ function guardarPagoRecurrente(){
   const rec=S.recurrentes.find(r=>r.id===recId);
   if(rec){
     S.gastos=S.gastos.filter(g=>g.recurrenteId!==recId||!g.fecha?.startsWith(mes));
-    const cuotas=medioPago==='tarjeta'?parseInt(document.getElementById('pagar-rec-cuotas')?.value||'1'):1;
+    const cuotas=medioPago==='tarjeta'?parseInt(document.getElementById('pagar-rec-cuotas')?.value||'0'):1;
     const nuevoGasto={id:uid(),descripcion:rec.nombre,monto:montoReal,categoria:rec.categoria||'Otros',icono:rec.icono||'📋',fecha,tipo:medioPago==='tarjeta'?'tarjeta':medioPago==='debito'?'debito':'efectivo',tarjetaId:medioPago==='tarjeta'?tarjetaId:null,cuentaId:cuentaId||null,recurrenteId:recId,notas:'Gasto recurrente',cuotas:cuotas>1?cuotas:null};
     S.gastos.push(nuevoGasto);
   }
