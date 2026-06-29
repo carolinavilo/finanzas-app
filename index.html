@@ -2087,10 +2087,35 @@ async function afterLogin() {
         setTimeout(() => {
           const grid = document.getElementById('mob-cat-grid');
           if (grid) {
-            const cats = Object.keys(CAT_ICONS);
-            grid.innerHTML = cats.map(cat =>
+            const iconMap = {
+              ...CAT_ICONS,
+              'COMIDA':'🍔','SUPERMERCADO':'🛒','TRANSPORTE':'🚌','SALUD':'💊',
+              'ROPA':'👗','ENTRETENIMIENTO':'🎬','EDUCACION':'📚','EDUCACIÓN':'📚',
+              'SERVICIOS':'💡','TECNOLOGIA':'💻','TECNOLOGÍA':'💻','VIAJES':'✈️',
+              'DEPORTE':'🏋️','HOGAR':'🏠','MASCOTA':'🐾','AHORRO':'💰',
+              'SUSCRIPCION':'📱','SUSCRIPCIÓN':'📱','SEGUROS':'🛡️','OTROS':'📦',
+              'AUTO':'🚗','INDUMENTARIA':'👔','LIMPIEZA':'🧹','GIMNASIO':'💪',
+              'COSAS PARA EL HOGAR':'🏠','COSAS PARA EL':'🏠',
+            };
+            const getIconForCat = cat => {
+              const key = (cat||'').toUpperCase().trim();
+              if (iconMap[key]) return iconMap[key];
+              const match = Object.keys(iconMap).find(k => key.includes(k) || k.includes(key));
+              if (match) return iconMap[match];
+              const ciKey = Object.keys(CAT_ICONS).find(k => k.toUpperCase() === key);
+              if (ciKey) return CAT_ICONS[ciKey];
+              return '📦';
+            };
+            const allCats = getCatsGasto();
+            const vistas = new Set();
+            const catsDeduplicadas = [];
+            allCats.forEach(cat => {
+              const key = (cat||'').toUpperCase().trim();
+              if (!vistas.has(key)) { vistas.add(key); catsDeduplicadas.push(cat); }
+            });
+            grid.innerHTML = catsDeduplicadas.map(cat =>
               `<button type="button" class="mob-cat-btn" data-cat="${cat}">
-                <span class="ci">${CAT_ICONS[cat]||'📦'}</span>${cat}
+                <span class="ci">${getIconForCat(cat)}</span>${cat}
               </button>`
             ).join('');
             grid.querySelectorAll('.mob-cat-btn').forEach(btn => {
