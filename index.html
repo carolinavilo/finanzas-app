@@ -2902,7 +2902,7 @@ function renderMovimientos(){
       <div style="padding:10px 16px;border-bottom:0.5px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:8px">
         <div style="flex:1;min-width:0">
           <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.descripcion)}</div>
-          <div style="font-size:11px;color:var(--text2);margin-top:2px">${ff(m.fecha)} · <span class="badge ${m.tipo_mov==='cuota'?'b-blue':'b-purple'}" style="font-size:10px">${m.tipo_mov==='cuota'?'💳 Cuotas':esc(m.categoria)}</span></div>
+          <div style="font-size:11px;color:var(--text2);margin-top:2px">${ff(m.fecha)} · <span class="badge ${m.tipo_mov==='cuota'?'b-blue':'b-purple'}" style="font-size:10px">${m.tipo_mov==='cuota'?(()=>{const fp=m.fechaPrimerPago||m.fecha;const y0=+fp.slice(0,4),mo0=+fp.slice(5,7);const y1=+m.fecha.slice(0,4),mo1=+m.fecha.slice(5,7);const n=(y1-y0)*12+(mo1-mo0)+1;return'💳 Cuota '+n+'/'+(m.cuotas||'?');})():esc(m.categoria)}</span></div>
         </div>
         <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">
           <span style="font-size:13px;font-weight:600">−${$$(m.monto)}</span>
