@@ -516,7 +516,7 @@ input[type=checkbox]{width:auto;margin-right:5px}
 <div id="mobile-header">
   <div class="mh-logo">
     <svg width="28" height="28" viewBox="0 0 30 30" fill="none"><rect width="30" height="30" rx="9" fill="var(--accent)"/><path d="M8 20l4.5-5 3.5 3 5.5-8" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    <h1>FinanzasApp</h1>
+    <h1 id="mh-title">FinanzasApp</h1>
   </div>
   <div class="mh-actions">
     <button class="mh-btn" id="btn-refresh" onclick="location.reload()" title="Actualizar">
@@ -1270,6 +1270,15 @@ input[type=checkbox]{width:auto;margin-right:5px}
       <button onclick="renderAPIStats()" class="btn btn-ghost btn-xs" style="font-size:10px">🔄 Actualizar</button>
       <button onclick="if(confirm('¿Borrar historial?')){localStorage.removeItem('fz_api_calls');renderAPIStats();}" class="btn btn-ghost btn-xs" style="font-size:10px;color:var(--accent4)">🗑 Limpiar</button>
     </div>
+    <div class="bs-sep"></div>
+    <div id="user-nombre-section">
+      <p style="font-size:11px;font-weight:600;margin-bottom:8px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px">👤 Tu nombre</p>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="user-nombre-input" placeholder="Tu nombre" style="flex:1">
+        <button class="btn btn-primary btn-sm" onclick="guardarNombreUsuario()">Guardar</button>
+      </div>
+      <small style="color:var(--text2);font-size:11px">Así aparecerá en el encabezado de la app</small>
+    </div>
     <button class="btn btn-neutral" style="width:100%;margin-top:8px;padding:12px" onclick="closeSheet('sheet-settings')">Cerrar</button>
   </div>
 </div>
@@ -1361,8 +1370,10 @@ input[type=checkbox]{width:auto;margin-right:5px}
         </div>
       </div>
       <div class="form-group"><label>Límite (ARS)</label><input id="t-limite" type="number" placeholder="500000"/></div>
-      <div class="form-group"><label>Día de cierre</label><input id="t-cierre" type="number" min="1" max="31" placeholder="5"/></div>
-      <div class="form-group"><label>Día de vencimiento</label><input id="t-venc" type="number" min="1" max="31" placeholder="15"/></div>
+      <div class="form-group"><label>Fecha próximo cierre</label><input type="date" id="t-proximo-cierre" style="width:100%;box-sizing:border-box"/><small style="color:var(--text2);font-size:11px">La fecha exacta en que cierra el próximo resumen</small></div>
+      <div class="form-group"><label>Fecha próximo vencimiento</label><input type="date" id="t-proximo-vencimiento" style="width:100%;box-sizing:border-box"/><small style="color:var(--text2);font-size:11px">La fecha exacta en que vence el pago del resumen</small></div>
+      <div class="form-group"><label>Día de cierre mensual</label><input id="t-cierre" type="number" min="1" max="31" placeholder="Ej: 28"/><small style="color:var(--text2);font-size:11px">Día del mes en que cierra habitualmente</small></div>
+      <div class="form-group"><label>Día de vencimiento mensual</label><input id="t-venc" type="number" min="1" max="31" placeholder="Ej: 5"/><small style="color:var(--text2);font-size:11px">Día del mes en que vence habitualmente (puede ser el mes siguiente al cierre)</small></div>
       <div class="form-group" style="grid-column:1/-1">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:400">
           <input type="checkbox" id="t-venc-mes-sig" style="width:auto;flex-shrink:0"/>
@@ -1989,6 +2000,14 @@ async function afterLogin() {
   // Sincronizar datos desde Supabase (fuente de verdad única)
   await load(); applyTheme(); applyAppIcon();
   await syncCatsFromSupabase();
+  // Usar nombre personalizado si existe
+  if(S.config?.nombreUsuario){
+    currentNombre=S.config.nombreUsuario;
+  } else {
+    currentNombre=currentUser.email.split('@')[0].replace(/[._]/g,' ').replace(/\b\w/g,l=>l.toUpperCase());
+  }
+  const _mhTitle=document.getElementById('mh-title');
+  if(_mhTitle)_mhTitle.textContent=userRole==='admin'?'FinanzasApp':currentNombre;
 
   if (userRole === 'admin') {
     // Solo mostrar sidebar en desktop; en mobile el CSS lo oculta
@@ -2722,7 +2741,28 @@ function renderAPIStats(){
 <div style="font-size:10px;margin-top:3px;color:var(--text2)">Tipos hoy: ${det}</div>
 <div style="font-size:9px;margin-top:2px;color:var(--text2)">Caché: cotiz. 6h · dividendos 7d · ratios 30d</div>`;
 }
-function openSheet(id){document.getElementById(id).classList.add('open');document.body.style.overflow='hidden';if(id==='sheet-settings')renderAPIStats();}
+function guardarNombreUsuario(){
+  const nombre=document.getElementById('user-nombre-input')?.value.trim();
+  if(!nombre){showToast('⚠️ Ingresá un nombre');return;}
+  if(!S.config)S.config={};
+  S.config.nombreUsuario=nombre;
+  currentNombre=nombre;
+  const mhTitle=document.getElementById('mh-title');
+  if(mhTitle)mhTitle.textContent=nombre;
+  const logoH1=document.querySelector('.logo h1');
+  if(logoH1)logoH1.textContent=nombre;
+  save();
+  showToast('✅ Nombre actualizado');
+}
+function openSheet(id){
+  document.getElementById(id).classList.add('open');
+  document.body.style.overflow='hidden';
+  if(id==='sheet-settings'){
+    renderAPIStats();
+    const nombreInp=document.getElementById('user-nombre-input');
+    if(nombreInp)nombreInp.value=S.config?.nombreUsuario||currentNombre||'';
+  }
+}
 function closeSheet(id){document.getElementById(id).classList.remove('open');document.body.style.overflow='';}
 
 // ====== NAV ======
@@ -4665,6 +4705,8 @@ function editTarjeta(id){
   document.getElementById('t-nombre').value=t.nombre;
   document.getElementById('t-color').value=t.color||'#6c63ff';
   document.getElementById('t-limite').value=t.limite;
+  document.getElementById('t-proximo-cierre').value=t.proximoCierre||'';
+  document.getElementById('t-proximo-vencimiento').value=t.proximoVencimiento||'';
   document.getElementById('t-cierre').value=t.cierre;
   document.getElementById('t-venc').value=t.vencimiento;
   document.getElementById('t-venc-mes-sig').checked=!!t.vencMesSiguiente;
@@ -4683,7 +4725,9 @@ function guardarTarjeta(){
     limite:+document.getElementById('t-limite').value||0,
     cierre:+document.getElementById('t-cierre').value||5,
     vencimiento:+document.getElementById('t-venc').value||15,
-    vencMesSiguiente:document.getElementById('t-venc-mes-sig').checked};
+    vencMesSiguiente:document.getElementById('t-venc-mes-sig').checked,
+    proximoCierre:document.getElementById('t-proximo-cierre')?.value||'',
+    proximoVencimiento:document.getElementById('t-proximo-vencimiento')?.value||''};
   if(editId){Object.assign(S.tarjetas.find(t=>t.id===editId),data);}
   else{S.tarjetas.push({id:uid(),...data});}
   save();closeModal('modal-tarjeta');renderTarjetas();
@@ -4743,6 +4787,9 @@ function calcFechaImpactoGasto(g){
   if(!g||!g.tarjetaId||g.tipo==='efectivo'||g.tipo==='debito')return g?.fecha||today();
   const tarjeta=(S.tarjetas||[]).find(t=>t.id===g.tarjetaId);
   if(!tarjeta)return g?.fecha||today();
+  if(tarjeta.proximoVencimiento&&tarjeta.proximoCierre){
+    if(new Date(g.fecha||today())<=new Date(tarjeta.proximoCierre))return tarjeta.proximoVencimiento;
+  }
   const fechaCompra=g.fecha||today();
   const[anioC,mesC,diaC]=fechaCompra.split('-').map(Number);
   const diaCierre=parseInt(tarjeta.cierre||tarjeta.fechaCierre||1);
@@ -4976,7 +5023,7 @@ function renderTarjetas(){
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap">
         <div style="min-width:0;flex:1">
           <div style="font-size:16px;font-weight:700">${esc(t.nombre)}</div>
-          <div style="font-size:12px;color:var(--text2);margin-top:2px">Próx. cierre: <strong>${nextFechaDia(t.cierre)}</strong> · Próx. venc: <strong>${nextFechaDia(t.vencimiento)}</strong></div>
+          <div style="font-size:12px;color:var(--text2);margin-top:2px">Próx. cierre: <strong>${t.proximoCierre?ff(t.proximoCierre):nextFechaDia(t.cierre)}</strong> · Próx. venc: <strong>${t.proximoVencimiento?ff(t.proximoVencimiento):nextFechaDia(t.vencimiento)}</strong></div>
         </div>
         <div style="display:flex;gap:6px;flex-shrink:0;align-items:center">
           <span class="tarjeta-drag-handle" title="Reordenar">⠿</span>
