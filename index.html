@@ -4392,7 +4392,7 @@ function agregarGasto(){
       resetGastoForm();renderGastos();renderTarjetas();refreshDashIfVisible();
       return;
     }
-    const nuevo={id:uid(),fecha,descripcion:desc,categoria:cat,subcategoria,monto,tipo,tarjetaId,notas,recurrente:false};
+    const nuevo={id:uid(),fecha,descripcion:desc,categoria:cat,subcategoria,monto,tipo,creadoEn:new Date().toISOString(),tarjetaId,notas,recurrente:false,creadoEn:new Date().toISOString()};
     const dupG1=S.gastos.find(g=>g.descripcion===nuevo.descripcion&&g.monto===nuevo.monto&&g.fecha===nuevo.fecha&&g.categoria===nuevo.categoria);
     if(dupG1&&!confirm(`⚠️ Ya existe un gasto similar:\n"${nuevo.descripcion}" · $${nuevo.monto} · ${nuevo.fecha}\n\n¿Querés registrarlo de todas formas?`))return;
     S.gastos.push(nuevo);
@@ -4402,7 +4402,7 @@ function agregarGasto(){
   }
 
   const cuentaId=tipo==='debito'?document.getElementById('g-cuenta-debito').value:tipo==='efectivo'?(document.getElementById('g-cuenta-efectivo')?.value||null):null;
-  const nuevo={id:uid(),fecha,descripcion:desc,categoria:cat,subcategoria,monto,tipo,
+  const nuevo={id:uid(),fecha,descripcion:desc,categoria:cat,subcategoria,monto,tipo,creadoEn:new Date().toISOString(),
     tarjetaId:null,cuentaId,notas,recurrente:false};
   const dupG2=S.gastos.find(g=>g.descripcion===nuevo.descripcion&&g.monto===nuevo.monto&&g.fecha===nuevo.fecha&&g.categoria===nuevo.categoria);
   if(dupG2&&!confirm(`⚠️ Ya existe un gasto similar:\n"${nuevo.descripcion}" · $${nuevo.monto} · ${nuevo.fecha}\n\n¿Querés registrarlo de todas formas?`))return;
@@ -4634,8 +4634,8 @@ function renderGastos(){
     if(buscar&&![g.descripcion,g.categoria,g.subcategoria,g.notas].some(f=>norm(f||'').includes(buscar)))return false;
     return true;
   }).sort((a,b)=>{
-    const fa=calcFechaImpactoGasto(a)||a.fecha||'';
-    const fb=calcFechaImpactoGasto(b)||b.fecha||'';
+    const fa=a.creadoEn||calcFechaImpactoGasto(a)||a.fecha||'';
+    const fb=b.creadoEn||calcFechaImpactoGasto(b)||b.fecha||'';
     return fb.localeCompare(fa);
   });
 
