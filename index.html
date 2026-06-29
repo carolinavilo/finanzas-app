@@ -4679,7 +4679,7 @@ function renderGastos(){
       ?`<div style="font-size:10px;color:var(--accent);margin-top:2px">💳 Impacta: ${mesPretty(fImpacto.slice(0,7))}</div>`:'';
     return{fecha:g.fecha,
       mobHtml:`<div class="mob-row">
-        <div class="mob-row-desc">${esc(g.descripcion)}${impactaBadge}</div>
+        <div class="mob-row-desc">${esc(g.descripcion)}${impactaBadge}${g.registrado_por&&!ADMIN_EMAILS.includes(g.registrado_por)?`<span style="background:var(--accent-light);color:var(--accent);border-radius:6px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:4px">👤 ${g.registrado_por.split('@')[0]}</span>`:''}</div>
         <div class="mob-row-monto">
           <span>${$$(g.monto)}</span>
           <button class="btn-editar-gasto" data-id="${esc(g.id)}">✏️</button>
