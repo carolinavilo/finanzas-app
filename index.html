@@ -2018,61 +2018,116 @@ async function afterLogin() {
     if (aiKeySection) { aiKeySection.style.display = ''; renderKeyWidget('mob-ai-key-container'); }
     // sb-ai-key-section eliminado del sidebar
   } else {
-    // USUARIO: sección de gastos + ingresos
-    // Solo mostrar sidebar en desktop
-    if (!isMobile) {
-      document.getElementById('sidebar').style.display = 'flex';
-    }
+    // USUARIO
+    if (!isMobile) document.getElementById('sidebar').style.display = 'flex';
     document.getElementById('main').style.display = 'block';
-    // Ocultar nav items excepto Gastos e Ingresos (sidebar desktop)
+
+    // Ocultar todo el nav excepto Gastos e Ingresos
     document.querySelectorAll('.nav-item').forEach(el => el.style.display = 'none');
-    const gastosNav = document.querySelector('.nav-item[onclick*="\'gastos\'"]') || document.querySelector('.nav-item[onclick*="gastos"]');
+    const gastosNav = document.querySelector('.nav-item[onclick*="gastos"]');
+    const ingresosNav = document.querySelector('.nav-item[onclick*="ingresos"]');
     if (gastosNav) gastosNav.style.display = 'flex';
-    const ingresosNav = document.querySelector('.nav-item[onclick*="\'ingresos\'"]') || document.querySelector('.nav-item[onclick*="ingresos"]');
     if (ingresosNav) ingresosNav.style.display = 'flex';
-    // Ocultar bottom-nav items excepto Gastos e Ingresos (mobile)
+
+    // Ocultar bottom nav items innecesarios
     ['bn-dashboard','bn-tarjetas','bn-mas'].forEach(id => {
       const el = document.getElementById(id); if (el) el.style.display = 'none';
     });
-    // Cambiar logo (desktop)
+
+    // Logo
     const logoH1 = document.querySelector('.logo h1'); if (logoH1) logoH1.textContent = currentNombre;
     const logoP = document.querySelector('.logo p'); if (logoP) logoP.textContent = 'Mis gastos';
-    // Cargar gastos de Supabase
+
+    // 1. Cargar gastos propios del usuario
     await loadGastosFromSupabase();
+
+    // 2. Cargar TODOS los datos del admin (cuentas, tarjetas, categorías, subcats)
     await loadSharedData();
-    startSharedDataPolling();
+
+    // 3. Cargar categorías del admin y aplicarlas
+    try {
+      const sharedCats = JSON.parse(localStorage.getItem('shared_categorias') || '[]');
+      if (sharedCats.length) {
+        sharedCats.forEach(cat => {
+          if (!CAT_ICONS[cat.toUpperCase()] && !CAT_ICONS[cat]) CAT_ICONS[cat] = '📦';
+        });
+      }
+    } catch(e) {}
+
+    // 4. Aplicar tema y popular TODOS los selects con datos del admin
     seedSubcats();
     applyTheme();
     populateCatSelects();
     populateCuentaSels();
     populateTarjetaSels();
-    document.getElementById('g-fecha').value = today();
-    document.getElementById('i-fecha').value = today();
-    nav('gastos', gastosNav);
-    // Enriquecer UI mobile si aplica
-    if (isMobile) setTimeout(enhanceMobileGastos, 100);
-    // Re-popular después de un delay por si Supabase tardó
-    setTimeout(()=>{
-      populateCatSelects();populateCuentaSels();populateTarjetaSels();
-      if(isMobile)enhanceMobileGastos();
-    },1500);
-    // Regenerar grilla mobile con categorías del admin
-    setTimeout(()=>{
-      const grid=document.getElementById('mob-cat-grid');
-      if(grid&&userRole==='usuario'){
-        const cats=getCatsGasto();
-        const CI={'Comida':'🍔','Supermercado':'🛒','Transporte':'🚌','Salud':'💊','Ropa':'👗','Entretenimiento':'🎬','Educación':'📚','Servicios':'💡','Tecnología':'💻','Viajes':'✈️','Deporte':'🏋️','Hogar':'🏠','Mascota':'🐾','Ahorro':'💰','Suscripción':'📱','Seguros':'🛡️','Otros':'📦'};
-        grid.innerHTML=cats.map(cat=>`<button type="button" class="mob-cat-btn" data-cat="${cat}"><span class="ci">${CI[cat]||'📦'}</span>${cat}</button>`).join('');
-        grid.querySelectorAll('.mob-cat-btn').forEach(btn=>{
-          btn.addEventListener('click',()=>{
-            grid.querySelectorAll('.mob-cat-btn').forEach(b=>b.classList.remove('active'));
-            btn.classList.add('active');
-            const catSel=document.getElementById('g-cat');
-            if(catSel){catSel.value=btn.dataset.cat;onGastoCatChange();}
-          });
+
+    // 5. Setear fechas
+    const gfecha = document.getElementById('g-fecha');
+    const ifecha = document.getElementById('i-fecha');
+    if (gfecha) gfecha.value = today();
+    if (ifecha) ifecha.value = today();
+
+    // 6. Re-popular después de delay por latencia de Supabase
+    setTimeout(async () => {
+      await loadSharedData();
+
+      try {
+        const sharedCats = JSON.parse(localStorage.getItem('shared_categorias') || '[]');
+        sharedCats.forEach(cat => {
+          if (!CAT_ICONS[cat.toUpperCase()] && !CAT_ICONS[cat]) CAT_ICONS[cat] = '📦';
         });
+      } catch(e) {}
+
+      populateCatSelects();
+      populateCuentaSels();
+      populateTarjetaSels();
+
+      if (isMobile) {
+        enhanceMobileGastos();
+        setTimeout(() => {
+          const grid = document.getElementById('mob-cat-grid');
+          if (grid) {
+            const cats = Object.keys(CAT_ICONS);
+            grid.innerHTML = cats.map(cat =>
+              `<button type="button" class="mob-cat-btn" data-cat="${cat}">
+                <span class="ci">${CAT_ICONS[cat]||'📦'}</span>${cat}
+              </button>`
+            ).join('');
+            grid.querySelectorAll('.mob-cat-btn').forEach(btn => {
+              btn.addEventListener('click', () => {
+                grid.querySelectorAll('.mob-cat-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                const catSel = document.getElementById('g-cat');
+                if (catSel) { catSel.value = btn.dataset.cat; catSel.dispatchEvent(new Event('change')); }
+              });
+            });
+          }
+        }, 200);
       }
-    },2000);
+    }, 1500);
+
+    // 7. Polling para detectar cambios del admin en tiempo real
+    if (_sharedDataInterval) clearInterval(_sharedDataInterval);
+    _sharedDataInterval = setInterval(async () => {
+      if (userRole !== 'usuario' || !currentUser) { clearInterval(_sharedDataInterval); _sharedDataInterval = null; return; }
+      const tsAntes = localStorage.getItem('shared_data_updated');
+      await loadSharedData();
+      const tsDespues = localStorage.getItem('shared_data_updated');
+      if (tsAntes !== tsDespues) {
+        try {
+          const sharedCats = JSON.parse(localStorage.getItem('shared_categorias') || '[]');
+          sharedCats.forEach(cat => {
+            if (!CAT_ICONS[cat.toUpperCase()] && !CAT_ICONS[cat]) CAT_ICONS[cat] = '📦';
+          });
+        } catch(e) {}
+        populateCatSelects();
+        populateCuentaSels();
+        populateTarjetaSels();
+        showToast('🔄 Datos actualizados');
+      }
+    }, 60000);
+
+    nav('gastos', gastosNav);
   }
   // Notificaciones + URL params
   pedirPermisoNotificaciones();
@@ -2085,13 +2140,6 @@ async function afterLogin() {
 
 // ── MOBILE GASTOS UI ENRIQUECIDA ──
 function enhanceMobileGastos() {
-  const CAT_ICONS = {
-    'Comida':'🍔','Supermercado':'🛒','Transporte':'🚌','Salud':'💊',
-    'Ropa':'👗','Entretenimiento':'🎬','Educación':'📚','Servicios':'💡',
-    'Tecnología':'💻','Viajes':'✈️','Deporte':'🏋️','Hogar':'🏠',
-    'Mascota':'🐾','Ahorro':'💰','Suscripción':'📱','Seguros':'🛡️','Otros':'📦'
-  };
-
   // Ocultar campo descripción label y hacer el formulario más compacto en mobile
   const montoInp = document.getElementById('g-monto');
   const catSel = document.getElementById('g-cat');
@@ -2271,6 +2319,7 @@ const getAdminEmail=()=>ADMIN_EMAILS[0];
 // ====== STATE ======
 const DEFAULT_CATS_GASTO=['Comida','Transporte','Entretenimiento','Salud','Ropa','Hogar','Educación','Servicios','Supermercado','Otros','Ajuste de saldo'];
 const SYSTEM_CATS=['Ajuste de saldo'];
+const CAT_ICONS={'Comida':'🍔','Supermercado':'🛒','Transporte':'🚌','Salud':'💊','Ropa':'👗','Entretenimiento':'🎬','Educación':'📚','Servicios':'💡','Tecnología':'💻','Viajes':'✈️','Deporte':'🏋️','Hogar':'🏠','Mascota':'🐾','Ahorro':'💰','Suscripción':'📱','Seguros':'🛡️','Otros':'📦'};
 const DEFAULT_CATS_INGRESO=['Sueldo','Freelance','Alquiler','Inversiones','Regalo','Otros'];
 const CAT_COLORS={
   'Comida':'#6c63ff','Transporte':'#4ade80','Entretenimiento':'#f59e0b','Salud':'#f87171',
@@ -2432,6 +2481,7 @@ async function loadSharedData(){
     if(data.categorias?.length){
       localStorage.setItem('shared_categorias',JSON.stringify(data.categorias));
     }
+    localStorage.setItem('shared_data_updated', data.updated_at || new Date().toISOString());
     console.log('[shared_data] Cuentas:', _sharedData.cuentas.length, '| Tarjetas:', _sharedData.tarjetas.length, '| Cats:', data.categorias?.length);
     populateCuentaSels();populateTarjetaSels();populateCatSelects();
   }catch(e){console.warn('[shared_data] Error load:', e.message);}
