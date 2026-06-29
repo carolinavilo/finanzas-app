@@ -5343,7 +5343,7 @@ function renderCuotas(){
     }
   });
 
-  const meses=Object.keys(byMes).sort();
+  const meses=Object.keys(byMes).sort().reverse();
 
   // ── Alertas urgentes (venc ≤ 5d) ──
   const alertas=[];
