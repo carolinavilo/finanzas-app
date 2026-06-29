@@ -378,19 +378,15 @@ input[type=checkbox]{width:auto;margin-right:5px}
   #section-gastos thead, #section-ingresos thead { display:none; }
   #section-gastos .table-scroll, #section-ingresos .table-scroll { overflow-x:hidden; }
   #section-gastos .table-scroll table, #section-ingresos .table-scroll table { display:block; width:100%; }
-
   #gastos-tbody, #ingresos-tbody { display:block; width:100%; }
-  #gastos-tbody tr, #ingresos-tbody tr { display:flex; flex-wrap:wrap; padding:10px 4px; border-bottom:1px solid var(--border); box-sizing:border-box; }
-  #gastos-tbody td, #ingresos-tbody td { display:none; border:none; padding:0; box-sizing:border-box; }
-
-  #gastos-tbody td:nth-child(2) { display:block; order:1; flex:1 1 0; min-width:0; font-size:13px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; align-self:center; }
-  #gastos-tbody td:nth-child(7) { display:flex; order:2; flex:0 0 auto; align-items:center; gap:4px; }
-  #gastos-tbody td:nth-child(1) { display:block; order:3; width:100%; font-size:11px; color:var(--text2); margin-top:2px; }
-  #gastos-tbody td:nth-child(3) { display:block; order:4; width:100%; margin-top:2px; }
-
-  #ingresos-tbody td:nth-child(2) { display:block; order:1; flex:1 1 0; min-width:0; font-size:13px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; align-self:center; }
-  #ingresos-tbody td:nth-child(6) { display:flex; order:2; flex:0 0 auto; align-items:center; gap:4px; }
-  #ingresos-tbody td:nth-child(1) { display:block; order:3; width:100%; font-size:11px; color:var(--text2); margin-top:2px; }
+  #gastos-tbody tr, #ingresos-tbody tr { display:none; }
+  .mob-row { display:flex; flex-wrap:wrap; align-items:center; padding:10px 4px; border-bottom:1px solid var(--border); box-sizing:border-box; width:100%; }
+  .mob-row-desc { flex:1 1 0; min-width:0; font-size:13px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .mob-row-monto { flex:0 0 auto; display:flex; align-items:center; gap:4px; margin-left:8px; }
+  .mob-row-monto span { font-weight:700; font-size:13px; }
+  .mob-row-monto button { background:none; border:none; font-size:16px; cursor:pointer; padding:4px; min-width:28px; min-height:28px; }
+  .mob-row-fecha { width:100%; font-size:11px; color:var(--text2); margin-top:2px; }
+  .mob-row-cat { width:100%; margin-top:2px; }
 }
 /* ── MOBILE GASTOS ENRIQUECIDO ── */
 @media(max-width:768px){
@@ -4674,7 +4670,18 @@ function renderGastos(){
     const fImpacto=g.tarjetaId?calcFechaImpactoGasto(g):g.fecha;
     const impactaBadge=g.tarjetaId&&fImpacto.slice(0,7)!==g.fecha.slice(0,7)
       ?`<div style="font-size:10px;color:var(--accent);margin-top:2px">💳 Impacta: ${mesPretty(fImpacto.slice(0,7))}</div>`:'';
-    return{fecha:g.fecha,html:`<tr>
+    return{fecha:g.fecha,
+      mobHtml:`<div class="mob-row">
+        <div class="mob-row-desc">${esc(g.descripcion)}${impactaBadge}</div>
+        <div class="mob-row-monto">
+          <span>${$$(g.monto)}</span>
+          <button class="btn-editar-gasto" data-id="${esc(g.id)}">✏️</button>
+          <button class="btn-eliminar-gasto" data-id="${esc(g.id)}">🗑️</button>
+        </div>
+        <div class="mob-row-fecha">${ff(g.fecha)}</div>
+        <div class="mob-row-cat"><span class="badge b-purple">${esc(g.categoria)}</span></div>
+      </div>`,
+      html:`<tr>
       <td>${ff(g.fecha)}</td>
       <td><strong>${esc(g.descripcion)}</strong>${impactaBadge}${g.registrado_por&&!ADMIN_EMAILS.includes(g.registrado_por)?`<span style="background:var(--accent-light);color:var(--accent);border-radius:6px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:4px">👤 ${g.registrado_por.split('@')[0]}</span>`:''}</td>
       <td><span class="badge b-purple">${esc(g.categoria)}</span>${g.subcategoria?`<div class="subcat-badge">${esc(g.subcategoria)}</div>`:''}</td>
@@ -4693,7 +4700,18 @@ function renderGastos(){
   const filasCuotas=cuotasMes.map(c=>{
     const tar=c.tarjetaId?S.tarjetas.find(t=>t.id===c.tarjetaId):null;
     const badgePago=labelPagoCuotas(c);
-    return{fecha:c.fecha,html:`<tr style="background:rgba(99,102,241,.04)">
+    return{fecha:c.fecha,
+      mobHtml:`<div class="mob-row" style="background:rgba(99,102,241,.04)">
+        <div class="mob-row-desc">${esc(c.descripcion)}<span style="font-size:10px;color:#818cf8;margin-left:4px">💳 ${c.cuotas}c</span></div>
+        <div class="mob-row-monto">
+          <span>${$$(c.montoTotal)}</span>
+          <button class="btn-editar-gasto" data-cuota-id="${esc(c.id)}">✏️</button>
+          <button class="btn-eliminar-cuota" data-id="${esc(c.id)}">🗑️</button>
+        </div>
+        <div class="mob-row-fecha">${ff(c.fecha)}</div>
+        <div class="mob-row-cat"><span class="badge b-purple">${esc(c.categoria)}</span></div>
+      </div>`,
+      html:`<tr style="background:rgba(99,102,241,.04)">
       <td>${ff(c.fecha)}</td>
       <td><strong>${esc(c.descripcion)}</strong><div style="margin-top:3px"><span style="font-size:10px;background:rgba(99,102,241,.15);color:#818cf8;padding:2px 6px;border-radius:4px;font-weight:600">💳 ${c.cuotas} cuotas · pago ${esc(badgePago)}</span></div></td>
       <td><span class="badge b-purple">${esc(c.categoria)}</span>${c.subcategoria?`<div class="subcat-badge">${esc(c.subcategoria)}</div>`:''}</td>
@@ -4709,6 +4727,13 @@ function renderGastos(){
 
   const todasFilas=[...filasGastos,...filasCuotas].sort((a,b)=>b.fecha.localeCompare(a.fecha));
   tbody.innerHTML=todasFilas.map(f=>f.html).join('');
+  // ── RENDER MÓVIL ──
+  if(window.innerWidth<=600){
+    const mobContainer=tbody.closest('table').parentElement;
+    let mobDiv=mobContainer.querySelector('.mob-lista-gastos');
+    if(!mobDiv){mobDiv=document.createElement('div');mobDiv.className='mob-lista-gastos';mobContainer.appendChild(mobDiv);}
+    mobDiv.innerHTML=todasFilas.map(f=>f.mobHtml||'').join('');
+  }
 }
 
 // ====== TARJETAS ======
