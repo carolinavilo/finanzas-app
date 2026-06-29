@@ -4637,7 +4637,7 @@ function renderGastos(){
     const fa=calcFechaImpactoGasto(a)||a.fecha||'';
     const fb=calcFechaImpactoGasto(b)||b.fecha||'';
     if(fb!==fa)return fb.localeCompare(fa);
-    return (b.creadoEn||'').localeCompare(a.creadoEn||'');
+    return (b.creadoEn||fa).localeCompare(a.creadoEn||fa);
   });
 
   // Compras en cuotas compradas en el mes seleccionado
