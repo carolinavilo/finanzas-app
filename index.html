@@ -2251,10 +2251,21 @@ async function syncGastoUpdate(gasto) {
     .catch(e=>console.warn('Supabase syncUpdate:',e.message));
 }
 
-async function syncGastoDelete(gastoId) {
-  if (userRole !== 'usuario' || !currentUser) return;
-  await sb.from('gastos_sync').delete().eq('id', gastoId).eq('user_id', currentUser.id)
-    .catch(e=>console.warn('Supabase syncDelete:',e.message));
+async function syncGastoDelete(id) {
+  if (!currentUser) return;
+  try {
+    const { error } = await sb.from('gastos_sync').delete().eq('id', id).eq('user_id', currentUser.id);
+    if (error && error.code !== 'PGRST116') console.warn('[syncGastoDelete]', error.message);
+    S.gastos = S.gastos.filter(g => String(g.id) !== String(id));
+    save();
+    renderGastos();
+    refreshDashIfVisible();
+  } catch(e) {
+    console.warn('[syncGastoDelete] excepción:', e.message);
+    S.gastos = S.gastos.filter(g => String(g.id) !== String(id));
+    save();
+    renderGastos();
+  }
 }
 
 // ── ADMIN: ver gastos de todos los usuarios ──
@@ -7239,11 +7250,13 @@ document.addEventListener('click', e => {
       const cuenta = S.cuentas?.find(c => c.id === g.cuentaId);
       if (cuenta) cuenta.saldo = (+cuenta.saldo||0) + (+g.monto||0);
     }
-    S.gastos = S.gastos.filter(g => String(g.id) !== String(id));
-    save();
     if (userRole === 'usuario') {
       syncGastoDelete(id);
-    } else if (userRole === 'admin') {
+    } else {
+      S.gastos = S.gastos.filter(g => String(g.id) !== String(id));
+      save();
+    }
+    if (userRole === 'admin') {
       if (g?.registrado_por && !ADMIN_EMAILS.includes(g.registrado_por)) {
         sb.from('gastos_sync').delete().eq('id', id).then(({error}) => {
           if (error) console.warn('[deleteGastoSync]', error.message);
