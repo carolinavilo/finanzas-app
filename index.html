@@ -1931,11 +1931,26 @@ async function doLogin() {
 async function afterLogin() {
   _afterLoginDone = true;
   // Rol: hardcode por email — sin llamadas a tabla perfiles
-  if (currentUser.email === 'carolina.vilo@hotmail.com' || currentUser.email === 'carolinav.longo@hotmail.com') {
+  if (ADMIN_EMAILS.includes(currentUser.email)) {
     userRole = 'admin';
   } else {
     userRole = 'usuario';
   }
+
+  let adminUserId = null;
+  if (userRole === 'admin') {
+    adminUserId = currentUser.id;
+    localStorage.setItem('admin_user_id', adminUserId);
+  } else {
+    try {
+      const { data } = await sb.from('shared_data').select('admin_user_id').eq('id','main').single();
+      if (data?.admin_user_id) {
+        adminUserId = data.admin_user_id;
+        localStorage.setItem('admin_user_id', adminUserId);
+      }
+    } catch(e) {}
+  }
+
   // Nombre: solo user_metadata, sin Supabase
   const _nRaw = currentUser?.user_metadata?.full_name?.split(' ')[0] || currentUser.email?.split('@')[0].split('.')[0] || 'Usuario';
   currentNombre = _nRaw.charAt(0).toUpperCase() + _nRaw.slice(1);
@@ -1984,6 +1999,16 @@ async function afterLogin() {
     startApp();
     setTimeout(()=>_syncSharedData(), 1500);
     setTimeout(loadCristianGastos, 800);
+    if (_adminPollInterval) clearInterval(_adminPollInterval);
+    _adminPollInterval = setInterval(async () => {
+      if (userRole !== 'admin') { clearInterval(_adminPollInterval); _adminPollInterval = null; return; }
+      const antes = S.gastos.length;
+      await loadCristianGastos();
+      if (S.gastos.length !== antes) {
+        refreshDashIfVisible();
+        showToast('🔄 Nuevo gasto registrado por usuario');
+      }
+    }, 30000);
     // Mostrar FAB IA y secciones de API key (solo admin)
     const aiFab = document.getElementById('ai-fab');
     if (aiFab) aiFab.style.display = 'flex';
@@ -2121,7 +2146,8 @@ function enhanceMobileGastos() {
 
 async function doLogout() {
   if (!confirm('¿Cerrar sesión?')) return;
-  stopSharedDataPolling();
+  if (_adminPollInterval) { clearInterval(_adminPollInterval); _adminPollInterval = null; }
+  if (_sharedDataInterval) { clearInterval(_sharedDataInterval); _sharedDataInterval = null; }
   await sb.auth.signOut();
   location.reload();
 }
@@ -2148,8 +2174,11 @@ async function loadGastosFromSupabase() {
 
 async function syncGastoAdd(gasto) {
   if (userRole !== 'usuario' || !currentUser) return;
+  const _adminUid = localStorage.getItem('admin_user_id') || null;
   await sb.from('gastos_sync').upsert({
     id: gasto.id, user_id: currentUser.id,
+    admin_user_id: _adminUid,
+    registrado_por: currentUser.email,
     fecha: gasto.fecha, descripcion: gasto.descripcion,
     monto: gasto.monto, categoria: gasto.categoria,
     moneda: gasto.moneda || 'ARS', notas: gasto.notas || '',
@@ -2160,7 +2189,10 @@ async function syncGastoAdd(gasto) {
 
 async function syncGastoUpdate(gasto) {
   if (userRole !== 'usuario' || !currentUser) return;
+  const _adminUid = localStorage.getItem('admin_user_id') || null;
   await sb.from('gastos_sync').update({
+    admin_user_id: _adminUid,
+    registrado_por: currentUser.email,
     fecha: gasto.fecha, descripcion: gasto.descripcion,
     monto: gasto.monto, categoria: gasto.categoria,
     notas: gasto.notas || '', recurrente: gasto.recurrente || false,
@@ -2177,35 +2209,45 @@ async function syncGastoDelete(gastoId) {
 
 // ── ADMIN: ver gastos de todos los usuarios ──
 async function loadCristianGastos() {
-  if (userRole !== 'admin') return;
-  const panel = document.getElementById('admin-gastos-panel');
-  if (!panel) return;
-  panel.innerHTML = '<p style="color:var(--text2);font-size:12px">Cargando...</p>';
+  if (userRole !== 'admin' || !currentUser) return;
 
   const { data, error } = await sb.from('gastos_sync')
     .select('*')
+    .eq('admin_user_id', currentUser.id)
+    .neq('user_id', currentUser.id)
     .order('fecha', { ascending: false });
 
+  if (!error && data?.length) {
+    const idsExistentes = new Set(S.gastos.map(g => g.id));
+    const nuevos = data.filter(g => !idsExistentes.has(g.id));
+    if (nuevos.length) {
+      S.gastos = [...S.gastos, ...nuevos];
+      renderGastos();
+      refreshDashIfVisible();
+    }
+  }
+
+  // Actualizar panel admin si existe
+  const panel = document.getElementById('admin-gastos-panel');
+  if (!panel) return;
   if (error || !data || !data.length) {
     panel.innerHTML = '<p style="color:var(--text2);font-size:12px">Sin gastos registrados por usuarios.</p>';
     return;
   }
 
-  // Agrupar por usuario
   const byUser = {};
   data.forEach(g => {
     const uid = g.user_id;
-    if (!byUser[uid]) byUser[uid] = { email: g.user_id, nombre: null, gastos: [] };
+    if (!byUser[uid]) byUser[uid] = { email: g.registrado_por || g.user_id, gastos: [] };
     byUser[uid].gastos.push(g);
   });
 
   let html = '';
   Object.values(byUser).forEach(u => {
     const total = u.gastos.reduce((acc, g) => acc + Number(g.monto), 0);
-    const displayName = u.nombre || u.email || 'Usuario';
     html += `<div style="margin-bottom:20px">
       <div style="font-size:13px;font-weight:600;margin-bottom:8px;display:flex;align-items:center;gap:8px">
-        <span>👤 ${esc(displayName)}</span>
+        <span>👤 ${esc(u.email)}</span>
         <span class="badge" style="background:var(--accent-light);color:var(--accent)">${u.gastos.length} gastos</span>
         <span class="badge" style="background:rgba(248,113,113,.1);color:var(--accent4)">${$$(total)}</span>
       </div>
@@ -2222,6 +2264,9 @@ async function loadCristianGastos() {
   });
   panel.innerHTML = html;
 }
+
+const ADMIN_EMAILS=['carolina.vilo@hotmail.com','carolinav.longo@hotmail.com'];
+const getAdminEmail=()=>ADMIN_EMAILS[0];
 
 // ====== STATE ======
 const DEFAULT_CATS_GASTO=['Comida','Transporte','Entretenimiento','Salud','Ropa','Hogar','Educación','Servicios','Supermercado','Otros','Ajuste de saldo'];
@@ -2355,7 +2400,7 @@ async function _syncSharedData(){
     }
     const catsPersonalizadas=typeof getCatsGasto==='function'?getCatsGasto():[];
     const {error}=await sb.from('shared_data').upsert(
-      {id:'main',cuentas:S.cuentas||[],tarjetas:S.tarjetas||[],subcats:subcatsObj,categorias:catsPersonalizadas,updated_at:new Date().toISOString()},
+      {id:'main',admin_user_id:currentUser.id,cuentas:S.cuentas||[],tarjetas:S.tarjetas||[],subcats:subcatsObj,categorias:catsPersonalizadas,updated_at:new Date().toISOString()},
       {onConflict:'id'}
     );
     if(error)console.warn('[shared_data] Error sync:', error.message);
@@ -2366,6 +2411,7 @@ async function _syncSharedData(){
 let _sharedData = null;
 let _sharedDataLastUpdated = null;
 let _sharedDataInterval = null;
+let _adminPollInterval = null;
 
 async function loadSharedData(){
   if(!currentUser)return;
