@@ -380,18 +380,17 @@ input[type=checkbox]{width:auto;margin-right:5px}
   #section-gastos .table-scroll table, #section-ingresos .table-scroll table { display:block; width:100%; }
 
   #gastos-tbody, #ingresos-tbody { display:block; width:100%; }
-  #gastos-tbody tr { display:block; position:relative; padding:10px 110px 10px 4px; border-bottom:1px solid var(--border); min-height:52px; }
-  #gastos-tbody td { display:none; border:none; padding:0; }
+  #gastos-tbody tr, #ingresos-tbody tr { display:block; overflow:hidden; border-bottom:1px solid var(--border); padding:8px 4px; }
+  #gastos-tbody td, #ingresos-tbody td { display:none; border:none; padding:0; }
+
+  #gastos-tbody td:nth-child(7) { display:flex; float:right; align-items:center; gap:4px; margin-left:8px; }
   #gastos-tbody td:nth-child(2) { display:block; font-size:13px; font-weight:600; margin-bottom:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   #gastos-tbody td:nth-child(1) { display:block; font-size:11px; color:var(--text2); margin-bottom:2px; }
   #gastos-tbody td:nth-child(3) { display:block; }
-  #gastos-tbody td:nth-child(7) { display:flex; align-items:center; gap:4px; position:absolute; right:4px; top:50%; transform:translateY(-50%); }
 
-  #ingresos-tbody tr { display:block; position:relative; padding:10px 90px 10px 4px; border-bottom:1px solid var(--border); min-height:44px; }
-  #ingresos-tbody td { display:none; border:none; padding:0; }
+  #ingresos-tbody td:nth-child(6) { display:flex; float:right; align-items:center; gap:4px; margin-left:8px; }
   #ingresos-tbody td:nth-child(2) { display:block; font-size:13px; font-weight:600; margin-bottom:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   #ingresos-tbody td:nth-child(1) { display:block; font-size:11px; color:var(--text2); }
-  #ingresos-tbody td:nth-child(6) { display:flex; align-items:center; gap:4px; position:absolute; right:4px; top:50%; transform:translateY(-50%); }
 }
 /* ── MOBILE GASTOS ENRIQUECIDO ── */
 @media(max-width:768px){
