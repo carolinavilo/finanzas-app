@@ -2060,6 +2060,13 @@ async function afterLogin() {
     populateCatSelects();
     populateCuentaSels();
     populateTarjetaSels();
+    // Ocultar grilla mobile y mostrar select normal igual que admin
+    const grid = document.getElementById('mob-cat-grid');
+    if (grid) grid.style.display = 'none';
+    const gCat = document.getElementById('g-cat');
+    if (gCat) { gCat.classList.remove('mob-hide'); gCat.style.display = ''; }
+    const gCatLabel = gCat?.previousElementSibling;
+    if (gCatLabel) { gCatLabel.classList.remove('mob-hide'); gCatLabel.style.display = ''; }
 
     // 5. Setear fechas
     const gfecha = document.getElementById('g-fecha');
@@ -2081,16 +2088,6 @@ async function afterLogin() {
       populateCatSelects();
       populateCuentaSels();
       populateTarjetaSels();
-
-      if (isMobile) {
-        enhanceMobileGastos();
-        setTimeout(() => {
-          const sharedCats2 = (()=>{try{return JSON.parse(localStorage.getItem('shared_categorias')||'[]');}catch(e){return[];}})();
-          const catsBase2 = Object.entries(CAT_ICONS);
-          const catsAdmin2 = sharedCats2.filter(c=>!Object.keys(CAT_ICONS).some(k=>k.toUpperCase()===c.toUpperCase())).map(c=>[c,getIconForCat(c)]);
-          renderMobCatGrid([...catsBase2,...catsAdmin2]);
-        }, 200);
-      }
     }, 1500);
 
     // 7. Polling para detectar cambios del admin en tiempo real
@@ -2505,11 +2502,13 @@ async function loadSharedData(){
     populateCuentaSels();populateTarjetaSels();populateCatSelects();
     seedSubcats();
     if(typeof onGastoCatChange==='function')onGastoCatChange();
-    if(typeof renderMobCatGrid==='function'){
-      const _sc=(()=>{try{return JSON.parse(localStorage.getItem('shared_categorias')||'[]');}catch(e){return[];}})();
-      const _cb=Object.entries(CAT_ICONS);
-      const _ca=_sc.filter(c=>!Object.keys(CAT_ICONS).some(k=>k.toUpperCase()===c.toUpperCase())).map(c=>[c,getIconForCat(c)]);
-      renderMobCatGrid([..._cb,..._ca]);
+    if(userRole==='usuario'){
+      const _grid=document.getElementById('mob-cat-grid');
+      if(_grid)_grid.style.display='none';
+      const _gCat=document.getElementById('g-cat');
+      if(_gCat){_gCat.classList.remove('mob-hide');_gCat.style.display='';}
+      const _label=_gCat?.previousElementSibling;
+      if(_label){_label.classList.remove('mob-hide');_label.style.display='';}
     }
   }catch(e){console.warn('[shared_data] Error load:', e.message);}
 }
