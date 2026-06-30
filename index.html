@@ -5570,7 +5570,6 @@ function renderTarjetas(){
           <button class="btn btn-primary btn-sm" style="margin-top:8px;width:100%" onclick="agregarCargo('${esc(t.id)}')">+ Agregar cargo</button>
         </div>
       </div>
-    </div>
     ${(()=>{
       const _mesActual=today().slice(0,7);
       const _res=(S.resumenTarjetas||[]).find(r=>r.tarjetaId===t.id&&r.mes===_mesActual);
@@ -5602,7 +5601,8 @@ function renderTarjetas(){
         </button>
       </div>`;
     })()}
-    </div></div>`;
+    </div>
+    </div>`;
   }).join('');
   _initSort('tarjetas-list','data-tid','tarjetasOrder');
 }
