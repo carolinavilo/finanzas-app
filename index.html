@@ -487,7 +487,7 @@ input[type=checkbox]{width:auto;margin-right:5px}
     </div>
     <div class="login-field">
       <label>Contraseña</label>
-      <input type="password" id="login-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"/>
+      <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"/>
     </div>
     <button class="login-btn" id="login-btn" onclick="doLogin()">Entrar</button>
     <div class="login-error" id="login-error"></div>
@@ -503,11 +503,11 @@ input[type=checkbox]{width:auto;margin-right:5px}
     <div class="login-sub">Elegí tu contraseña para ingresar a la app</div>
     <div class="login-field">
       <label>Nueva contraseña</label>
-      <input type="password" id="new-pass" placeholder="Mínimo 6 caracteres" onkeydown="if(event.key==='Enter')document.getElementById('new-pass2').focus()"/>
+      <input type="password" id="new-pass" placeholder="Mínimo 6 caracteres" autocomplete="new-password" onkeydown="if(event.key==='Enter')document.getElementById('new-pass2').focus()"/>
     </div>
     <div class="login-field">
       <label>Repetir contraseña</label>
-      <input type="password" id="new-pass2" placeholder="Repetí la contraseña" onkeydown="if(event.key==='Enter')doSetPassword()"/>
+      <input type="password" id="new-pass2" placeholder="Repetí la contraseña" autocomplete="new-password" onkeydown="if(event.key==='Enter')doSetPassword()"/>
     </div>
     <button class="login-btn" id="set-pass-btn" onclick="doSetPassword()">Guardar contraseña</button>
     <div class="login-error" id="set-pass-error"></div>
@@ -1401,11 +1401,11 @@ input[type=checkbox]{width:auto;margin-right:5px}
     <div class="modal-body">
       <div class="form-group">
         <label>Nueva contraseña</label>
-        <input type="password" id="cp-nueva" placeholder="Mínimo 6 caracteres" onkeydown="if(event.key==='Enter')document.getElementById('cp-repetir').focus()"/>
+        <input type="password" id="cp-nueva" placeholder="Mínimo 6 caracteres" autocomplete="new-password" onkeydown="if(event.key==='Enter')document.getElementById('cp-repetir').focus()"/>
       </div>
       <div class="form-group">
         <label>Repetir contraseña</label>
-        <input type="password" id="cp-repetir" placeholder="Repetí la contraseña" onkeydown="if(event.key==='Enter')doChangePasword()"/>
+        <input type="password" id="cp-repetir" placeholder="Repetí la contraseña" autocomplete="new-password" onkeydown="if(event.key==='Enter')doChangePasword()"/>
       </div>
       <p id="cp-error" style="color:var(--accent4);font-size:13px;margin-top:4px"></p>
     </div>
