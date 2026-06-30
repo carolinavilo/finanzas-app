@@ -2992,7 +2992,7 @@ function renderMovimientos(){
         ${m.tipo_mov==='ingreso'?'+':'−'}${$$(m.monto)}
       </div>
       <div style="font-size:11px;color:var(--text2);grid-column:1;grid-row:2">
-        ${ff(m.fecha)} · <span class="badge ${m.tipo_mov==='ingreso'?'b-green':m.tipo_mov==='cuota'?'b-blue':'b-purple'}" style="font-size:10px">${m.tipo_mov==='cuota'?'💳 Cuotas':esc(m.categoria)}</span>
+        ${ff(m.fecha)} · <span class="badge ${m.tipo_mov==='ingreso'?'b-green':m.tipo_mov==='cuota'?'b-blue':'b-purple'}" style="font-size:10px">${m.tipo_mov==='cuota'?'💳 Cuotas':esc(m.categoria)}</span>${m.subcategoria?` · <span style="font-size:10px;color:var(--text2)">${esc(m.subcategoria)}</span>`:''}
       </div>
       <div style="grid-column:2;grid-row:2;text-align:right;white-space:nowrap">
         <button class="btn btn-ghost btn-xs mov-edit-btn" data-id="${esc(m.id)}" data-tipo="${m.tipo_mov}">✏️</button>
