@@ -7682,7 +7682,6 @@ document.addEventListener('click',(e)=>{
 });
 
 function startApp(){
-  limpiarSubcatsViejas();
   seedSubcats();
   const now=new Date();
   document.getElementById('fecha-sb').textContent=now.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});
