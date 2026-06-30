@@ -8124,6 +8124,7 @@ function renderImportResults(data) {
         </div>
         <select class="ai-import-cat" id="aicat-${panelId}-g-${i}" onchange="aiUpdateSubcat('${panelId}','g','${i}')">${catOpts(g.categoria_sugerida)}</select>
         <select class="ai-import-cat" id="aisubcat-${panelId}-g-${i}" style="font-size:10px;display:none"><option value="">Sin subcategoría</option></select>
+        <input type="text" class="ai-import-cat" id="ainota-${panelId}-g-${i}" placeholder="📝 Nota (opcional)" style="font-size:11px;margin-top:4px"/>
       </div>`;
     });
     html += '</div>';
@@ -8148,6 +8149,7 @@ function renderImportResults(data) {
         </div>
         <select class="ai-import-cat" id="aicat-${panelId}-c-${i}" onchange="aiUpdateSubcat('${panelId}','c','${i}')">${catOpts(c.categoria_sugerida||'')}</select>
         <select class="ai-import-cat" id="aisubcat-${panelId}-c-${i}" style="font-size:10px;display:none"><option value="">Sin subcategoría</option></select>
+        <input type="text" class="ai-import-cat" id="ainota-${panelId}-c-${i}" placeholder="📝 Nota (opcional)" style="font-size:11px;margin-top:4px"/>
       </div>`;
     });
     html += '</div>';
@@ -8220,8 +8222,9 @@ function importarSeleccionados(panelId, btn) {
       const tipo = tipoMap[medioPago] || 'efectivo';
       const tarjetaId = tipo === 'tarjeta' ? (document.getElementById(`aitarjeta-${panelId}-g-${i}`)?.value || S.tarjetas[0]?.id || null) : null;
       const subcat = document.getElementById(`aisubcat-${panelId}-g-${i}`)?.value||'';
+      const nota = document.getElementById(`ainota-${panelId}-g-${i}`)?.value?.trim()||'';
       S.gastos.push({ id: uid(), fecha: g.fecha || today(), descripcion: desc,
-        categoria: cat, subcategoria: subcat, monto, tipo, tarjetaId, notas: '', recurrente: false });
+        categoria: cat, subcategoria: subcat, monto, tipo, tarjetaId, notas: nota, recurrente: false });
       nGastos++;
     });
 
@@ -8232,12 +8235,13 @@ function importarSeleccionados(panelId, btn) {
       const desc = document.getElementById(`aidesc-${panelId}-c-${i}`)?.value?.trim() || c.descripcion;
       const catC = document.getElementById(`aicat-${panelId}-c-${i}`)?.value || c.categoria_sugerida || getCatsGasto()[0] || 'Otros';
       const subcatC = document.getElementById(`aisubcat-${panelId}-c-${i}`)?.value||'';
+      const notaC = document.getElementById(`ainota-${panelId}-c-${i}`)?.value?.trim()||'';
       const montoTotal = c.monto_total || (c.monto_cuota * c.total_cuotas);
       S.comprasCuotas.push({ id: uid(), tarjetaId: null, fecha: c.fecha || today(),
         descripcion: desc, categoria: catC, subcategoria: subcatC,
         montoTotal, cuotas: c.total_cuotas, montoCuota: c.monto_cuota,
         cuotasPagadas: Math.max(0, (c.cuota_actual || 1) - 1),
-        fechaPrimerPago: c.fecha || today(), notas: '' });
+        fechaPrimerPago: c.fecha || today(), notas: notaC });
       nCuotas++;
     });
 
