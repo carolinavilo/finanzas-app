@@ -563,6 +563,23 @@ input[type=checkbox]{width:auto;margin-right:5px}
   </div>
 </div>
 
+<div class="modal-overlay" id="modal-conciliar">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-header"><h3 id="modal-conciliar-titulo">Conciliar cuenta</h3><button class="modal-close" onclick="closeModal('modal-conciliar')">×</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="conc-cuenta-id">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:4px">Saldo calculado por la app</div>
+      <div id="conc-saldo-app" style="font-size:20px;font-weight:800;margin-bottom:14px"></div>
+      <div class="form-group"><label>Saldo real (según tu banco)</label><input type="number" id="conc-saldo-real" inputmode="decimal" placeholder="0" oninput="actualizarDiferenciaConciliacion()"/></div>
+      <div id="conc-diferencia-box" style="display:none;margin-top:10px;padding:10px 12px;border-radius:8px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-neutral" onclick="closeModal('modal-conciliar')">Cancelar</button>
+      <button class="btn btn-primary" id="conc-btn-confirmar" onclick="confirmarConciliacion()" disabled>Crear ajuste por la diferencia</button>
+    </div>
+  </div>
+</div>
+
 <div id="sidebar">
   <div class="logo">
     <div style="display:flex;align-items:center;gap:10px">
@@ -3900,7 +3917,7 @@ function renderCuentas(){
       <div style="font-size:24px;font-weight:900;margin:10px 0;color:${saldo<0?'var(--accent4)':'var(--text)'}">${saldoFmt}</div>
       ${c.notas?`<div style="font-size:11px;color:var(--text2);margin-bottom:8px">${esc(c.notas)}</div>`:''}
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
-        <button class="btn btn-ghost btn-xs" onclick="editarSaldoCuenta('${c.id}')">💰 Ajustar saldo</button>
+        <button class="btn btn-ghost btn-xs" onclick="abrirConciliacion('${c.id}')">⚖️ Conciliar</button>
         <button class="btn btn-ghost btn-xs" onclick="editCuenta('${c.id}')">✏️ Editar</button>
         <button class="btn btn-danger btn-xs" onclick="eliminarCuenta('${c.id}')">✕</button>
       </div>
@@ -4012,6 +4029,60 @@ function editarSaldoCuenta(id){
   const n=parseFloat(nuevo);
   if(isNaN(n))return alert('Ingresá un número válido');
   c.saldo=n;save();renderCuentas();showToast('✅ Saldo actualizado');
+}
+
+let _concCuentaId=null;
+function abrirConciliacion(id){
+  const c=S.cuentas.find(c=>c.id===id);if(!c)return;
+  _concCuentaId=id;
+  document.getElementById('modal-conciliar-titulo').textContent='Conciliar — '+c.nombre;
+  document.getElementById('conc-cuenta-id').value=id;
+  document.getElementById('conc-saldo-app').textContent=c.moneda==='USD'?`U$S ${(+c.saldo||0).toLocaleString('es-AR',{minimumFractionDigits:2})}`:$$(c.saldo||0);
+  document.getElementById('conc-saldo-real').value='';
+  document.getElementById('conc-diferencia-box').style.display='none';
+  document.getElementById('conc-btn-confirmar').disabled=true;
+  openModal('modal-conciliar');
+  setTimeout(()=>document.getElementById('conc-saldo-real').focus(),100);
+}
+function actualizarDiferenciaConciliacion(){
+  const c=S.cuentas.find(c=>c.id===_concCuentaId);if(!c)return;
+  const real=document.getElementById('conc-saldo-real').value;
+  const box=document.getElementById('conc-diferencia-box');
+  const btn=document.getElementById('conc-btn-confirmar');
+  if(real===''){box.style.display='none';btn.disabled=true;return;}
+  const realNum=parseFloat(real)||0;
+  const calculado=+c.saldo||0;
+  const dif=realNum-calculado;
+  box.style.display='flex';
+  box.style.justifyContent='space-between';
+  box.style.alignItems='center';
+  if(Math.abs(dif)<0.01){
+    box.style.background='var(--accent-light)';
+    box.innerHTML='<span style="font-size:12px;color:var(--accent2)">✅ Los saldos coinciden, no hace falta ajustar</span>';
+    btn.disabled=true;
+  } else {
+    box.style.background='rgba(248,113,113,.1)';
+    const fmtDif=c.moneda==='USD'?`U$S ${Math.abs(dif).toLocaleString('es-AR',{minimumFractionDigits:2})}`:$$(Math.abs(dif));
+    box.innerHTML=`<span style="font-size:12px;color:var(--accent4)">Diferencia detectada</span><span style="font-size:14px;font-weight:800;color:var(--accent4)">${dif<0?'−':'+'}${fmtDif}</span>`;
+    btn.disabled=false;
+  }
+}
+function confirmarConciliacion(){
+  const c=S.cuentas.find(c=>c.id===_concCuentaId);if(!c)return;
+  const realNum=parseFloat(document.getElementById('conc-saldo-real').value)||0;
+  const calculado=+c.saldo||0;
+  const dif=realNum-calculado;
+  if(Math.abs(dif)<0.01)return;
+  if(dif>0){
+    S.ingresos.push({id:uid(),fecha:today(),descripcion:'Ajuste de conciliación',categoria:'Ajuste',monto:dif,cuentaId:c.id,recurrente:false,notas:'Conciliación de cuenta'});
+  } else {
+    S.gastos.push({id:uid(),fecha:today(),descripcion:'Ajuste de conciliación',categoria:'Ajuste',subcategoria:'',monto:Math.abs(dif),tipo:'efectivo',tarjetaId:null,cuentaId:c.id,notas:'Conciliación de cuenta',recurrente:false,creadoEn:new Date().toISOString()});
+  }
+  c.saldo=realNum;
+  save();
+  closeModal('modal-conciliar');
+  renderCuentas();renderIngresos();renderGastos();refreshDashIfVisible();
+  showToast('✅ Cuenta conciliada');
 }
 
 function openTransferencia(){
