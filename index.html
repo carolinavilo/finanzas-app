@@ -2289,10 +2289,12 @@ async function syncGastoAdd(gasto) {
       user_id: currentUser.id,
       admin_user_id: _adminUid,
       registrado_por: currentUser.email,
+      registrado_por_nombre: currentNombre || currentUser.email.split('@')[0],
       fecha: gasto.fecha,
       descripcion: gasto.descripcion,
       monto: gasto.monto,
       categoria: gasto.categoria,
+      subcategoria: gasto.subcategoria || '',
       moneda: gasto.moneda || 'ARS',
       notas: gasto.notas || '',
       recurrente: gasto.recurrente || false,
@@ -2319,6 +2321,7 @@ async function syncGastoUpdate(gasto) {
     registrado_por: currentUser.email,
     fecha: gasto.fecha, descripcion: gasto.descripcion,
     monto: gasto.monto, categoria: gasto.categoria,
+    subcategoria: gasto.subcategoria || '',
     notas: gasto.notas || '', recurrente: gasto.recurrente || false,
     tipo: gasto.tipo || 'efectivo', updated_at: new Date().toISOString()
   }).eq('id', gasto.id).eq('user_id', currentUser.id)
@@ -4936,7 +4939,7 @@ function renderGastos(){
       const tar=g.tarjetaId?S.tarjetas.find(t=>t.id===g.tarjetaId):null;
       filas.push({fecha:g.fecha,html:`<tr>
         <td>${ff(g.fecha)}</td>
-        <td><strong>${esc(g.descripcion)}</strong>${g.registrado_por&&!ADMIN_EMAILS.includes(g.registrado_por)?`<span style="background:var(--accent-light);color:var(--accent);border-radius:6px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:4px">👤 ${g.registrado_por.split('@')[0]}</span>`:''}</td>
+        <td><strong>${esc(g.descripcion)}</strong>${g.registrado_por&&!ADMIN_EMAILS.includes(g.registrado_por)?`<span style="background:var(--accent-light);color:var(--accent);border-radius:6px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:4px">👤 ${(g.registrado_por_nombre||g.registrado_por.split('@')[0])}</span>`:''}</td>
         <td><span class="badge b-purple">${esc(g.categoria)}</span>${g.subcategoria?`<div class="subcat-badge">${esc(g.subcategoria)}</div>`:''}</td>
         <td><span class="badge b-gray">${esc(tLabel[g.tipo]||g.tipo)}${tar?` · ${esc(tar.nombre)}`:''}</span></td>
         <td><span class="nota-preview">${esc(g.notas)||'—'}</span></td>
@@ -5017,7 +5020,7 @@ function renderGastos(){
       ?`<div style="font-size:10px;color:var(--accent);margin-top:2px">💳 Impacta: ${mesPretty(fImpacto.slice(0,7))}</div>`:'';
     return{fecha:g.fecha,
       mobHtml:`<div class="mob-row">
-        <div class="mob-row-desc">${esc(g.descripcion)}${impactaBadge}${g.registrado_por&&!ADMIN_EMAILS.includes(g.registrado_por)?`<span style="background:var(--accent-light);color:var(--accent);border-radius:6px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:4px">👤 ${g.registrado_por.split('@')[0]}</span>`:''}</div>
+        <div class="mob-row-desc">${esc(g.descripcion)}${impactaBadge}${g.registrado_por&&!ADMIN_EMAILS.includes(g.registrado_por)?`<span style="background:var(--accent-light);color:var(--accent);border-radius:6px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:4px">👤 ${(g.registrado_por_nombre||g.registrado_por.split('@')[0])}</span>`:''}</div>
         <div class="mob-row-monto">
           <span>${$$(g.monto)}</span>
           <button class="btn-editar-gasto" data-id="${esc(g.id)}">✏️</button>
@@ -5028,7 +5031,7 @@ function renderGastos(){
       </div>`,
       html:`<tr>
       <td>${ff(g.fecha)}</td>
-      <td><strong>${esc(g.descripcion)}</strong>${impactaBadge}${g.registrado_por&&!ADMIN_EMAILS.includes(g.registrado_por)?`<span style="background:var(--accent-light);color:var(--accent);border-radius:6px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:4px">👤 ${g.registrado_por.split('@')[0]}</span>`:''}</td>
+      <td><strong>${esc(g.descripcion)}</strong>${impactaBadge}${g.registrado_por&&!ADMIN_EMAILS.includes(g.registrado_por)?`<span style="background:var(--accent-light);color:var(--accent);border-radius:6px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:4px">👤 ${(g.registrado_por_nombre||g.registrado_por.split('@')[0])}</span>`:''}</td>
       <td><span class="badge b-purple">${esc(g.categoria)}</span>${g.subcategoria?`<div class="subcat-badge">${esc(g.subcategoria)}</div>`:''}</td>
       <td><span class="badge b-gray">${esc(tLabel[g.tipo]||g.tipo)}${tar?` · ${esc(tar.nombre)}`:''}</span></td>
       <td><span class="nota-preview">${esc(g.notas)||'—'}</span></td>
@@ -6755,7 +6758,7 @@ function renderDashboard(){
       m.billetera?`🏦 ${m.billetera}`:'';
     return`<div onclick="${m.tipo_mov==='ingreso'?"navMob('ingresos')":"navMob('gastos')"}" style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(128,128,128,.07);cursor:pointer">
       <div>
-        <div style="font-size:13px;font-weight:500">${m.descripcion}${m.registrado_por&&!ADMIN_EMAILS.includes(m.registrado_por)?`<span style="background:var(--accent-light);color:var(--accent);border-radius:6px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:4px">👤 ${m.registrado_por.split('@')[0]}</span>`:''}</div>
+        <div style="font-size:13px;font-weight:500">${m.descripcion}${m.registrado_por&&!ADMIN_EMAILS.includes(m.registrado_por)?`<span style="background:var(--accent-light);color:var(--accent);border-radius:6px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:4px">👤 ${(m.registrado_por_nombre||m.registrado_por.split('@')[0])}</span>`:''}</div>
         <div style="font-size:11px;color:var(--text2)">${ff(m.fecha)} · ${m.categoria}${medioLabel?`<span style="margin-left:4px">· ${medioLabel}</span>`:''}</div>
       </div>
       <div style="font-weight:700;color:${m.tipo_mov==='ingreso'?'var(--accent2)':'var(--text)'}">${m.tipo_mov==='ingreso'?'+':'−'}${$$(m.monto)}</div>
