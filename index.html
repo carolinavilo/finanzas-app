@@ -2625,8 +2625,14 @@ async function loadSharedData(){
       tarjetas: data.tarjetas||[]
     };
     if(data.subcats){
+      // Siempre sobreescribir subcats con lo que viene de Supabase
+      // Primero limpiar las subcats existentes del localStorage
+      const keysToRemove=[];
+      for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith('subcats_'))keysToRemove.push(k);}
+      keysToRemove.forEach(k=>localStorage.removeItem(k));
+      // Luego guardar las del admin
       Object.entries(data.subcats).forEach(([k,v])=>{
-        localStorage.setItem('subcats_'+k,JSON.stringify(v));
+        localStorage.setItem('subcats_'+k.toUpperCase(),JSON.stringify(v));
       });
     }
     if(data.categorias?.length){
