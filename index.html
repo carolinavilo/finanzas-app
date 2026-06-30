@@ -924,7 +924,7 @@ input[type=checkbox]{width:auto;margin-right:5px}
         </div>
         <div class="form-group">
           <label>Monto total de la compra (ARS)</label>
-          <input type="number" id="g-monto-tarjeta" inputmode="decimal" placeholder="0" style="font-size:16px;padding:12px" oninput="document.getElementById('g-monto').value=this.value;updateGastoCuotasPreview()"/>
+          <input type="text" id="g-monto-tarjeta" inputmode="decimal" placeholder="0" style="font-size:16px;padding:12px" oninput="document.getElementById('g-monto').value=this.value.replace(/\./g,'').replace(',','.').replace(/[^0-9.]/g,'');updateGastoCuotasPreview()"/>
         </div>
         <div class="form-group">
           <label>Cantidad de cuotas</label>
