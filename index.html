@@ -5118,7 +5118,7 @@ function renderGastos(){
       <td>${ff(c.fecha)}</td>
       <td><strong>${esc(c.descripcion)}</strong><div style="margin-top:3px"><span style="font-size:10px;background:rgba(99,102,241,.15);color:#818cf8;padding:2px 6px;border-radius:4px;font-weight:600">💳 ${c.cuotas} cuotas · pago ${esc(badgePago)}</span></div></td>
       <td><span class="badge b-purple">${esc(c.categoria)}</span>${c.subcategoria?`<div class="subcat-badge">${esc(c.subcategoria)}</div>`:''}</td>
-      <td><span class="badge b-blue">💳 Cuotas${tar?` · ${esc(tar.nombre)}`:''}</span></td>
+      <td><span class="badge b-blue">💳 Cuotas</span>${tar?`<div style="font-size:10px;color:var(--text2);margin-top:2px;white-space:nowrap">${esc(tar.nombre)}</div>`:''}</td>
       <td><span class="nota-preview">${esc(c.notas)||'—'}</span></td>
       <td>—</td>
       <td style="text-align:right;font-weight:700">${$$(c.montoTotal)}</td>
