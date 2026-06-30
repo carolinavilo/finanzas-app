@@ -2610,6 +2610,7 @@ async function _syncSharedData(){
 }
 
 let _sharedData = null;
+let _subcatsEnMemoria = {};
 let _sharedDataLastUpdated = null;
 let _sharedDataInterval = null;
 let _adminPollInterval = null;
@@ -2625,15 +2626,17 @@ async function loadSharedData(){
       tarjetas: data.tarjetas||[]
     };
     if(data.subcats){
-      // Siempre sobreescribir subcats con lo que viene de Supabase
-      // Primero limpiar las subcats existentes del localStorage
+      // Guardar en memoria Y en localStorage
+      _subcatsEnMemoria={};
       const keysToRemove=[];
       for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith('subcats_'))keysToRemove.push(k);}
       keysToRemove.forEach(k=>localStorage.removeItem(k));
-      // Luego guardar las del admin
       Object.entries(data.subcats).forEach(([k,v])=>{
-        localStorage.setItem('subcats_'+k.toUpperCase(),JSON.stringify(v));
+        const key=k.toUpperCase();
+        _subcatsEnMemoria[key]=v;
+        localStorage.setItem('subcats_'+key,JSON.stringify(v));
       });
+      console.log('[subcats] Cargadas en memoria:', Object.keys(_subcatsEnMemoria).length, 'categorías');
     }
     if(data.categorias?.length){
       localStorage.setItem('shared_categorias',JSON.stringify(data.categorias));
@@ -4305,7 +4308,11 @@ function confirmEditCat(tipo,idx,oldName){
 // ── Subcategorías ──
 function getSubcats(cat){
   if(!cat)return[];
-  try{return JSON.parse(localStorage.getItem('subcats_'+cat.toUpperCase()))||[];}catch(e){return[];}
+  const key=cat.toUpperCase();
+  // Primero intentar de memoria (más confiable en móvil)
+  if(_subcatsEnMemoria&&_subcatsEnMemoria[key]&&_subcatsEnMemoria[key].length)return _subcatsEnMemoria[key];
+  // Fallback a localStorage
+  try{return JSON.parse(localStorage.getItem('subcats_'+key))||[];}catch(e){return[];}
 }
 function setSubcats(cat,arr){
   localStorage.setItem('subcats_'+cat.toUpperCase(),JSON.stringify(arr));
