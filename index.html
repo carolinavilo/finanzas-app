@@ -5128,7 +5128,7 @@ function renderGastos(){
       </td></tr>`};
   });
 
-  const todasFilas=[...filasGastos,...filasCuotas].sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  const todasFilas=[...filasGastos,...filasCuotas].sort((a,b)=>{const fd=b.fecha.localeCompare(a.fecha);if(fd!==0)return fd;return(b.creadoEn||'').localeCompare(a.creadoEn||'');});
   tbody.innerHTML=todasFilas.map(f=>f.html).join('');
   // ── RENDER MÓVIL ──
   if(window.innerWidth<=600){
