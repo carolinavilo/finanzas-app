@@ -2618,9 +2618,6 @@ async function loadSharedData(){
   try{
     const {data,error}=await sb.from('shared_data').select('cuentas,tarjetas,subcats,categorias,updated_at').eq('id','main').single();
     if(error||!data)return;
-    // Solo saltear si el timestamp es igual Y ya tenemos subcats cargadas
-    const _yaHaySubcats=localStorage.length>0&&[...Array(localStorage.length)].some((_,i)=>localStorage.key(i)?.startsWith('subcats_'));
-    if(_sharedDataLastUpdated&&data.updated_at&&data.updated_at===_sharedDataLastUpdated&&_yaHaySubcats)return;
     _sharedDataLastUpdated=data.updated_at||null;
     _sharedData = {
       cuentas: data.cuentas||[],
