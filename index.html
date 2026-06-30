@@ -2092,6 +2092,7 @@ async function afterLogin() {
     startApp();
     setTimeout(()=>_syncSharedData(), 1500);
     setTimeout(loadCristianGastos, 800);
+    setTimeout(loadSharedData, 500);
     if (_adminPollInterval) clearInterval(_adminPollInterval);
     _adminPollInterval = setInterval(async () => {
       if (userRole !== 'admin') { clearInterval(_adminPollInterval); _adminPollInterval = null; return; }
