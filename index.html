@@ -2316,16 +2316,21 @@ async function syncGastoAdd(gasto) {
 async function syncGastoUpdate(gasto) {
   if (userRole !== 'usuario' || !currentUser) return;
   const _adminUid = localStorage.getItem('admin_user_id') || null;
-  await sb.from('gastos_sync').update({
-    admin_user_id: _adminUid,
-    registrado_por: currentUser.email,
-    fecha: gasto.fecha, descripcion: gasto.descripcion,
-    monto: gasto.monto, categoria: gasto.categoria,
-    subcategoria: gasto.subcategoria || '',
-    notas: gasto.notas || '', recurrente: gasto.recurrente || false,
-    tipo: gasto.tipo || 'efectivo', updated_at: new Date().toISOString()
-  }).eq('id', gasto.id).eq('user_id', currentUser.id)
-    .catch(e=>console.warn('Supabase syncUpdate:',e.message));
+  try {
+    const { error } = await sb.from('gastos_sync').update({
+      admin_user_id: _adminUid,
+      registrado_por: currentUser.email,
+      registrado_por_nombre: currentNombre || currentUser.email.split('@')[0],
+      fecha: gasto.fecha, descripcion: gasto.descripcion,
+      monto: gasto.monto, categoria: gasto.categoria,
+      subcategoria: gasto.subcategoria || '',
+      notas: gasto.notas || '', recurrente: gasto.recurrente || false,
+      tipo: gasto.tipo || 'efectivo', updated_at: new Date().toISOString()
+    }).eq('id', gasto.id).eq('user_id', currentUser.id);
+    if (error) console.warn('Supabase syncUpdate:', error.message);
+  } catch(e) {
+    console.warn('Supabase syncUpdate excepción:', e.message);
+  }
 }
 
 async function syncGastoDelete(id) {
