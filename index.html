@@ -4323,8 +4323,11 @@ function _fillSubcatSel(selId,wrapId,cat,current){
 function onGastoCatChange(){
   _fillSubcatSel('g-subcat','g-subcat-wrap',document.getElementById('g-cat').value,'');
 }
+let _egCatOriginal=null;
 function onEditGastoCatChange(){
-  _fillSubcatSel('eg-subcat','eg-subcat-wrap',document.getElementById('eg-cat').value,'');
+  const catActual=document.getElementById('eg-cat').value;
+  const mantenerSub=(catActual===_egCatOriginal);
+  _fillSubcatSel('eg-subcat','eg-subcat-wrap',catActual,mantenerSub?document.getElementById('eg-subcat')?.dataset.original:'');
 }
 function onCcCatChange(){
   _fillSubcatSel('cc-subcat','cc-subcat-wrap',document.getElementById('cc-cat').value,'');
@@ -4781,7 +4784,10 @@ function editGasto(id){
     if(!exists){const opt=document.createElement('option');opt.value=g.categoria;opt.textContent=g.categoria;egCat.appendChild(opt);}
     egCat.value=g.categoria;
   }
+  _egCatOriginal=g.categoria;
   _fillSubcatSel('eg-subcat','eg-subcat-wrap',g.categoria,g.subcategoria||'');
+  const egSubcatEl=document.getElementById('eg-subcat');
+  if(egSubcatEl)egSubcatEl.dataset.original=g.subcategoria||'';
   openModal('modal-edit-gasto');
 }
 
