@@ -2626,16 +2626,27 @@ async function loadSharedData(){
       tarjetas: data.tarjetas||[]
     };
     if(data.subcats){
-      // Guardar en memoria Y en localStorage
-      _subcatsEnMemoria={};
-      const keysToRemove=[];
-      for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith('subcats_'))keysToRemove.push(k);}
-      keysToRemove.forEach(k=>localStorage.removeItem(k));
-      Object.entries(data.subcats).forEach(([k,v])=>{
-        const key=k.toUpperCase();
-        _subcatsEnMemoria[key]=v;
-        localStorage.setItem('subcats_'+key,JSON.stringify(v));
-      });
+      const subcatsSupabase=data.subcats;
+      const nSupabase=Object.keys(subcatsSupabase).length;
+      // Contar subcats actuales en localStorage
+      const nLocal=[...Array(localStorage.length)].filter((_,i)=>localStorage.key(i)?.startsWith('subcats_')).length;
+      // Solo sobreescribir si Supabase tiene igual o más subcats que local
+      if(nSupabase>=nLocal){
+        _subcatsEnMemoria={};
+        const keysToRemove=[];
+        for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith('subcats_'))keysToRemove.push(k);}
+        keysToRemove.forEach(k=>localStorage.removeItem(k));
+        Object.entries(subcatsSupabase).forEach(([k,v])=>{
+          const key=k.toUpperCase();
+          _subcatsEnMemoria[key]=v;
+          localStorage.setItem('subcats_'+key,JSON.stringify(v));
+        });
+      } else {
+        // Local tiene más — cargar solo en memoria sin tocar localStorage
+        Object.entries(subcatsSupabase).forEach(([k,v])=>{
+          _subcatsEnMemoria[k.toUpperCase()]=v;
+        });
+      }
       console.log('[subcats] Cargadas en memoria:', Object.keys(_subcatsEnMemoria).length, 'categorías');
       if(typeof showToast==='function')showToast('✅ Subcats: '+Object.keys(_subcatsEnMemoria).length+' categorías cargadas');
     }
