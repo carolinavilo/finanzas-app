@@ -2968,10 +2968,21 @@ function renderMovimientos(){
   const buscar=document.getElementById('mov-search')?.value.toLowerCase()||'';
   const mes=document.getElementById('mov-mes')?.value||'';
   const tipo=document.getElementById('mov-tipo')?.value||'';
+  const cuotasExpandidas=[];
+  (S.comprasCuotas||[]).forEach(c=>{
+    const totalCuotas=c.cuotas||0;
+    const montoCuota=c.montoCuota||0;
+    if(!totalCuotas||!montoCuota)return;
+    for(let i=0;i<totalCuotas;i++){
+      const fechaPago=c.fechaPrimerPago?addMesesAFecha(c.fechaPrimerPago,i):null;
+      if(!fechaPago)continue;
+      cuotasExpandidas.push({...c,tipo_mov:'cuota',monto:montoCuota,fecha:fechaPago,cuotaNum:i+1,categoria:c.categoria||'Sin categoría'});
+    }
+  });
   const movs=[
     ...S.gastos.map(g=>({...g,tipo_mov:'gasto'})),
     ...S.ingresos.map(i=>({...i,tipo_mov:'ingreso'})),
-    ...(S.comprasCuotas||[]).map(c=>({...c,tipo_mov:'cuota',monto:c.montoTotal||(c.montoCuota*c.cuotas),categoria:c.categoria||'Sin categoría'}))
+    ...cuotasExpandidas
   ]
   .filter(m=>!mes||(m.tipo_mov==='gasto'?calcFechaImpactoGasto(m)?.startsWith(mes):m.fecha?.startsWith(mes)))
   .filter(m=>!tipo||m.tipo_mov===tipo)
@@ -3033,7 +3044,7 @@ function renderMovimientos(){
       <div style="padding:10px 16px;border-bottom:0.5px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:8px">
         <div style="flex:1;min-width:0">
           <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.descripcion)}</div>
-          <div style="font-size:11px;color:var(--text2);margin-top:2px">${ff(m.fecha)} · <span class="badge ${m.tipo_mov==='cuota'?'b-blue':'b-purple'}" style="font-size:10px">${m.tipo_mov==='cuota'?(()=>{const fp=m.fechaPrimerPago||m.fecha;const y0=+fp.slice(0,4),mo0=+fp.slice(5,7);const y1=+m.fecha.slice(0,4),mo1=+m.fecha.slice(5,7);const n=(y1-y0)*12+(mo1-mo0)+1;return'💳 Cuota '+n+'/'+(m.cuotas||'?');})():esc(m.categoria)}</span></div>
+          <div style="font-size:11px;color:var(--text2);margin-top:2px">${ff(m.fecha)} · <span class="badge ${m.tipo_mov==='cuota'?'b-blue':'b-purple'}" style="font-size:10px">${m.tipo_mov==='cuota'?'💳 Cuota '+m.cuotaNum+'/'+(m.cuotas||'?'):esc(m.categoria)}</span>${m.subcategoria?` · <span style="font-size:10px;color:var(--text2)">${esc(m.subcategoria)}</span>`:''}</div>
         </div>
         <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">
           <span style="font-size:13px;font-weight:600">−${$$(m.monto)}</span>
