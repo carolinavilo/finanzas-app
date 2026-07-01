@@ -257,6 +257,7 @@ input[type=checkbox]{width:auto;margin-right:5px}
 .btn-eliminar-gasto:hover,.btn-eliminar-cuota:hover{background:rgba(248,113,113,.15)}
 .btn-editar-gasto:hover{background:rgba(96,165,250,.15)}
 .subcat-badge{display:inline-block;font-size:10px;color:var(--text2);margin-top:2px}
+.subcat-badge-block{display:block;margin-top:3px}
 .subcat-panel{background:var(--bg2);border-radius:10px;padding:12px;margin-top:8px;border:1px solid var(--border)}
 .subcat-tag{display:inline-flex;align-items:center;gap:4px;background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:12px;margin:3px 2px}
 .subcat-tag button{background:none;border:none;cursor:pointer;color:var(--text2);padding:0;font-size:13px;line-height:1}
@@ -4995,7 +4996,7 @@ function renderGastos(){
       filas.push({fecha:g.fecha,html:`<tr>
         <td>${ff(g.fecha)}</td>
         <td><strong>${esc(g.descripcion)}</strong>${g.registrado_por&&!ADMIN_EMAILS.includes(g.registrado_por)?`<span style="background:var(--accent-light);color:var(--accent);border-radius:6px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:4px">👤 ${(g.registrado_por_nombre||g.registrado_por.split('@')[0])}</span>`:''}</td>
-        <td><span class="badge b-purple">${esc(g.categoria)}</span>${g.subcategoria?`<div class="subcat-badge">${esc(g.subcategoria)}</div>`:''}</td>
+        <td><span class="badge b-purple">${esc(g.categoria)}</span>${g.subcategoria?`<div class="subcat-badge subcat-badge-block">${esc(g.subcategoria)}</div>`:''}</td>
         <td><span class="badge b-gray">${esc(tLabel[g.tipo]||g.tipo)}${tar?` · ${esc(tar.nombre)}`:''}</span></td>
         <td><span class="nota-preview">${esc(g.notas)||'—'}</span></td>
         <td>${g.recurrente?'<span class="badge b-blue">🔄</span>':'—'}</td>
@@ -5013,7 +5014,7 @@ function renderGastos(){
       filas.push({fecha:d.fecha,html:`<tr style="background:rgba(99,102,241,.04)">
         <td>${ff(d.fecha)}</td>
         <td><strong>${esc(c.descripcion)}</strong><div style="font-size:10px;color:var(--text2);margin-top:2px">Cuota ${d.cuotaNum}/${c.cuotas}</div></td>
-        <td><span class="badge b-purple">${esc(c.categoria)}</span>${c.subcategoria?`<div class="subcat-badge">${esc(c.subcategoria)}</div>`:''}</td>
+        <td><span class="badge b-purple">${esc(c.categoria)}</span>${c.subcategoria?`<div class="subcat-badge subcat-badge-block">${esc(c.subcategoria)}</div>`:''}</td>
         <td><span class="badge b-blue">💳 Cuota${tar?` · ${esc(tar.nombre)}`:''}</span></td>
         <td><span class="nota-preview">${esc(c.notas)||'—'}</span></td>
         <td>—</td>
@@ -5028,7 +5029,7 @@ function renderGastos(){
   }
 
   // ── MODO FECHA DE COMPRA (default) ──
-  let items=S.gastos.filter(g=>{
+  let items=S.gastos.map((g,i)=>({...g,__idx:i})).filter(g=>{
     if(mes&&!g.fecha.startsWith(mes))return false;
     if(cat&&g.categoria!==cat)return false;
     if(subcat&&g.subcategoria!==subcat)return false;
@@ -5039,7 +5040,8 @@ function renderGastos(){
     const fa=calcFechaImpactoGasto(a)||a.fecha||'';
     const fb=calcFechaImpactoGasto(b)||b.fecha||'';
     if(fb!==fa)return fb.localeCompare(fa);
-    return (b.creadoEn||fa).localeCompare(a.creadoEn||fa);
+    if(a.creadoEn&&b.creadoEn)return b.creadoEn.localeCompare(a.creadoEn);
+    return b.__idx-a.__idx;
   });
 
   // Compras en cuotas compradas en el mes seleccionado
@@ -5087,7 +5089,7 @@ function renderGastos(){
       html:`<tr>
       <td>${ff(g.fecha)}</td>
       <td><strong>${esc(g.descripcion)}</strong>${impactaBadge}${g.registrado_por&&!ADMIN_EMAILS.includes(g.registrado_por)?`<span style="background:var(--accent-light);color:var(--accent);border-radius:6px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:4px">👤 ${(g.registrado_por_nombre||g.registrado_por.split('@')[0])}</span>`:''}</td>
-      <td><span class="badge b-purple">${esc(g.categoria)}</span>${g.subcategoria?`<div class="subcat-badge">${esc(g.subcategoria)}</div>`:''}</td>
+      <td><span class="badge b-purple">${esc(g.categoria)}</span>${g.subcategoria?`<div class="subcat-badge subcat-badge-block">${esc(g.subcategoria)}</div>`:''}</td>
       <td><span class="badge b-gray">${esc(tLabel[g.tipo]||g.tipo)}${tar?` · ${esc(tar.nombre)}`:''}</span></td>
       <td><span class="nota-preview">${esc(g.notas)||'—'}</span></td>
       <td>${g.recurrente?'<span class="badge b-blue">🔄</span>':'—'}</td>
@@ -5117,14 +5119,16 @@ function renderGastos(){
       html:`<tr style="background:rgba(99,102,241,.04)">
       <td>${ff(c.fecha)}</td>
       <td><strong>${esc(c.descripcion)}</strong><div style="margin-top:3px"><span style="font-size:10px;background:rgba(99,102,241,.15);color:#818cf8;padding:2px 6px;border-radius:4px;font-weight:600">💳 ${c.cuotas} cuotas · pago ${esc(badgePago)}</span></div></td>
-      <td><span class="badge b-purple">${esc(c.categoria)}</span>${c.subcategoria?`<div class="subcat-badge">${esc(c.subcategoria)}</div>`:''}</td>
+      <td><span class="badge b-purple">${esc(c.categoria)}</span>${c.subcategoria?`<div class="subcat-badge subcat-badge-block">${esc(c.subcategoria)}</div>`:''}</td>
       <td><span class="badge b-blue">💳 Cuotas</span>${tar?`<div style="font-size:10px;color:var(--text2);margin-top:2px;white-space:nowrap">${esc(tar.nombre)}</div>`:''}</td>
       <td><span class="nota-preview">${esc(c.notas)||'—'}</span></td>
       <td>—</td>
-      <td style="text-align:right;font-weight:700">${$$(c.montoTotal)}</td>
-      <td style="white-space:nowrap">
-        <button class="btn-editar-gasto" data-cuota-id="${esc(c.id)}" title="Editar">✏️</button>
-        <button class="btn-eliminar-cuota" data-id="${esc(c.id)}" title="Eliminar">🗑️</button>
+      <td style="text-align:right;white-space:nowrap;vertical-align:middle">
+        <div style="display:flex;align-items:center;justify-content:flex-end;gap:4px">
+          <span style="font-weight:700;font-size:13px">${$$(c.montoTotal)}</span>
+          <button class="btn-editar-gasto" data-cuota-id="${esc(c.id)}" style="background:none;border:none;font-size:16px;cursor:pointer;padding:4px;min-width:28px;min-height:28px" title="Editar">✏️</button>
+          <button class="btn-eliminar-cuota" data-id="${esc(c.id)}" style="background:none;border:none;font-size:16px;cursor:pointer;padding:4px;min-width:28px;min-height:28px" title="Eliminar">🗑️</button>
+        </div>
       </td></tr>`};
   });
 
