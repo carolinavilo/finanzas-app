@@ -2652,7 +2652,6 @@ async function loadSharedData(){
         });
       }
       console.log('[subcats] Cargadas en memoria:', Object.keys(_subcatsEnMemoria).length, 'categorías');
-      if(typeof showToast==='function')showToast('✅ Subcats: '+Object.keys(_subcatsEnMemoria).length+' categorías cargadas');
     }
     if(data.categorias?.length){
       localStorage.setItem('shared_categorias',JSON.stringify(data.categorias));
