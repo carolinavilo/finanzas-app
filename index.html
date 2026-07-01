@@ -2273,7 +2273,8 @@ async function loadGastosFromSupabase() {
       id: g.id, fecha: g.fecha, descripcion: g.descripcion,
       monto: Number(g.monto), categoria: g.categoria || 'Otros',
       moneda: g.moneda || 'ARS', notas: g.notas || '',
-      recurrente: g.recurrente || false, tipo: g.tipo || 'efectivo'
+      recurrente: g.recurrente || false, tipo: g.tipo || 'efectivo',
+      creadoEn: g.created_at || ''
     }));
   }
 }
@@ -2369,7 +2370,9 @@ async function loadCristianGastos() {
     });
     // Agregar los nuevos
     const idsExistentes = new Set(S.gastos.map(g => g.id));
-    const nuevos = (data||[]).filter(g => !idsExistentes.has(g.id));
+    const nuevos = (data||[]).filter(g => !idsExistentes.has(g.id)).map(g => ({
+      ...g, monto: Number(g.monto), creadoEn: g.created_at || ''
+    }));
     if (nuevos.length) S.gastos = [...S.gastos, ...nuevos];
     renderGastos();
     refreshDashIfVisible();
