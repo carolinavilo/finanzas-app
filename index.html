@@ -525,6 +525,9 @@ input[type=checkbox]{width:auto;margin-right:5px}
     <button class="mh-btn" id="btn-global-search" onclick="toggleGlobalSearch()" title="Buscar">
       <i data-lucide="search"></i>
     </button>
+    <button class="mh-btn" onclick="forzarActualizacionApp()" id="refresh-btn-mob" title="Actualizar app">
+      <i data-lucide="refresh-cw"></i>
+    </button>
     <button class="mh-btn" onclick="toggleTheme()" id="theme-btn-mob" title="Cambiar tema">
       <i data-lucide="sun"></i>
     </button>
@@ -5684,6 +5687,12 @@ function guardarAbonoTarjeta(){
   const resumen={id:idx>=0?S.resumenTarjetas[idx].id:uid(),tarjetaId,mes,montoResumen,montoAbonado,fechaAbono:fecha,medioAbono:medio,cuentaId,pagado:montoAbonado>=montoResumen};
   if(idx>=0)S.resumenTarjetas[idx]=resumen;else S.resumenTarjetas.push(resumen);
   if(cuentaId&&montoAbonado>0){const cuenta=S.cuentas?.find(c=>c.id===cuentaId);if(cuenta)cuenta.saldo=(+cuenta.saldo||0)-montoAbonado;}
+  if(montoAbonado>0){
+    const tarj=S.tarjetas.find(t=>t.id===tarjetaId);
+    S.gastos.push({id:uid(),fecha,descripcion:'Pago resumen — '+(tarj?.nombre||'Tarjeta'),categoria:'Tarjeta de crédito',subcategoria:'',monto:montoAbonado,tipo:medio==='efectivo'?'efectivo':'debito',tarjetaId:null,cuentaId:cuentaId||null,notas:'Pago de resumen de tarjeta',recurrente:false,creadoEn:new Date().toISOString()});
+    if(typeof syncGastoAdd==='function'&&userRole==='usuario')syncGastoAdd(S.gastos[S.gastos.length-1]);
+    renderGastos();
+  }
   save();closeModal('modal-abonar-tarjeta');renderTarjetas();refreshDashIfVisible();
   if(userRole==='admin')setTimeout(_syncSharedData,500);
   showToast(montoAbonado>=montoResumen?'✅ Resumen abonado completamente':`✅ Abonado ${$$(montoAbonado)} — quedan ${$$(montoResumen-montoAbonado)}`);
@@ -7613,6 +7622,20 @@ function renderCotizacionesPanel(){
 }
 
 // ====== PWA ======
+async function forzarActualizacionApp(){
+  showToast('🔄 Actualizando...');
+  try{
+    if('serviceWorker' in navigator){
+      const regs=await navigator.serviceWorker.getRegistrations();
+      for(const r of regs) await r.unregister();
+    }
+    if('caches' in window){
+      const keys=await caches.keys();
+      await Promise.all(keys.map(k=>caches.delete(k)));
+    }
+  }catch(e){console.warn('[forzarActualizacionApp]',e);}
+  location.reload(true);
+}
 function registerPWA(){
   if('serviceWorker' in navigator){
     navigator.serviceWorker.getRegistrations().then(registrations=>{
