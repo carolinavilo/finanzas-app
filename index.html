@@ -306,9 +306,9 @@ input[type=checkbox]{width:auto;margin-right:5px}
 
 /* ── MOBILE HEADER ── */
 #mobile-header{display:none;position:fixed;top:0;left:0;right:0;height:56px;background:var(--sidebar);border-bottom:1px solid var(--border);z-index:110;align-items:center;padding:0 16px;gap:10px;box-shadow:var(--shadow)}
-#mobile-header .mh-logo{display:flex;align-items:center;gap:9px;flex:1}
-#mobile-header .mh-logo h1{font-size:15px;font-weight:700;letter-spacing:-.2px}
-#mobile-header .mh-actions{display:flex;gap:8px;align-items:center}
+#mobile-header .mh-logo{display:flex;align-items:center;gap:9px;flex:1;min-width:0}
+#mobile-header .mh-logo h1{font-size:15px;font-weight:700;letter-spacing:-.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#mobile-header .mh-actions{display:flex;gap:4px;align-items:center;flex-shrink:0}
 .mh-btn{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:7px 10px;cursor:pointer;color:var(--text);font-size:13px;display:flex;align-items:center;gap:5px;font-weight:600;transition:.15s}
 .mh-btn:hover{border-color:var(--accent);color:var(--accent)}
 .mh-btn i[data-lucide]{width:16px;height:16px;stroke-width:1.8;display:flex}
