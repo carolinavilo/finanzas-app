@@ -187,6 +187,14 @@ input[type=checkbox]{width:auto;margin-right:5px}
 .cuota-card.urgent{border-color:rgba(248,113,113,.4)}
 /* ── MES ACCORDION ── */
 .mes-card{background:var(--card);border:1px solid var(--border);border-radius:14px;margin-bottom:10px;overflow:hidden;box-shadow:var(--shadow)}
+.cuota-mes-hint{font-size:11px;color:var(--text2);margin-bottom:6px}
+.cuota-mes-carrusel{display:flex;gap:10px;overflow-x:auto;padding-bottom:8px;scroll-behavior:smooth}
+.cuota-mes-chip{flex:0 0 160px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:10px 12px;cursor:pointer;transition:.15s}
+.cuota-mes-chip:hover{border-color:var(--accent)}
+.cuota-mes-chip.sel{border:2px solid var(--accent);padding:9px 11px}
+.cuota-mes-chip-hoy{font-size:10px;color:var(--accent);font-weight:700;margin-bottom:2px}
+.cuota-mes-chip-title{font-size:12px;font-weight:600;margin-bottom:4px}
+.cuota-mes-chip-total{font-size:14px;font-weight:700}
 .mes-card-header{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;cursor:pointer;gap:10px;-webkit-tap-highlight-color:transparent;user-select:none}
 .mes-card-header:active{background:var(--bg2)}
 .mes-card-title{font-weight:700;font-size:15px}
@@ -5833,6 +5841,8 @@ function eliminarCuota(id){
 }
 
 let _cuotasMesOpen={};
+let _cuotaMesSeleccionado=null;
+function seleccionarMesCuotas(mes){_cuotaMesSeleccionado=mes;renderCuotas();}
 let _cuotasVerPasados=false;
 function toggleCuotasPasados(){_cuotasVerPasados=!_cuotasVerPasados;renderCuotas();}
 function toggleMesCard(mes){
@@ -5894,26 +5904,32 @@ function renderCuotas(){
 
   let html='';
 
-  // ── Accordion por mes ──
-  meses.forEach(mes=>{
-    const isPast=mes<mesHoy;
-    if(isPast&&mes===_pasados[0]){
-      html+=`<div class="mes-card" style="cursor:pointer;background:var(--card2)" onclick="toggleCuotasPasados()">
-        <div class="mes-card-header">
-          <div class="mes-card-title">${_cuotasVerPasados?'▲':'▼'} Meses anteriores (${_pasados.length})</div>
-        </div>
-      </div>`;
-      if(!_cuotasVerPasados)return;
-    } else if(isPast&&!_cuotasVerPasados){
-      return;
-    }
+  // ── Carrusel horizontal de meses (pasado ← hoy → futuro) ──
+  const _mesesCarrusel=[..._pasados.slice().reverse(),..._futuros];
+  if(_cuotaMesSeleccionado===null||!byMes[_cuotaMesSeleccionado]){
+    _cuotaMesSeleccionado=byMes[mesHoy]?mesHoy:(_futuros[0]||_pasados[0]||null);
+  }
+  const chipsHTML=_mesesCarrusel.map(mes=>{
     const isCurrent=mes===mesHoy;
-    if(_cuotasMesOpen[mes]===undefined)_cuotasMesOpen[mes]=isCurrent;
-    const isOpen=_cuotasMesOpen[mes];
+    const isSel=mes===_cuotaMesSeleccionado;
+    const totMes=Object.values(byMes[mes]).flat().reduce((a,i)=>a+i.monto,0);
+    return`<div class="cuota-mes-chip${isSel?' sel':''}" id="cuota-mes-chip-${mes}" onclick="seleccionarMesCuotas('${mes}')">
+      ${isCurrent?'<div class="cuota-mes-chip-hoy">📌 hoy</div>':''}
+      <div class="cuota-mes-chip-title">${mesPretty(mes)}</div>
+      <div class="cuota-mes-chip-total">${$$(totMes)}</div>
+    </div>`;
+  }).join('');
+  html+=`<div class="cuota-mes-hint">← meses anteriores &nbsp;·&nbsp; meses futuros →</div>
+  <div class="cuota-mes-carrusel" id="cuota-mes-carrusel">${chipsHTML}</div>`;
+
+  // ── Detalle del mes seleccionado ──
+  if(_cuotaMesSeleccionado){
+    const mes=_cuotaMesSeleccionado;
+    const isPast=mes<mesHoy;
+    const isCurrent=mes===mesHoy;
     const allItems=Object.values(byMes[mes]).flat();
     const totalMes=allItems.reduce((a,i)=>a+i.monto,0);
 
-    // Fecha de vencimiento más próxima del mes (para header)
     let minDias=Infinity,headerFV='';
     Object.keys(byMes[mes]).forEach(tId=>{
       const tar=S.tarjetas.find(t=>t.id===tId);if(!tar)return;
@@ -5923,7 +5939,6 @@ function renderCuotas(){
     });
     const hUrgClass=minDias>=0&&minDias<=5?'vence-danger':minDias>=0&&minDias<=10?'vence-warn':'vence-ok';
 
-    // Grupos por tarjeta
     const tarjetasHTML=Object.entries(byMes[mes]).map(([tId,items])=>{
       const tar=S.tarjetas.find(t=>t.id===tId);
       const tarColor=tar?tar.color:'var(--accent)';
@@ -5958,22 +5973,21 @@ function renderCuotas(){
       </div>`;
     }).join('');
 
-    html+=`<div class="mes-card${isPast?' mes-pagado':''}">
-      <div class="mes-card-header" onclick="toggleMesCard('${mes}')">
+    html+=`<div class="mes-card${isPast?' mes-pagado':''}" style="margin-top:14px">
+      <div class="mes-card-header" style="cursor:default">
         <div>
           <div class="mes-card-title">${isPast?'✅ ':isCurrent?'📌 ':''}${mesPretty(mes)}</div>
           ${headerFV?`<div class="mes-card-meta"><span class="vence-badge ${hUrgClass}">Vence ${ff(headerFV)}${minDias>=0&&minDias<=30?' ('+minDias+'d)':''}</span></div>`:''}
         </div>
         <div class="mes-card-right">
           <div class="mes-card-total" style="color:${minDias>=0&&minDias<=5?'var(--accent4)':minDias>=0&&minDias<=10?'var(--accent3)':'var(--text)'}">${$$(totalMes)}</div>
-          <div class="mes-card-chevron">${isOpen?'▲':'▼'}</div>
         </div>
       </div>
-      <div class="mes-card-body${isOpen?' open':''}">
+      <div class="mes-card-body open">
         ${tarjetasHTML}
       </div>
     </div>`;
-  });
+  }
 
   // ── Cuotas legacy (S.cuotas) ──
   if(cuotasLegacy.length){
@@ -6012,6 +6026,10 @@ function renderCuotas(){
   }
 
   cont.innerHTML=html;
+  setTimeout(()=>{
+    const selChip=document.getElementById('cuota-mes-chip-'+_cuotaMesSeleccionado);
+    if(selChip)selChip.scrollIntoView({inline:'center',block:'nearest'});
+  },50);
 }
 
 // ====== INVERSIONES ======
