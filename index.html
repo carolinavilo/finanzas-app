@@ -6963,7 +6963,7 @@ function renderDashboard(){
   document.getElementById('dash-cuotas').innerHTML=proxCuotas.length?proxCuotas.slice(0,5).map(c=>{
     const dias=diasHasta(c.proximoVencimiento);
     return`<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(128,128,128,.07)">
-      <div><div style="font-size:13px;font-weight:500">${c.descripcion}</div><div style="font-size:11px;color:var(--text2)">Cuota ${c.cuotaNum}/${c.totalCuotas} · ${ff(c.proximoVencimiento)} (${dias}d)</div></div>
+      <div><div style="font-size:13px;font-weight:500">${c.descripcion}</div><div style="font-size:11px;color:var(--text2)">Cuota ${c.cuotaNum}/${c.totalCuotas}</div></div>
       <div style="font-weight:700;color:${dias<=7?'var(--accent4)':'var(--accent3)'}">${$$(c.montoCuota)}</div>
     </div>`;
   }).join(''):'<div class="empty" style="padding:16px"><p>Sin cuotas próximas.</p></div>';
