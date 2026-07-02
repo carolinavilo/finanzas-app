@@ -192,9 +192,13 @@ input[type=checkbox]{width:auto;margin-right:5px}
 .cuota-mes-carrusel::-webkit-scrollbar{height:6px}
 .cuota-mes-carrusel::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
 .cuota-mes-carrusel::-webkit-scrollbar-thumb:hover{background:var(--accent)}
-.cuota-mes-nav{display:flex;align-items:center;gap:8px}
-.cuota-mes-arrow{flex-shrink:0;width:32px;height:32px;border-radius:50%;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s}
+.cuota-mes-nav{position:relative}
+.cuota-mes-carrusel-pad{padding:0 38px}
+.cuota-mes-arrow{position:absolute;top:50%;transform:translateY(-50%);z-index:5;width:32px;height:32px;border-radius:50%;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s;box-shadow:0 2px 6px rgba(0,0,0,.15)}
 .cuota-mes-arrow:hover{border-color:var(--accent);color:var(--accent)}
+.cuota-mes-arrow.left{left:0}
+.cuota-mes-arrow.right{right:0}
+.cuota-mes-hoy-btn{font-size:11px;font-weight:700;color:var(--accent);background:none;border:none;cursor:pointer;padding:0;margin-left:8px;text-decoration:underline}
 .cuota-mes-chip{flex:0 0 160px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:10px 12px;cursor:pointer;transition:.15s}
 .cuota-mes-chip:hover{border-color:var(--accent)}
 .cuota-mes-chip.sel{border:2px solid var(--accent);padding:9px 11px}
@@ -5929,11 +5933,13 @@ function renderCuotas(){
       <div class="cuota-mes-chip-total">${$$(totMes)}</div>
     </div>`;
   }).join('');
-  html+=`<div class="cuota-mes-hint">← meses anteriores &nbsp;·&nbsp; meses futuros →</div>
+  html+=`<div class="cuota-mes-hint">← meses anteriores &nbsp;·&nbsp; meses futuros →${byMes[mesHoy]?`<button class="cuota-mes-hoy-btn" onclick="seleccionarMesCuotas('${mesHoy}')" type="button">Ir a hoy</button>`:''}</div>
   <div class="cuota-mes-nav">
-    <button class="cuota-mes-arrow" onclick="scrollCuotasCarrusel(-1)" title="Ver mes anterior" type="button">‹</button>
-    <div class="cuota-mes-carrusel" id="cuota-mes-carrusel" style="flex:1">${chipsHTML}</div>
-    <button class="cuota-mes-arrow" onclick="scrollCuotasCarrusel(1)" title="Ver mes siguiente" type="button">›</button>
+    <button class="cuota-mes-arrow left" onclick="scrollCuotasCarrusel(-1)" title="Ver mes anterior" type="button">‹</button>
+    <div class="cuota-mes-carrusel-pad">
+      <div class="cuota-mes-carrusel" id="cuota-mes-carrusel">${chipsHTML}</div>
+    </div>
+    <button class="cuota-mes-arrow right" onclick="scrollCuotasCarrusel(1)" title="Ver mes siguiente" type="button">›</button>
   </div>`;
 
   // ── Detalle del mes seleccionado ──
