@@ -3064,7 +3064,7 @@ function renderMovimientos(){
   .filter(m=>!dia||(m.tipo_mov==='gasto'?calcFechaImpactoGasto(m)?.slice(8,10):m.fecha?.slice(8,10))===dia)
   .filter(m=>!tipo||m.tipo_mov===tipo)
   .filter(m=>!buscar||m.descripcion?.toLowerCase().includes(buscar)||m.categoria?.toLowerCase().includes(buscar))
-  .sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+  .sort((a,b)=>{const fd=(b.fecha||'').localeCompare(a.fecha||'');if(fd!==0)return fd;return(b.creadoEn||'').localeCompare(a.creadoEn||'');});
   const totalIngresos=movs.filter(m=>m.tipo_mov==='ingreso').reduce((a,m)=>a+(+m.monto||0),0);
   const totalGastos=movs.filter(m=>m.tipo_mov!=='ingreso').reduce((a,m)=>a+(+m.monto||0),0);
   const label=document.getElementById('mov-total-label');
