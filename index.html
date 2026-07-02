@@ -5761,12 +5761,14 @@ function guardarAbonoTarjeta(){
   if(!montoResumen){showToast('⚠️ Ingresá el monto del resumen');return;}
   if(montoAbonado>montoResumen){showToast('⚠️ El abono no puede superar el resumen');return;}
   const idx=(S.resumenTarjetas||[]).findIndex(r=>r.tarjetaId===tarjetaId&&r.mes===mes);
+  const montoAbonadoPrevio=idx>=0?(S.resumenTarjetas[idx].montoAbonado||0):0;
+  const deltaAbonado=montoAbonado-montoAbonadoPrevio;
   const resumen={id:idx>=0?S.resumenTarjetas[idx].id:uid(),tarjetaId,mes,montoResumen,montoAbonado,fechaAbono:fecha,medioAbono:medio,cuentaId,pagado:montoAbonado>=montoResumen};
   if(idx>=0)S.resumenTarjetas[idx]=resumen;else S.resumenTarjetas.push(resumen);
-  if(cuentaId&&montoAbonado>0){const cuenta=S.cuentas?.find(c=>c.id===cuentaId);if(cuenta)cuenta.saldo=(+cuenta.saldo||0)-montoAbonado;}
-  if(montoAbonado>0){
+  if(cuentaId&&deltaAbonado>0){const cuenta=S.cuentas?.find(c=>c.id===cuentaId);if(cuenta)cuenta.saldo=(+cuenta.saldo||0)-deltaAbonado;}
+  if(deltaAbonado>0){
     const tarj=S.tarjetas.find(t=>t.id===tarjetaId);
-    S.gastos.push({id:uid(),fecha,descripcion:'Pago resumen — '+(tarj?.nombre||'Tarjeta'),categoria:'Tarjeta de crédito',subcategoria:'',monto:montoAbonado,tipo:medio==='efectivo'?'efectivo':'debito',tarjetaId:null,cuentaId:cuentaId||null,notas:'Pago de resumen de tarjeta',recurrente:false,creadoEn:new Date().toISOString()});
+    S.gastos.push({id:uid(),fecha,descripcion:'Pago resumen — '+(tarj?.nombre||'Tarjeta'),categoria:'Tarjeta de crédito',subcategoria:'',monto:deltaAbonado,tipo:medio==='efectivo'?'efectivo':'debito',tarjetaId:null,cuentaId:cuentaId||null,notas:'Pago de resumen de tarjeta',recurrente:false,creadoEn:new Date().toISOString()});
     if(typeof syncGastoAdd==='function'&&userRole==='usuario')syncGastoAdd(S.gastos[S.gastos.length-1]);
     renderGastos();
   }
