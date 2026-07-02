@@ -2531,6 +2531,7 @@ const CAT_COLORS={
   'Supermercado':'#a78bfa','Otros':'#94a3b8','Sueldo':'#4ade80','Freelance':'#34d399',
   'Alquiler':'#60a5fa','Inversiones':'#f59e0b','Regalo':'#e879f9'
 };
+const CAT_PALETTE=["#6c63ff","#4ade80","#f59e0b","#f87171","#e879f9","#60a5fa","#34d399","#fb923c","#a78bfa","#38bdf8","#facc15","#fb7185","#2dd4bf","#c084fc","#84cc16","#f472b6"];function colorForCat(name){let h=0;for(let i=0;i<name.length;i++){h=(h*31+name.charCodeAt(i))>>>0;}return CAT_PALETTE[h%CAT_PALETTE.length];}
 
 function _defaultS(){
   return{gastos:[],ingresos:[],tarjetas:[],cuotas:[],inversiones:[],presupuesto:{},
@@ -6889,7 +6890,7 @@ function renderDashboard(){
 
   // CHART categorías
   const byCat={};gMes.forEach(g=>{byCat[g.categoria]=(byCat[g.categoria]||0)+g.monto;});
-  const cats=Object.keys(byCat),vals=cats.map(c=>byCat[c]),cols=cats.map(c=>CAT_COLORS[c]||'#94a3b8');
+  const cats=Object.keys(byCat),vals=cats.map(c=>byCat[c]),cols=cats.map(c=>CAT_COLORS[c]||colorForCat(c));
   if(chCat)chCat.destroy();
   if(cats.length){
     chCat=new Chart(document.getElementById('chartCat'),{
