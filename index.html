@@ -6957,7 +6957,7 @@ function renderDashboard(){
   document.getElementById('dash-comparativa').innerHTML=compHTML||'<p style="color:var(--text2);font-size:13px">Cargá gastos de este y el mes pasado para ver la comparativa.</p>';
 
   // CUOTAS PRÓXIMAS
-  const proxCuotasExp=[];(S.comprasCuotas||[]).forEach(c=>{const mc=c.montoCuota||c.montoPorCuota||0;const tc=c.cuotas||c.totalCuotas||0;if(!tc||!mc)return;for(let i=0;i<tc;i++){let fp;if(c.fechaPrimerPago){fp=addMesesAFecha(c.fechaPrimerPago,i);}else if(c.primerMes){fp=addMeses(c.primerMes,i)+"-01";}else continue;if(diasHasta(fp)<=30)proxCuotasExp.push({descripcion:c.descripcion,montoCuota:mc,proximoVencimiento:fp});}});
+  const proxCuotasExp=[];(S.comprasCuotas||[]).forEach(c=>{const mc=c.montoCuota||c.montoPorCuota||0;const tc=c.cuotas||c.totalCuotas||0;if(!tc||!mc)return;for(let i=0;i<tc;i++){let fp;if(c.fechaPrimerPago){fp=addMesesAFecha(c.fechaPrimerPago,i);}else if(c.primerMes){fp=addMeses(c.primerMes,i)+"-01";}else continue;const dh=diasHasta(fp);if(dh>=0&&dh<=30)proxCuotasExp.push({descripcion:c.descripcion,montoCuota:mc,proximoVencimiento:fp});}});
   const proxCuotas=proxCuotasExp.sort((a,b)=>a.proximoVencimiento.localeCompare(b.proximoVencimiento));
   document.getElementById('cuotas-prox-count').textContent=`${proxCuotas.length} en 30 días`;
   document.getElementById('dash-cuotas').innerHTML=proxCuotas.length?proxCuotas.slice(0,5).map(c=>{
