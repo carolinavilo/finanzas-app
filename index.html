@@ -6044,7 +6044,10 @@ function renderCuotas(){
     const carrusel=document.getElementById('cuota-mes-carrusel');
     const selChip=document.getElementById('cuota-mes-chip-'+_cuotaMesSeleccionado);
     if(carrusel&&selChip){
-      const target=selChip.offsetLeft-(carrusel.clientWidth/2)+(selChip.clientWidth/2);
+      const idxSel=_mesesCarrusel.indexOf(_cuotaMesSeleccionado);
+      const prevMes=idxSel>0?_mesesCarrusel[idxSel-1]:null;
+      const prevChip=prevMes?document.getElementById('cuota-mes-chip-'+prevMes):null;
+      const target=prevChip?prevChip.offsetLeft:selChip.offsetLeft;
       carrusel.scrollLeft=Math.max(0,target);
     }
   },80);
