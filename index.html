@@ -188,7 +188,13 @@ input[type=checkbox]{width:auto;margin-right:5px}
 /* ── MES ACCORDION ── */
 .mes-card{background:var(--card);border:1px solid var(--border);border-radius:14px;margin-bottom:10px;overflow:hidden;box-shadow:var(--shadow)}
 .cuota-mes-hint{font-size:11px;color:var(--text2);margin-bottom:6px}
-.cuota-mes-carrusel{display:flex;gap:10px;overflow-x:auto;padding-bottom:8px;scroll-behavior:smooth}
+.cuota-mes-carrusel{display:flex;gap:10px;overflow-x:auto;padding-bottom:8px;scroll-behavior:smooth;scrollbar-width:thin}
+.cuota-mes-carrusel::-webkit-scrollbar{height:6px}
+.cuota-mes-carrusel::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.cuota-mes-carrusel::-webkit-scrollbar-thumb:hover{background:var(--accent)}
+.cuota-mes-nav{display:flex;align-items:center;gap:8px}
+.cuota-mes-arrow{flex-shrink:0;width:32px;height:32px;border-radius:50%;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s}
+.cuota-mes-arrow:hover{border-color:var(--accent);color:var(--accent)}
 .cuota-mes-chip{flex:0 0 160px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:10px 12px;cursor:pointer;transition:.15s}
 .cuota-mes-chip:hover{border-color:var(--accent)}
 .cuota-mes-chip.sel{border:2px solid var(--accent);padding:9px 11px}
@@ -5843,6 +5849,10 @@ function eliminarCuota(id){
 let _cuotasMesOpen={};
 let _cuotaMesSeleccionado=null;
 function seleccionarMesCuotas(mes){_cuotaMesSeleccionado=mes;renderCuotas();}
+function scrollCuotasCarrusel(dir){
+  const el=document.getElementById('cuota-mes-carrusel');
+  if(el)el.scrollBy({left:dir*340,behavior:'smooth'});
+}
 let _cuotasVerPasados=false;
 function toggleCuotasPasados(){_cuotasVerPasados=!_cuotasVerPasados;renderCuotas();}
 function toggleMesCard(mes){
@@ -5920,7 +5930,11 @@ function renderCuotas(){
     </div>`;
   }).join('');
   html+=`<div class="cuota-mes-hint">← meses anteriores &nbsp;·&nbsp; meses futuros →</div>
-  <div class="cuota-mes-carrusel" id="cuota-mes-carrusel">${chipsHTML}</div>`;
+  <div class="cuota-mes-nav">
+    <button class="cuota-mes-arrow" onclick="scrollCuotasCarrusel(-1)" title="Ver mes anterior" type="button">‹</button>
+    <div class="cuota-mes-carrusel" id="cuota-mes-carrusel" style="flex:1">${chipsHTML}</div>
+    <button class="cuota-mes-arrow" onclick="scrollCuotasCarrusel(1)" title="Ver mes siguiente" type="button">›</button>
+  </div>`;
 
   // ── Detalle del mes seleccionado ──
   if(_cuotaMesSeleccionado){
@@ -6027,9 +6041,13 @@ function renderCuotas(){
 
   cont.innerHTML=html;
   setTimeout(()=>{
+    const carrusel=document.getElementById('cuota-mes-carrusel');
     const selChip=document.getElementById('cuota-mes-chip-'+_cuotaMesSeleccionado);
-    if(selChip)selChip.scrollIntoView({inline:'center',block:'nearest'});
-  },50);
+    if(carrusel&&selChip){
+      const target=selChip.offsetLeft-(carrusel.clientWidth/2)+(selChip.clientWidth/2);
+      carrusel.scrollLeft=Math.max(0,target);
+    }
+  },80);
 }
 
 // ====== INVERSIONES ======
