@@ -8496,7 +8496,7 @@ function renderImportResults(data) {
     html += `<div class="ai-import-section">
       <div class="ai-import-title">💳 Gastos (${gastos.length})${selBtns('g')}</div>`;
     gastos.forEach((g, i) => {
-      const isCredito = g.medio_pago === 'credito' || g.medio_pago === 'tarjeta';
+      const isCredito = g.medio_pago === 'credito' || g.medio_pago === 'tarjeta' || (Boolean(tarjetaMatcheada) && ['efectivo','debito','transferencia'].includes(g.medio_pago)===false);
       const tMatch = (S.tarjetas||[]).find(t=>{
         const tn=t.nombre.toUpperCase().replace(/[^A-Z0-9\s]/g,'');
         const gtn=(g.tarjeta_nombre||'').toUpperCase().replace(/[^A-Z0-9\s]/g,'');
