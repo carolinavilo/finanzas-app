@@ -894,7 +894,15 @@ input[type=checkbox]{width:auto;margin-right:5px}
     <div class="gasto-form-v2">
       <div class="form-group"><label>Descripción</label><input type="text" id="g-desc" placeholder="Ej: Almuerzo, Nafta, Netflix..." autocomplete="off"/></div>
       <div id="g-fecha-wrap" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px">
-        <div class="form-group" style="min-width:0"><label>Monto (ARS)</label><input type="number" id="g-monto" inputmode="decimal" placeholder="0" style="font-size:16px;width:100%;height:48px;box-sizing:border-box" oninput="updateGastoCuotasPreview()"/></div>
+        <div class="form-group" style="min-width:0"><label id="g-monto-label">Monto (ARS)</label>
+          <div style="display:flex;gap:6px">
+            <input type="number" id="g-monto" inputmode="decimal" placeholder="0" style="font-size:16px;width:100%;height:48px;box-sizing:border-box" oninput="updateGastoCuotasPreview()"/>
+            <select id="g-moneda" onchange="onGastoMonedaChange()" style="height:48px;border-radius:8px;border:1px solid var(--border);background:var(--card2);font-size:13px;font-weight:700;padding:0 6px;flex-shrink:0">
+              <option value="ARS">$</option>
+              <option value="USD">U$S</option>
+            </select>
+          </div>
+        </div>
         <div class="form-group" style="min-width:0"><label>Fecha</label><input type="date" id="g-fecha" style="font-size:16px;width:100%;height:48px;box-sizing:border-box;-webkit-appearance:none;appearance:none"/></div>
       </div>
       <div class="form-group"><label>Categoría</label><select id="g-cat" onchange="onGastoCatChange()"></select></div>
@@ -1515,9 +1523,15 @@ input[type=checkbox]{width:auto;margin-right:5px}
           <option value="mixto">🔀 Mixto</option>
         </select>
       </div>
+      <div class="form-group"><label>Moneda</label>
+        <select id="obj-moneda" onchange="updateObjMonedaLabels()">
+          <option value="ARS">$ Pesos (ARS)</option>
+          <option value="USD">U$S Dólares (USD)</option>
+        </select>
+      </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div class="form-group"><label>Monto objetivo ($)</label><input type="number" id="obj-meta" placeholder="0" inputmode="decimal"/></div>
-        <div class="form-group"><label>Monto ahorrado inicial ($) <span style="font-weight:400;font-size:10px">si no usás instrumentos</span></label><input type="number" id="obj-actual" placeholder="0" inputmode="decimal"/></div>
+        <div class="form-group"><label id="obj-meta-label">Monto objetivo ($)</label><input type="number" id="obj-meta" placeholder="0" inputmode="decimal"/></div>
+        <div class="form-group"><label id="obj-actual-label">Monto ahorrado inicial ($) <span style="font-weight:400;font-size:10px">si no usás instrumentos</span></label><input type="number" id="obj-actual" placeholder="0" inputmode="decimal"/></div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
         <div class="form-group"><label>Fecha límite</label><input type="date" id="obj-fecha"/></div>
@@ -1885,7 +1899,15 @@ input[type=checkbox]{width:auto;margin-right:5px}
       <div class="form-group" style="grid-column:1/-1"><label>Descripción</label><input id="eg-desc"/></div>
       <div class="form-group"><label>Categoría</label><select id="eg-cat" onchange="onEditGastoCatChange()"></select></div>
       <div class="form-group" id="eg-subcat-wrap" style="display:none"><label>Subcategoría</label><select id="eg-subcat"><option value="">-- Sin subcategoría --</option></select></div>
-      <div class="form-group"><label>Monto (ARS)</label><input type="number" id="eg-monto"/></div>
+      <div class="form-group"><label id="eg-monto-label">Monto (ARS)</label>
+        <div style="display:flex;gap:6px">
+          <input type="number" id="eg-monto" style="flex:1"/>
+          <select id="eg-moneda" onchange="onEgMonedaChange()" style="border-radius:8px;border:1px solid var(--border);background:var(--card2);font-size:13px;font-weight:700;padding:0 6px;flex-shrink:0">
+            <option value="ARS">$</option>
+            <option value="USD">U$S</option>
+          </select>
+        </div>
+      </div>
       <div class="form-group"><label>Medio de pago</label>
         <select id="eg-tipo" onchange="document.getElementById('eg-tarjeta-group').style.display=this.value==='tarjeta'?'flex':'none'">
           <option value="efectivo">Efectivo</option><option value="debito">Débito</option><option value="tarjeta">Tarjeta créd.</option>
@@ -3530,6 +3552,8 @@ function renderObjetivos(){
       <div style="font-size:12px;color:var(--text2);margin-bottom:4px">
         Ahorrado: <strong style="color:var(--text)">${$$(actual)}</strong> de <strong>${$$(meta)}</strong> · Falta: <strong style="color:${falta>0?'var(--accent4)':'var(--accent2)'}">${$$(falta)}</strong>
       </div>
+      ${obj.moneda==='USD'?`<div style="font-size:11px;color:var(--text2);margin-bottom:4px">💵 Meta: U$S ${(+obj.monto_objetivo_usd||0).toLocaleString('es-AR',{minimumFractionDigits:2})} · Blue: ${dolarRates.blue?.venta?$$(obj.monto_objetivo_usd*dolarRates.blue.venta):'—'} · Oficial: ${dolarRates.oficial?.venta?$$(obj.monto_objetivo_usd*dolarRates.oficial.venta):'—'}</div>`:''}
+      ${obj.moneda==='USD'?`<div style="font-size:11px;color:var(--text2);margin-bottom:4px">💵 Meta: U$S ${(+obj.monto_objetivo_usd||0).toLocaleString('es-AR',{minimumFractionDigits:2})} · Blue: ${dolarRates.blue?.venta?$$(obj.monto_objetivo_usd*dolarRates.blue.venta):'—'} · Oficial: ${dolarRates.oficial?.venta?$$(obj.monto_objetivo_usd*dolarRates.oficial.venta):'—'}</div>`:''}
       ${pct>=100?'<div style="font-size:12px;color:var(--accent2);font-weight:700;margin-bottom:4px">✅ ¡Meta alcanzada!</div>':obj.fecha_limite?`<div style="font-size:12px;color:var(--text2);margin-bottom:4px">⏰ ${dias>0?dias+' días restantes':dias===0?'¡Vence hoy!':'Fecha vencida'} · ${_fmtFecha(obj.fecha_limite)}</div>`:''}
       ${proyFecha&&!insts.length?`<div style="font-size:11px;color:var(--text2);margin-bottom:6px">A este ritmo lo lográs el <strong>${proyFecha}</strong></div>`:''}
       ${instsHTML}
@@ -3585,6 +3609,12 @@ function onObjImgChange(e){
   };
   reader.readAsDataURL(file);
 }
+function updateObjMonedaLabels(){
+  const mon=document.getElementById('obj-moneda')?.value||'ARS';
+  const simbolo=mon==='USD'?'U$S':'$';
+  const lm=document.getElementById('obj-meta-label');if(lm)lm.textContent=`Monto objetivo (${simbolo})`;
+  const la=document.getElementById('obj-actual-label');if(la)la.innerHTML=`Monto ahorrado inicial (${simbolo}) <span style="font-weight:400;font-size:10px">si no usás instrumentos</span>`;
+}
 function openNuevoObjetivo(){
   objImgData=null;
   document.getElementById('obj-id').value='';
@@ -3598,6 +3628,8 @@ function openNuevoObjetivo(){
   document.getElementById('obj-img-preview').innerHTML='🎯';
   document.getElementById('obj-img-quitar').style.display='none';
   document.getElementById('obj-tipo-ahorro').value='';
+  const objMonNew=document.getElementById('obj-moneda');if(objMonNew)objMonNew.value='ARS';
+  updateObjMonedaLabels();
   openModal('modal-objetivo');
 }
 
@@ -3608,8 +3640,11 @@ function editObjetivo(id){
   document.getElementById('modal-obj-title').textContent='Editar objetivo';
   document.getElementById('obj-nombre').value=obj.nombre;
   document.getElementById('obj-icono').value=obj.icono||'🎯';
-  document.getElementById('obj-meta').value=obj.monto_objetivo||0;
-  document.getElementById('obj-actual').value=obj.monto_actual||0;
+  const objMonEdit=document.getElementById('obj-moneda');
+  if(objMonEdit)objMonEdit.value=obj.moneda||'ARS';
+  document.getElementById('obj-meta').value=obj.moneda==='USD'?(obj.monto_objetivo_usd||0):(obj.monto_objetivo||0);
+  document.getElementById('obj-actual').value=obj.moneda==='USD'?(obj.monto_actual_usd||0):(obj.monto_actual||0);
+  updateObjMonedaLabels();
   document.getElementById('obj-fecha').value=obj.fecha_limite||'';
   document.getElementById('obj-color').value=obj.color||'#3a6338';
   document.getElementById('obj-tipo-ahorro').value=obj.tipo_ahorro||'';
@@ -3629,10 +3664,17 @@ function guardarObjetivo(){
   const nombre=document.getElementById('obj-nombre').value.trim();
   if(!nombre)return alert('Ingresá un nombre');
   const meta=+document.getElementById('obj-meta').value;
+  const monedaObj=document.getElementById('obj-moneda')?.value||'ARS';
+  const actualIngresado=+document.getElementById('obj-actual').value||0;
+  const cotBlueObj=dolarRates.blue?.venta||0;
   if(!meta||meta<=0)return alert('El monto objetivo debe ser mayor a 0');
   const editId=document.getElementById('obj-id').value;
   const data={nombre,icono:document.getElementById('obj-icono').value||'🎯',
-    monto_objetivo:meta,monto_actual:+document.getElementById('obj-actual').value||0,
+    moneda:monedaObj,
+    monto_objetivo:monedaObj==='USD'?(cotBlueObj?meta*cotBlueObj:meta):meta,
+    monto_actual:monedaObj==='USD'?(cotBlueObj?actualIngresado*cotBlueObj:actualIngresado):actualIngresado,
+    monto_objetivo_usd:monedaObj==='USD'?meta:null,
+    monto_actual_usd:monedaObj==='USD'?actualIngresado:null,
     fecha_limite:document.getElementById('obj-fecha').value||null,
     color:document.getElementById('obj-color').value,activo:true,
     imagen:objImgData||null,
@@ -4750,6 +4792,8 @@ function renderIngresos(){
 function resetGastoForm(){
   document.getElementById('g-desc').value='';
   document.getElementById('g-monto').value='';
+  const gMonReset=document.getElementById('g-moneda');if(gMonReset)gMonReset.value='ARS';
+  onGastoMonedaChange();
   document.getElementById('g-notas').value='';
   document.getElementById('g-fecha').value=today();
   const mt=document.getElementById('g-monto-tarjeta');if(mt)mt.value='';
@@ -4769,12 +4813,21 @@ function resetGastoForm(){
   }
   document.getElementById('g-cat').value='';
 }
+function onGastoMonedaChange(){
+  const mon=document.getElementById('g-moneda')?.value||'ARS';
+  const lbl=document.getElementById('g-monto-label');
+  if(lbl)lbl.textContent=mon==='USD'?'Monto (USD)':'Monto (ARS)';
+}
 function agregarGasto(){
   if(!currentUser)return;
   const desc=document.getElementById('g-desc').value.trim();
   const monto=+document.getElementById('g-monto').value;
   if(!desc)return alert('Ingresá una descripción');
   if(!monto||monto<=0)return alert('El monto debe ser mayor a 0');
+  const monedaGasto=document.getElementById('g-moneda')?.value||'ARS';
+  const cotOficialGasto=dolarRates.oficial?.venta||0;
+  const montoARS=monedaGasto==='USD'?(cotOficialGasto?monto*cotOficialGasto:monto):monto;
+  const montoUSDOriginal=monedaGasto==='USD'?monto:null;
   const tipo=document.getElementById('g-tipo').value;
   const fecha=document.getElementById('g-fecha').value||today();
   const notas=document.getElementById('g-notas').value.trim();
@@ -4794,7 +4847,7 @@ function agregarGasto(){
       resetGastoForm();renderGastos();renderTarjetas();refreshDashIfVisible();
       return;
     }
-    const nuevo={id:uid(),fecha,descripcion:desc,categoria:cat,subcategoria,monto,tipo,creadoEn:new Date().toISOString(),tarjetaId,notas,recurrente:false,creadoEn:new Date().toISOString()};
+    const nuevo={id:uid(),fecha,descripcion:desc,categoria:cat,subcategoria,monto:montoARS,tipo,creadoEn:new Date().toISOString(),tarjetaId,notas,recurrente:false,moneda:monedaGasto,montoUSD:montoUSDOriginal,cotizacionUsada:monedaGasto==='USD'?cotOficialGasto:null};
     const dupG1=S.gastos.find(g=>g.descripcion===nuevo.descripcion&&g.monto===nuevo.monto&&g.fecha===nuevo.fecha&&g.categoria===nuevo.categoria);
     if(dupG1&&!confirm(`⚠️ Ya existe un gasto similar:\n"${nuevo.descripcion}" · $${nuevo.monto} · ${nuevo.fecha}\n\n¿Querés registrarlo de todas formas?`))return;
     S.gastos.push(nuevo);
@@ -4804,27 +4857,35 @@ function agregarGasto(){
   }
 
   const cuentaId=tipo==='debito'?document.getElementById('g-cuenta-debito').value:tipo==='efectivo'?(document.getElementById('g-cuenta-efectivo')?.value||null):null;
-  const nuevo={id:uid(),fecha,descripcion:desc,categoria:cat,subcategoria,monto,tipo,creadoEn:new Date().toISOString(),
-    tarjetaId:null,cuentaId,notas,recurrente:false};
+  const nuevo={id:uid(),fecha,descripcion:desc,categoria:cat,subcategoria,monto:montoARS,tipo,creadoEn:new Date().toISOString(),
+    tarjetaId:null,cuentaId,notas,recurrente:false,moneda:monedaGasto,montoUSD:montoUSDOriginal,cotizacionUsada:monedaGasto==='USD'?cotOficialGasto:null};
   const dupG2=S.gastos.find(g=>g.descripcion===nuevo.descripcion&&g.monto===nuevo.monto&&g.fecha===nuevo.fecha&&g.categoria===nuevo.categoria);
   if(dupG2&&!confirm(`⚠️ Ya existe un gasto similar:\n"${nuevo.descripcion}" · $${nuevo.monto} · ${nuevo.fecha}\n\n¿Querés registrarlo de todas formas?`))return;
   // Descontar saldo de la cuenta si es débito
   if(cuentaId){
     const cuenta=S.cuentas.find(c=>c.id===cuentaId);
-    if(cuenta){cuenta.saldo=(+cuenta.saldo||0)-monto;}
+    if(cuenta){cuenta.saldo=(+cuenta.saldo||0)-montoARS;}
   }
   S.gastos.push(nuevo);
   save();if(userRole==='usuario')syncGastoAdd(nuevo);
   resetGastoForm();renderGastos();refreshDashIfVisible();
 }
 
+function onEgMonedaChange(){
+  const mon=document.getElementById('eg-moneda')?.value||'ARS';
+  const lbl=document.getElementById('eg-monto-label');
+  if(lbl)lbl.textContent=mon==='USD'?'Monto (USD)':'Monto (ARS)';
+}
 function editGasto(id){
   const g=S.gastos.find(g=>g.id===id);if(!g)return;
   populateTarjetaSels();populateCatSelects();
   document.getElementById('eg-id').value=id;
   document.getElementById('eg-fecha').value=g.fecha;
   document.getElementById('eg-desc').value=g.descripcion;
-  document.getElementById('eg-monto').value=g.monto;
+  const egMon=document.getElementById('eg-moneda');
+  if(egMon)egMon.value=g.moneda||'ARS';
+  document.getElementById('eg-monto').value=g.moneda==='USD'?(g.montoUSD||0):g.monto;
+  onEgMonedaChange();
   document.getElementById('eg-tipo').value=g.tipo;
   document.getElementById('eg-tarjeta-group').style.display=g.tipo==='tarjeta'?'flex':'none';
   document.getElementById('eg-tarjeta').value=g.tarjetaId||'';
@@ -4851,11 +4912,22 @@ function guardarEditGasto(){
   const monto=+document.getElementById('eg-monto').value;
   if(!desc)return alert('Ingresá una descripción');
   if(!monto||monto<=0)return alert('El monto debe ser mayor a 0');
+  const monedaEdit=document.getElementById('eg-moneda')?.value||'ARS';
+  const cotOficialEdit=dolarRates.oficial?.venta||0;
   g.fecha=document.getElementById('eg-fecha').value;
   g.descripcion=document.getElementById('eg-desc').value.trim();
   g.categoria=document.getElementById('eg-cat').value;
   g.subcategoria=document.getElementById('eg-subcat')?.value||'';
-  g.monto=+document.getElementById('eg-monto').value;
+  g.moneda=monedaEdit;
+  if(monedaEdit==='USD'){
+    g.montoUSD=monto;
+    g.cotizacionUsada=cotOficialEdit;
+    g.monto=cotOficialEdit?monto*cotOficialEdit:monto;
+  } else {
+    g.montoUSD=null;
+    g.cotizacionUsada=null;
+    g.monto=monto;
+  }
   g.tipo=document.getElementById('eg-tipo').value;
   g.tarjetaId=g.tipo==='tarjeta'?document.getElementById('eg-tarjeta').value:null;
   g.notas=document.getElementById('eg-notas').value.trim();
@@ -5004,7 +5076,10 @@ function renderGastos(){
         <td>${g.recurrente?'<span class="badge b-blue">🔄</span>':'—'}</td>
         <td style="text-align:right;white-space:nowrap;vertical-align:middle">
           <div style="display:flex;align-items:center;justify-content:flex-end;gap:4px">
-            <span style="font-weight:700;font-size:13px">${$$(g.monto)}</span>
+            <div style="text-align:right">
+              <span style="font-weight:700;font-size:13px">${$$(g.monto)}</span>
+              ${g.moneda==='USD'?`<div style="font-size:10px;color:var(--text2)">U$S ${(+g.montoUSD||0).toLocaleString('es-AR',{minimumFractionDigits:2})}</div>`:''}
+            </div>
             <button class="btn-editar-gasto" data-id="${esc(g.id)}" style="background:none;border:none;font-size:16px;cursor:pointer;padding:4px;min-width:28px;min-height:28px">✏️</button>
             <button class="btn-eliminar-gasto" data-id="${esc(g.id)}" style="background:none;border:none;font-size:16px;cursor:pointer;padding:4px;min-width:28px;min-height:28px">🗑️</button>
           </div>
@@ -5081,7 +5156,7 @@ function renderGastos(){
       mobHtml:`<div class="mob-row">
         <div class="mob-row-desc">${esc(g.descripcion)}${impactaBadge}${g.registrado_por&&!ADMIN_EMAILS.includes(g.registrado_por)?`<span style="background:var(--accent-light);color:var(--accent);border-radius:6px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:4px">👤 ${(g.registrado_por_nombre||g.registrado_por.split('@')[0])}</span>`:''}</div>
         <div class="mob-row-monto">
-          <span>${$$(g.monto)}</span>
+          <span>${$$(g.monto)}${g.moneda==='USD'?`<br><span style="font-size:10px;color:var(--text2)">U$S ${(+g.montoUSD||0).toLocaleString('es-AR',{minimumFractionDigits:2})}</span>`:''}</span>
           <button class="btn-editar-gasto" data-id="${esc(g.id)}">✏️</button>
           <button class="btn-eliminar-gasto" data-id="${esc(g.id)}">🗑️</button>
         </div>
@@ -5097,7 +5172,10 @@ function renderGastos(){
       <td>${g.recurrente?'<span class="badge b-blue">🔄</span>':'—'}</td>
       <td style="text-align:right;white-space:nowrap;vertical-align:middle">
         <div style="display:flex;align-items:center;justify-content:flex-end;gap:4px">
-          <span style="font-weight:700;font-size:13px">${$$(g.monto)}</span>
+          <div style="text-align:right">
+            <span style="font-weight:700;font-size:13px">${$$(g.monto)}</span>
+            ${g.moneda==='USD'?`<div style="font-size:10px;color:var(--text2)">U$S ${(+g.montoUSD||0).toLocaleString('es-AR',{minimumFractionDigits:2})}</div>`:''}
+          </div>
           <button class="btn-editar-gasto" data-id="${esc(g.id)}" style="background:none;border:none;font-size:16px;cursor:pointer;padding:4px;min-width:28px;min-height:28px">✏️</button>
           <button class="btn-eliminar-gasto" data-id="${esc(g.id)}" style="background:none;border:none;font-size:16px;cursor:pointer;padding:4px;min-width:28px;min-height:28px">🗑️</button>
         </div>
