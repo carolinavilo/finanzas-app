@@ -850,6 +850,7 @@ input[type=checkbox]{width:auto;margin-right:5px}
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         <input type="text" id="mov-search" placeholder="🔍 Buscar..." oninput="renderMovimientos()" style="min-width:140px">
         <select id="mov-mes" onchange="renderMovimientos()"></select>
+        <select id="mov-dia" onchange="renderMovimientos()"><option value="">Todos los días</option><option value="01">1</option><option value="02">2</option><option value="03">3</option><option value="04">4</option><option value="05">5</option><option value="06">6</option><option value="07">7</option><option value="08">8</option><option value="09">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option><option value="21">21</option><option value="22">22</option><option value="23">23</option><option value="24">24</option><option value="25">25</option><option value="26">26</option><option value="27">27</option><option value="28">28</option><option value="29">29</option><option value="30">30</option><option value="31">31</option></select>
         <select id="mov-tipo" onchange="renderMovimientos()">
           <option value="">Todo</option>
           <option value="ingreso">Ingresos</option>
@@ -981,6 +982,7 @@ input[type=checkbox]{width:auto;margin-right:5px}
       <input type="text" id="filtro-buscar-g" placeholder="🔍 Buscar..." onkeyup="renderGastos()" style="width:100%"/>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <select id="filtro-mes-g" onchange="renderGastos()"></select>
+        <select id="filtro-dia-g" onchange="renderGastos()"><option value="">Todos los días</option><option value="01">1</option><option value="02">2</option><option value="03">3</option><option value="04">4</option><option value="05">5</option><option value="06">6</option><option value="07">7</option><option value="08">8</option><option value="09">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option><option value="21">21</option><option value="22">22</option><option value="23">23</option><option value="24">24</option><option value="25">25</option><option value="26">26</option><option value="27">27</option><option value="28">28</option><option value="29">29</option><option value="30">30</option><option value="31">31</option></select>
         <select id="filtro-cat-g" onchange="onFiltroCatGChange();renderGastos()"><option value="">Todas</option></select>
         <select id="filtro-subcat-g" onchange="renderGastos()" style="display:none"><option value="">Todas las subcats</option></select>
         <select id="filtro-tipo-g" onchange="renderGastos()">
@@ -3021,6 +3023,7 @@ function renderMovimientos(){
   }
   const buscar=document.getElementById('mov-search')?.value.toLowerCase()||'';
   const mes=document.getElementById('mov-mes')?.value||'';
+  const dia=document.getElementById('mov-dia')?.value||'';
   const tipo=document.getElementById('mov-tipo')?.value||'';
   const cuotasExpandidas=[];
   (S.comprasCuotas||[]).forEach(c=>{
@@ -3039,6 +3042,7 @@ function renderMovimientos(){
     ...cuotasExpandidas
   ]
   .filter(m=>!mes||(m.tipo_mov==='gasto'?calcFechaImpactoGasto(m)?.startsWith(mes):m.fecha?.startsWith(mes)))
+  .filter(m=>!dia||(m.tipo_mov==='gasto'?calcFechaImpactoGasto(m)?.slice(8,10):m.fecha?.slice(8,10))===dia)
   .filter(m=>!tipo||m.tipo_mov===tipo)
   .filter(m=>!buscar||m.descripcion?.toLowerCase().includes(buscar)||m.categoria?.toLowerCase().includes(buscar))
   .sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
@@ -5023,6 +5027,7 @@ function renderGastos(){
   if(gcat)gcat.value='';
   if(!document.getElementById('g-fecha').value)document.getElementById('g-fecha').value=today();
   const mes=document.getElementById('filtro-mes-g').value;
+  const dia=document.getElementById('filtro-dia-g')?.value||'';
   const cat=document.getElementById('filtro-cat-g').value;
   const tipo=document.getElementById('filtro-tipo-g').value;
   const buscarRaw=document.getElementById('filtro-buscar-g').value.trim();
@@ -5037,6 +5042,7 @@ function renderGastos(){
     // Gastos normales (no multi-cuota) que caen en el mes
     let gastosMes=S.gastos.filter(g=>{
       if(mes&&!calcFechaImpactoGasto(g).startsWith(mes))return false;
+      if(dia&&calcFechaImpactoGasto(g).slice(8,10)!==dia)return false;
       if(cat&&g.categoria!==cat)return false;
       if(subcat&&g.subcategoria!==subcat)return false;
       if(tipo&&g.tipo!==tipo)return false;
@@ -5046,6 +5052,7 @@ function renderGastos(){
     // Cuotas de comprasCuotas que vencen este mes
     let cuotasDue=(!tipo||tipo==='tarjeta')
       ? getCuotasDueInMonth(mes).filter(d=>{
+          if(dia&&d.fecha.slice(8,10)!==dia)return false;
           if(cat&&d.compra.categoria!==cat)return false;
           if(subcat&&d.compra.subcategoria!==subcat)return false;
           if(buscar&&!norm(d.compra.descripcion||'').includes(buscar))return false;
@@ -5108,6 +5115,7 @@ function renderGastos(){
   // ── MODO FECHA DE COMPRA (default) ──
   let items=S.gastos.map((g,i)=>({...g,__idx:i})).filter(g=>{
     if(mes&&!g.fecha.startsWith(mes))return false;
+    if(dia&&g.fecha.slice(8,10)!==dia)return false;
     if(cat&&g.categoria!==cat)return false;
     if(subcat&&g.subcategoria!==subcat)return false;
     if(tipo&&g.tipo!==tipo)return false;
@@ -5125,6 +5133,7 @@ function renderGastos(){
   const cuotasMes=(!tipo||tipo==='tarjeta')
     ? S.comprasCuotas.filter(c=>{
         if(mes&&!c.fecha.startsWith(mes))return false;
+        if(dia&&c.fecha.slice(8,10)!==dia)return false;
         if(cat&&c.categoria!==cat)return false;
         if(subcat&&c.subcategoria!==subcat)return false;
         if(buscar&&!norm(c.descripcion||'').includes(buscar))return false;
