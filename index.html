@@ -500,6 +500,7 @@ input[type=checkbox]{width:auto;margin-right:5px}
     <div class="login-logo">💰</div>
     <div class="login-title">FinanzasApp</div>
     <div class="login-sub">Ingresá con tu cuenta</div>
+    <form onsubmit="return false">
     <div class="login-field">
       <label>Email</label>
       <input type="email" id="login-email" placeholder="tu@email.com" onkeydown="if(event.key==='Enter')document.getElementById('login-pass').focus()"/>
@@ -508,6 +509,7 @@ input[type=checkbox]{width:auto;margin-right:5px}
       <label>Contraseña</label>
       <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"/>
     </div>
+    </form>
     <button class="login-btn" id="login-btn" onclick="doLogin()">Entrar</button>
     <div class="login-error" id="login-error"></div>
     <p style="text-align:center;margin-top:12px">
@@ -520,6 +522,7 @@ input[type=checkbox]{width:auto;margin-right:5px}
     <div class="login-logo">🔐</div>
     <div class="login-title">Crear contraseña</div>
     <div class="login-sub">Elegí tu contraseña para ingresar a la app</div>
+    <form onsubmit="return false">
     <div class="login-field">
       <label>Nueva contraseña</label>
       <input type="password" id="new-pass" placeholder="Mínimo 6 caracteres" autocomplete="new-password" onkeydown="if(event.key==='Enter')document.getElementById('new-pass2').focus()"/>
@@ -528,6 +531,7 @@ input[type=checkbox]{width:auto;margin-right:5px}
       <label>Repetir contraseña</label>
       <input type="password" id="new-pass2" placeholder="Repetí la contraseña" autocomplete="new-password" onkeydown="if(event.key==='Enter')doSetPassword()"/>
     </div>
+    </form>
     <button class="login-btn" id="set-pass-btn" onclick="doSetPassword()">Guardar contraseña</button>
     <div class="login-error" id="set-pass-error"></div>
   </div>
@@ -1428,6 +1432,7 @@ input[type=checkbox]{width:auto;margin-right:5px}
   <div class="modal" style="max-width:360px">
     <div class="modal-header"><h3>🔑 Cambiar contraseña</h3><button class="modal-close" onclick="closeModalCambiarPass()">×</button></div>
     <div class="modal-body">
+      <form onsubmit="return false">
       <div class="form-group">
         <label>Nueva contraseña</label>
         <input type="password" id="cp-nueva" placeholder="Mínimo 6 caracteres" autocomplete="new-password" onkeydown="if(event.key==='Enter')document.getElementById('cp-repetir').focus()"/>
@@ -1437,6 +1442,7 @@ input[type=checkbox]{width:auto;margin-right:5px}
         <input type="password" id="cp-repetir" placeholder="Repetí la contraseña" autocomplete="new-password" onkeydown="if(event.key==='Enter')doChangePasword()"/>
       </div>
       <p id="cp-error" style="color:var(--accent4);font-size:13px;margin-top:4px"></p>
+      </form>
     </div>
     <div class="modal-footer">
       <button class="btn btn-neutral" onclick="closeModalCambiarPass()">Cancelar</button>
