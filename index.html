@@ -5833,6 +5833,8 @@ function eliminarCuota(id){
 }
 
 let _cuotasMesOpen={};
+let _cuotasVerPasados=false;
+function toggleCuotasPasados(){_cuotasVerPasados=!_cuotasVerPasados;renderCuotas();}
 function toggleMesCard(mes){
   _cuotasMesOpen[mes]=!_cuotasMesOpen[mes];
   renderCuotas();
@@ -5864,7 +5866,10 @@ function renderCuotas(){
     }
   });
 
-  const meses=Object.keys(byMes).sort();
+  const _todosMeses=Object.keys(byMes);
+  const _futuros=_todosMeses.filter(m=>m>=mesHoy).sort();
+  const _pasados=_todosMeses.filter(m=>m<mesHoy).sort().reverse();
+  const meses=[..._futuros,..._pasados];
 
   // ── Alertas urgentes (venc ≤ 5d) ──
   const alertas=[];
@@ -5892,6 +5897,16 @@ function renderCuotas(){
   // ── Accordion por mes ──
   meses.forEach(mes=>{
     const isPast=mes<mesHoy;
+    if(isPast&&mes===_pasados[0]){
+      html+=`<div class="mes-card" style="cursor:pointer;background:var(--card2)" onclick="toggleCuotasPasados()">
+        <div class="mes-card-header">
+          <div class="mes-card-title">${_cuotasVerPasados?'▲':'▼'} Meses anteriores (${_pasados.length})</div>
+        </div>
+      </div>`;
+      if(!_cuotasVerPasados)return;
+    } else if(isPast&&!_cuotasVerPasados){
+      return;
+    }
     const isCurrent=mes===mesHoy;
     if(_cuotasMesOpen[mes]===undefined)_cuotasMesOpen[mes]=isCurrent;
     const isOpen=_cuotasMesOpen[mes];
