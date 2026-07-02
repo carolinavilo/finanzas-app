@@ -2587,6 +2587,7 @@ async function load(){
         const json=JSON.stringify(S);
         localStorage.setItem('fz_v3',json);localStorage.setItem('fz_v3_backup',json);
         if(S.config?.anthropicKey)localStorage.setItem('anthropic_api_key',S.config.anthropicKey);
+        if(document.getElementById('section-cuotas')?.classList.contains('active')&&typeof renderCuotas==='function')renderCuotas();
         return;
       }
     }catch(e){console.warn('[sync] Error cargando desde Supabase:', e.message);}
