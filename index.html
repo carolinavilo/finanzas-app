@@ -8418,7 +8418,7 @@ function _buscarDuplicado(desc,monto,fecha){
     const montoC=c.montoTotal||(c.montoCuota*c.cuotas)||0;
     const montoCercano=Math.abs(montoC-(+monto||0))/(+monto||1)<0.05;
     const diasDif=Math.abs((fechaD-new Date(c.fecha))/(1000*60*60*24));
-    return sim>0.7&&montoCercano&&diasDif<=45;
+    return sim>0.7&&montoCercano&&diasDif<=400;
   });
   if(cuotaDup)return{tipo:'cuota',item:cuotaDup};
   return null;
@@ -8431,7 +8431,7 @@ function actualizarDatosTarjetaDesdeResumen(tarjetaId,cierre,vencimiento){
   if(userRole==='admin')setTimeout(_syncSharedData,500);
 }
 function renderImportResults(data, forcedTarjetaId, targetContainerEl) {
-  const { gastos = [], cuotas = [], tarjeta_info: tarjetaInfo = null } = data;
+  const { gastos = [], cuotas = [], cargos = [], tarjeta_info: tarjetaInfo = null } = data;
   const allCats = getCatsGasto();
   const panelId = 'imp' + Date.now();
   _aiImportData[panelId] = data;
@@ -8474,6 +8474,16 @@ function renderImportResults(data, forcedTarjetaId, targetContainerEl) {
   }) : null;
   const tarjetaMatcheada = forcedTarjetaId || tarjetaInfoMatch?.id || S.tarjetas[0]?.id || '';
   _aiImportData[panelId].tarjetaMatcheada = tarjetaMatcheada;
+  if(forcedTarjetaId&&tarjetaInfo&&(tarjetaInfo.saldo_total||tarjetaInfo.pago_minimo)){
+    const mesResumen=today().slice(0,7);
+    const idxR=(S.resumenTarjetas||[]).findIndex(r=>r.tarjetaId===forcedTarjetaId&&r.mes===mesResumen);
+    const montoResumenNuevo=+tarjetaInfo.saldo_total||0;
+    if(montoResumenNuevo>0){
+      if(idxR>=0){S.resumenTarjetas[idxR].montoResumen=montoResumenNuevo;}
+      else{S.resumenTarjetas.push({id:uid(),tarjetaId:forcedTarjetaId,mes:mesResumen,montoResumen:montoResumenNuevo,montoAbonado:0,fechaAbono:null,medioAbono:null,cuentaId:null,pagado:false});}
+      save();
+    }
+  }
 
   if (gastos.length) {
     html += `<div class="ai-import-section">
@@ -8539,7 +8549,23 @@ function renderImportResults(data, forcedTarjetaId, targetContainerEl) {
     html += '</div>';
   }
 
-  if (!gastos.length && !cuotas.length) {
+  if (cargos.length) {
+    html += `<div class="ai-import-section">
+      <div class="ai-import-title">🧾 Cargos e impuestos (${cargos.length})${selBtns('x')}</div>`;
+    cargos.forEach((x, i) => {
+      html += `<div class="ai-import-row">
+        <input type="checkbox" class="ai-imp-chk" data-section="${panelId}-x" data-idx="${i}" checked/>
+        <div class="ai-import-info">
+          <input type="text" class="ai-import-edit-desc" id="aidesc-${panelId}-x-${i}" value="${escHtml(x.descripcion)}"/>
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:4px">
+            <input type="number" id="aimonto-${panelId}-x-${i}" value="${x.monto}" style="width:84px;padding:3px 6px;font-size:11px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--accent);font-weight:600"/>
+          </div>
+        </div>
+      </div>`;
+    });
+    html += '</div>';
+  }
+  if (!gastos.length && !cuotas.length && !cargos.length) {
     html += '<p style="font-size:13px;color:var(--text2);padding:4px 0">No se detectaron movimientos en el documento.</p>';
   } else {
     const nDups=gastos.filter(g=>_buscarDuplicado(g.descripcion,g.monto,g.fecha)).length+
@@ -8586,7 +8612,7 @@ function importarSeleccionados(panelId, btn) {
     return;
   }
 
-  const { gastos = [], cuotas = [] } = data;
+  const { gastos = [], cuotas = [], cargos = [] } = data;
   let nGastos = 0, nCuotas = 0;
 
   try {
@@ -8626,12 +8652,24 @@ function importarSeleccionados(panelId, btn) {
         cuotasPagadas: Math.max(0, (c.cuota_actual || 1) - 1),
         fechaPrimerPago: c.fecha || today(), notas: notaC });
       nCuotas++;
+});
+    let nCargos=0;
+    panel.querySelectorAll(`.ai-imp-chk[data-section="${panelId}-x"]:checked`).forEach(chk => {
+      const i = chk.dataset.idx;
+      const x = cargos[i];
+      if (!x) return;
+      const descX = document.getElementById(`aidesc-${panelId}-x-${i}`)?.value?.trim() || x.descripcion;
+      const montoX = +(document.getElementById(`aimonto-${panelId}-x-${i}`)?.value) || x.monto;
+      if(!montoX)return;
+      const tarjetaIdX = data.tarjetaMatcheada || S.tarjetas[0]?.id || null;
+      if(!tarjetaIdX)return;
+      S.gastosFinTarjeta.push({ id: uid(), tarjetaId: tarjetaIdX, mes: today().slice(0,7), descripcion: descX, monto: montoX });
+      nCargos++;
     });
-
     save();
     renderGastos(); renderTarjetas(); refreshDashIfVisible();
+    const msg = `✅ Se importaron ${nGastos} gasto${nGastos!==1?'s':''}, ${nCuotas} cuota${nCuotas!==1?'s':''} y ${nCargos} cargo${nCargos!==1?'s':''}`;
 
-    const msg = `✅ Se importaron ${nGastos} gasto${nGastos!==1?'s':''} y ${nCuotas} cuota${nCuotas!==1?'s':''}`;
     btn.textContent = msg;
     btn.disabled = true;
     btn.style.background = 'var(--accent2)';
