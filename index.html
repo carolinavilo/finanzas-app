@@ -3070,8 +3070,8 @@ function renderMovimientos(){
     ...S.ingresos.map(i=>({...i,tipo_mov:'ingreso'})),
     ...cuotasExpandidas
   ]
-  .filter(m=>!mes||(m.tipo_mov==='gasto'?calcFechaImpactoGasto(m)?.startsWith(mes):m.fecha?.startsWith(mes)))
-  .filter(m=>!dia||(m.tipo_mov==='gasto'?calcFechaImpactoGasto(m)?.slice(8,10):m.fecha?.slice(8,10))===dia)
+  .filter(m=>(mes||'')===''||m.fecha?.startsWith(mes))
+  .filter(m=>(dia||'')===''||m.fecha?.slice(8,10)===dia)
   .filter(m=>!tipo||m.tipo_mov===tipo)
   .filter(m=>!buscar||m.descripcion?.toLowerCase().includes(buscar)||m.categoria?.toLowerCase().includes(buscar))
   .sort((a,b)=>{const fd=(b.fecha||'').localeCompare(a.fecha||'');if(fd!==0)return fd;return(b.creadoEn||'').localeCompare(a.creadoEn||'');});
