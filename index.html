@@ -8335,25 +8335,23 @@ async function analizarResumenBancario(attachments, loadingEl, forcedTarjetaId, 
   });
 
   const tarjetasDisp = S.tarjetas.length ? `Las tarjetas disponibles son: ${S.tarjetas.map(t=>t.nombre).join(', ')}. Asigná en tarjeta_nombre el nombre MÁS SIMILAR de esa lista para cada gasto de crédito.` : '';
-  const jsonSchema = `{"gastos":[{"fecha":"YYYY-MM-DD","descripcion":"nombre limpio del comercio","monto":0,"categoria_sugerida":"Otros","medio_pago":"credito","tarjeta_nombre":""}],"cuotas":[{"fecha":"YYYY-MM-DD","descripcion":"nombre limpio del comercio","monto_cuota":0,"monto_total":0,"cuota_actual":1,"total_cuotas":12,"categoria_sugerida":"Otros"}],"tarjeta_info":{"nombre_tarjeta":"","fecha_cierre":0,"fecha_vencimiento":0}}`;
-
+  const jsonSchema = `{"gastos":[{"fecha":"YYYY-MM-DD","descripcion":"nombre limpio del comercio","monto":0,"categoria_sugerida":"Otros","medio_pago":"credito","tarjeta_nombre":""}],"cuotas":[{"fecha":"YYYY-MM-DD","descripcion":"nombre limpio del comercio","monto_cuota":0,"monto_total":0,"cuota_actual":1,"total_cuotas":12,"categoria_sugerida":"Otros"}],"cargos":[{"descripcion":"nombre del cargo","monto":0}],"tarjeta_info":{"nombre_tarjeta":"","fecha_cierre":0,"fecha_vencimiento":0,"saldo_total":0,"pago_minimo":0}}`;
   const basePrompt = `Analizá ${n > 1 ? `estos ${n} resúmenes bancarios/fotos de tickets` : 'este resumen bancario o de tarjeta de crédito'} con máximo detalle.
 ${tarjetasDisp}
 Para cada movimiento identificá:
-
 GASTOS (compras en 1 pago, débitos, transferencias salientes):
 - fecha (YYYY-MM-DD), descripcion (nombre limpio del comercio, sin códigos internos), monto (número positivo en ARS), categoria_sugerida (Comida/Transporte/Entretenimiento/Salud/Ropa/Hogar/Servicios/Supermercado/Seguros/Otros), medio_pago (debito/credito/transferencia), tarjeta_nombre (nombre de la tarjeta si es crédito). Los seguros de vida, robo, automotor, médico y similares que aparezcan en el resumen deben clasificarse como categoria_sugerida: Seguros
-
 CUOTAS (compras en N cuotas, identificadas por texto como '2/12', 'CTA 3/6', 'CUOTA'):
 - fecha (YYYY-MM-DD), descripcion (nombre limpio del comercio), monto_cuota (monto de esta cuota en ARS), monto_total (monto_cuota × total_cuotas), cuota_actual, total_cuotas, categoria_sugerida
-
+CARGOS (impuesto de sellos, intereses de financiación, IVA sobre intereses, cargos administrativos, seguro de tarjeta o similares que apliquen al resumen completo, no a una compra puntual):
+- descripcion (nombre limpio del cargo), monto (número positivo en ARS)
 TARJETA INFO (del encabezado o pie del resumen):
 - tarjeta_info.nombre_tarjeta: nombre completo de la tarjeta
 - tarjeta_info.fecha_cierre: solo el número del día (1-31). Ej: "Cierre 28/06/2026" → 28
 - tarjeta_info.fecha_vencimiento: solo el número del día (1-31). Ej: "Vencimiento 10/07/2026" → 10
-
-${n > 1 ? 'Consolidá TODOS los movimientos de todos los archivos en un único JSON sin duplicados.\n' : ''}IGNORAR: pagos de resumen, acreditaciones de sueldo, ajustes, intereses, descuentos promocionales.
-
+- tarjeta_info.saldo_total: el saldo actual total a pagar del resumen (número, sin puntos ni comas de miles, ej "SALDO ACTUAL $27.228,86" → 27228.86)
+- tarjeta_info.pago_minimo: el pago mínimo del resumen (mismo formato numérico)
+${n > 1 ? 'Consolidá TODOS los movimientos de todos los archivos en un único JSON sin duplicados.\n' : ''}IGNORAR: pagos de resumen ya realizados, acreditaciones de sueldo, ajustes, descuentos promocionales.
 Respondé ÚNICAMENTE con JSON válido, sin texto adicional, sin markdown:
 ${jsonSchema}`;
 
