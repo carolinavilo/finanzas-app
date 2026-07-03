@@ -3054,21 +3054,11 @@ function renderMovimientos(){
   const mes=document.getElementById('mov-mes')?.value||'';
   const dia=document.getElementById('mov-dia')?.value||'';
   const tipo=document.getElementById('mov-tipo')?.value||'';
-  const cuotasExpandidas=[];
-  (S.comprasCuotas||[]).forEach(c=>{
-    const totalCuotas=c.cuotas||0;
-    const montoCuota=c.montoCuota||0;
-    if(!totalCuotas||!montoCuota)return;
-    for(let i=0;i<totalCuotas;i++){
-      const fechaPago=c.fechaPrimerPago?addMesesAFecha(c.fechaPrimerPago,i):null;
-      if(!fechaPago)continue;
-      cuotasExpandidas.push({...c,tipo_mov:'cuota',monto:montoCuota,fecha:fechaPago,cuotaNum:i+1,categoria:c.categoria||'Sin categoría'});
-    }
-  });
+  const cuotasCompras=(S.comprasCuotas||[]).filter(c=>c.cuotas&&c.montoCuota).map(c=>({...c,tipo_mov:'cuota',monto:c.montoTotal||(c.montoCuota*c.cuotas),cuotaNum:1,categoria:c.categoria||'Sin categoría'}));
   const movs=[
     ...S.gastos.map(g=>({...g,tipo_mov:'gasto'})),
     ...S.ingresos.map(i=>({...i,tipo_mov:'ingreso'})),
-    ...cuotasExpandidas
+    ...cuotasCompras
   ]
   .filter(m=>(mes||'')===''||m.fecha?.startsWith(mes))
   .filter(m=>(dia||'')===''||m.fecha?.slice(8,10)===dia)
@@ -3090,7 +3080,7 @@ function renderMovimientos(){
         ${m.tipo_mov==='ingreso'?'+':'−'}${$$(m.monto)}
       </div>
       <div style="font-size:11px;color:var(--text2);grid-column:1;grid-row:2">
-        ${m.tipo_mov==='ingreso'?'📈':(m.tipo==='tarjeta'||m.tipo_mov==='cuota')?'💳':m.tipo==='debito'?'🏦':'💵'} ${ff(m.fecha)} · <span class="badge ${m.tipo_mov==='ingreso'?'b-green':m.tipo_mov==='cuota'?'b-blue':'b-purple'}" style="font-size:10px">${m.tipo_mov==='cuota'?'Cuota '+m.cuotaNum+'/'+(m.cuotas||'?'):esc(m.categoria)}</span>${m.subcategoria?` · <span style="font-size:10px;color:var(--text2)">${esc(m.subcategoria)}</span>`:''}${(m.tipo==='tarjeta'||m.tipo_mov==='cuota')?` · <span style="font-size:10px;color:var(--text2)">Impacta ${mesPretty(calcFechaImpactoGasto(m).slice(0,7))}</span>`:''}
+        ${m.tipo_mov==='ingreso'?'📈':(m.tipo==='tarjeta'||m.tipo_mov==='cuota')?'💳':m.tipo==='debito'?'🏦':'💵'} ${ff(m.fecha)} · <span class="badge ${m.tipo_mov==='ingreso'?'b-green':m.tipo_mov==='cuota'?'b-blue':'b-purple'}" style="font-size:10px">${m.tipo_mov==='cuota'?'En '+(m.cuotas||'?')+' cuotas':esc(m.categoria)}</span>${m.subcategoria?` · <span style="font-size:10px;color:var(--text2)">${esc(m.subcategoria)}</span>`:''}${m.tipo==='tarjeta'?` · <span style="font-size:10px;color:var(--text2)">Impacta ${mesPretty(calcFechaImpactoGasto(m).slice(0,7))}</span>`:''}
       </div>
       <div style="grid-column:2;grid-row:2;text-align:right;white-space:nowrap">
         <button class="btn btn-ghost btn-xs mov-edit-btn" data-id="${esc(m.id)}" data-tipo="${m.tipo_mov}">✏️</button>
