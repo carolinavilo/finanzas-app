@@ -1420,6 +1420,7 @@ input[type=checkbox]{width:auto;margin-right:5px}
   <div id="ai-attachment-label"></div>
   <div id="ai-input-row">
     <input type="file" id="ai-file-input" accept=".pdf,image/*" multiple style="display:none" onchange="handleAIFileSelect(event)"/>
+    <input type="file" id="resumen-tarjeta-file-input" accept=".pdf,image/*" multiple style="display:none" onchange="handleResumenTarjetaFileSelect(event)"/>
     <button id="ai-attach-btn" title="Adjuntar resúmenes bancarios (PDF o imágenes)" onclick="document.getElementById('ai-file-input').click()">📎</button>
     <input id="ai-input" placeholder="Preguntá algo..." onkeydown="if(event.key==='Enter')sendAIMsg()"/>
     <button class="btn btn-primary" style="padding:8px 14px;border-radius:20px" onclick="sendAIMsg()">↑</button>
@@ -1427,6 +1428,12 @@ input[type=checkbox]{width:auto;margin-right:5px}
 </div>
 
 <!-- MODAL TARJETA -->
+<div class="modal-overlay" id="modal-resumen-tarjeta" style="display:none" onclick="if(event.target===this)closeResumenTarjetaModal()">
+  <div class="modal" style="max-width:520px;max-height:85vh;overflow-y:auto">
+    <div class="modal-header"><h3>📄 Revisión de resumen</h3><button class="modal-close" onclick="closeResumenTarjetaModal()">×</button></div>
+    <div class="modal-body" id="modal-resumen-tarjeta-body"></div>
+  </div>
+</div>
 <!-- MODAL CAMBIAR CONTRASEÑA -->
 <div class="modal-overlay" id="modal-cambiar-pass" style="display:none" onclick="if(event.target===this)closeModalCambiarPass()">
   <div class="modal" style="max-width:360px">
@@ -5707,6 +5714,9 @@ function renderTarjetas(){
         `:`<div style="font-size:12px;color:var(--text2);margin-bottom:10px">Sin resumen registrado este mes</div>`}
         <button class="btn btn-primary btn-sm" style="width:100%" onclick="abrirModalAbonarTarjeta('${esc(t.id)}')">
           💳 ${_montoRes>0?'Abonar / actualizar resumen':'Registrar resumen del mes'}
+        </button>
+        <button class="btn btn-neutral btn-sm" style="width:100%;margin-top:6px" onclick="subirResumenTarjeta('${esc(t.id)}')">
+          📤 Subir resumen
         </button>
       </div>`;
     })()}
