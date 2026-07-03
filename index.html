@@ -8292,7 +8292,38 @@ function clearAIAttachments() {
   renderAttachmentChips();
 }
 
-async function analizarResumenBancario(attachments, loadingEl) {
+function closeResumenTarjetaModal(){document.getElementById('modal-resumen-tarjeta').style.display='none';}
+let _resumenTarjetaIdFijo=null;
+function subirResumenTarjeta(tarjetaId){
+  const apiKey=getApiKey();
+  if(!apiKey){alert('Configurá tu API key de Anthropic en Ajustes → Asistente IA para usar esta función.');return;}
+  _resumenTarjetaIdFijo=tarjetaId;
+  document.getElementById('resumen-tarjeta-file-input').click();
+}
+function handleResumenTarjetaFileSelect(e){
+  const files=Array.from(e.target.files);
+  e.target.value='';
+  if(!files.length)return;
+  const tarjetaId=_resumenTarjetaIdFijo;
+  const body=document.getElementById('modal-resumen-tarjeta-body');
+  const modal=document.getElementById('modal-resumen-tarjeta');
+  body.innerHTML='<div style="padding:24px;text-align:center;color:var(--text2)">⏳ Analizando '+(files.length>1?files.length+' archivos':'resumen')+'...</div>';
+  modal.style.display='flex';
+  let pending=files.length;const atts=[];
+  files.forEach(file=>{
+    const reader=new FileReader();
+    reader.onload=(ev)=>{
+      const dataUrl=ev.target.result;
+      atts.push({base64:dataUrl.slice(dataUrl.indexOf(',')+1),mediaType:file.type,fileName:file.name});
+      if(--pending===0){
+        analizarResumenBancario(atts,{remove:()=>{}},tarjetaId,body);
+      }
+    };
+    reader.readAsDataURL(file);
+  });
+}
+async function analizarResumenBancario(attachments, loadingEl, forcedTarjetaId, targetContainerEl) {
+  const showErr=(msg)=>{if(targetContainerEl){targetContainerEl.innerHTML='<div style="padding:20px;color:var(--accent4)">'+msg+'</div>';}else{appendAIMsg('bot',msg);}};
   const apiKey = getApiKey();
   const n = attachments.length;
 
@@ -8346,23 +8377,23 @@ ${jsonSchema}`;
     loadingEl.remove();
     if (!response.ok) {
       const err = await response.json();
-      appendAIMsg('bot', '❌ Error al analizar: ' + (err?.error?.message || response.status));
+      showErr('❌ Error al analizar: ' + (err?.error?.message || response.status));
       return;
     }
     const data = await response.json();
     const rawText = data.content[0].text.trim();
     const jsonMatch = rawText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
-      appendAIMsg('bot', '⚠️ No pude leer la respuesta. Probá con una imagen más nítida o un PDF con texto seleccionable.');
+      showErr('⚠️ No pude leer la respuesta. Probá con una imagen más nítida o un PDF con texto seleccionable.');
       return;
     }
     let parsed;
     try { parsed = JSON.parse(jsonMatch[0]); }
-    catch(e) { appendAIMsg('bot', '⚠️ Error al parsear la respuesta de la IA: ' + e.message); return; }
-    renderImportResults(parsed);
+    catch(e) { showErr('⚠️ Error al parsear la respuesta de la IA: ' + e.message); return; }
+    renderImportResults(parsed, forcedTarjetaId, targetContainerEl);
   } catch(e) {
     loadingEl.remove();
-    appendAIMsg('bot', '❌ Error de red: ' + e.message);
+    showErr('❌ Error de red: ' + e.message);
   }
 }
 
@@ -8401,7 +8432,7 @@ function actualizarDatosTarjetaDesdeResumen(tarjetaId,cierre,vencimiento){
   save();showToast(`✅ Tarjeta actualizada: cierre día ${cierre} · vencimiento día ${vencimiento}`);renderTarjetas();
   if(userRole==='admin')setTimeout(_syncSharedData,500);
 }
-function renderImportResults(data) {
+function renderImportResults(data, forcedTarjetaId, targetContainerEl) {
   const { gastos = [], cuotas = [], tarjeta_info: tarjetaInfo = null } = data;
   const allCats = getCatsGasto();
   const panelId = 'imp' + Date.now();
@@ -8419,7 +8450,7 @@ function renderImportResults(data) {
   let html = '<div class="ai-import-panel">';
 
   // Aviso tarjeta_info
-  if (tarjetaInfo?.nombre_tarjeta && (tarjetaInfo.fecha_cierre || tarjetaInfo.fecha_vencimiento)) {
+  if ((forcedTarjetaId||'')===''&&tarjetaInfo?.nombre_tarjeta && (tarjetaInfo.fecha_cierre || tarjetaInfo.fecha_vencimiento)) {
     const tEncontrada = (S.tarjetas||[]).find(t => {
       const tn = t.nombre.toUpperCase();
       const gtn = (tarjetaInfo.nombre_tarjeta||'').toUpperCase();
@@ -8443,13 +8474,14 @@ function renderImportResults(data) {
     const tn=t.nombre.toUpperCase();const gtn=(tarjetaInfo.nombre_tarjeta||'').toUpperCase();
     return tn.includes(gtn)||gtn.includes(tn)||tn.split(/\s+/).some(w=>w.length>=3&&gtn.includes(w));
   }) : null;
-  const tarjetaMatcheada = tarjetaInfoMatch?.id || S.tarjetas[0]?.id || '';
+  const tarjetaMatcheada = forcedTarjetaId || tarjetaInfoMatch?.id || S.tarjetas[0]?.id || '';
+  _aiImportData[panelId].tarjetaMatcheada = tarjetaMatcheada;
 
   if (gastos.length) {
     html += `<div class="ai-import-section">
       <div class="ai-import-title">💳 Gastos (${gastos.length})${selBtns('g')}</div>`;
     gastos.forEach((g, i) => {
-      const isCredito = g.medio_pago === 'credito' || g.medio_pago === 'tarjeta' || (Boolean(tarjetaMatcheada) && ['efectivo','debito','transferencia'].includes(g.medio_pago)===false);
+      const isCredito = Boolean(forcedTarjetaId) || g.medio_pago === 'credito' || g.medio_pago === 'tarjeta' || (Boolean(tarjetaMatcheada) && ['efectivo','debito','transferencia'].includes(g.medio_pago)===false);
       const tMatch = (S.tarjetas||[]).find(t=>{
         const tn=t.nombre.toUpperCase().replace(/[^A-Z0-9\s]/g,'');
         const gtn=(g.tarjeta_nombre||'').toUpperCase().replace(/[^A-Z0-9\s]/g,'');
@@ -8467,13 +8499,13 @@ function renderImportResults(data) {
           ${dupG?`<div style="display:flex;align-items:center;gap:6px;margin-top:4px;padding:4px 8px;background:rgba(248,113,113,.1);border-radius:6px;border-left:3px solid var(--accent4)"><span style="font-size:10px;color:var(--accent4);font-weight:700">⚠️ Posible duplicado</span><span style="font-size:10px;color:var(--text2)">Ya existe: "${esc(dupG.item.descripcion)}" · ${$$(dupG.item.monto||dupG.item.montoCuota)} · ${ff(dupG.item.fecha)}</span></div>`:''}
           <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:4px">
             <input type="number" id="aimonto-${panelId}-g-${i}" value="${g.monto}" style="width:84px;padding:3px 6px;font-size:11px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--accent);font-weight:600"/>
-            <select class="ai-import-cat" id="aitipo-${panelId}-g-${i}" onchange="aiToggleTarjeta(this,'${panelId}','${i}')">
+            <select class="ai-import-cat" id="aitipo-${panelId}-g-${i}" onchange="aiToggleTarjeta(this,'${panelId}','${i}')" ${forcedTarjetaId?'disabled':''}>
               <option value="efectivo"${g.medio_pago==='efectivo'?' selected':''}>Efectivo</option>
               <option value="debito"${g.medio_pago==='debito'?' selected':''}>Débito</option>
               <option value="transferencia"${g.medio_pago==='transferencia'?' selected':''}>Transf.</option>
               <option value="credito"${isCredito?' selected':''}>Tarjeta</option>
             </select>
-            <select class="ai-import-cat" id="aitarjeta-${panelId}-g-${i}" style="${isCredito&&S.tarjetas.length?'':'display:none'}">${tarjetaOpts(primeraTarjeta)}</select>
+            <select class="ai-import-cat" id="aitarjeta-${panelId}-g-${i}" style="${isCredito&&S.tarjetas.length?'':'display:none'}" ${forcedTarjetaId?'disabled':''}>${tarjetaOpts(primeraTarjeta)}</select>
           </div>
         </div>
         <select class="ai-import-cat" id="aicat-${panelId}-g-${i}" onchange="aiUpdateSubcat('${panelId}','g','${i}')">${catOpts(g.categoria_sugerida)}</select>
@@ -8520,12 +8552,11 @@ function renderImportResults(data) {
   }
   html += '</div>';
 
-  const div = document.getElementById('ai-messages');
   const msg = document.createElement('div');
-  msg.className = 'ai-msg bot ai-import-wrap';
+  msg.className = forcedTarjetaId ? 'ai-import-wrap' : 'ai-msg bot ai-import-wrap';
   msg.innerHTML = html;
-  div.appendChild(msg);
-  div.scrollTop = div.scrollHeight;
+  if(targetContainerEl){targetContainerEl.innerHTML='';targetContainerEl.appendChild(msg);document.getElementById('modal-resumen-tarjeta').style.display='flex';}
+  else{const div=document.getElementById('ai-messages');div.appendChild(msg);div.scrollTop=div.scrollHeight;}
 }
 
 function aiToggleTarjeta(sel, panelId, idx) {
@@ -8591,7 +8622,7 @@ function importarSeleccionados(panelId, btn) {
       const subcatC = document.getElementById(`aisubcat-${panelId}-c-${i}`)?.value||'';
       const notaC = document.getElementById(`ainota-${panelId}-c-${i}`)?.value?.trim()||'';
       const montoTotal = c.monto_total || (c.monto_cuota * c.total_cuotas);
-      S.comprasCuotas.push({ id: uid(), tarjetaId: null, fecha: c.fecha || today(),
+      S.comprasCuotas.push({ id: uid(), tarjetaId: data.tarjetaMatcheada || null, fecha: c.fecha || today(),
         descripcion: desc, categoria: catC, subcategoria: subcatC,
         montoTotal, cuotas: c.total_cuotas, montoCuota: c.monto_cuota,
         cuotasPagadas: Math.max(0, (c.cuota_actual || 1) - 1),
