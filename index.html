@@ -5602,7 +5602,7 @@ function renderTarjetas(){
     const rowIcon={gasto:'🛒',cuota:'📦',fin:'🏦'};
     const rowLabel={gasto:'Gasto',cuota:'Cuota',fin:'Gasto Fin.'};
     const rows=items.length?items.map(item=>`<tr>
-      <td><span class="badge ${rowBadge[item.tipo]}">${rowIcon[item.tipo]} ${rowLabel[item.tipo]}</span></td>
+      <td><span class="badge ${rowBadge[item.tipo]}" title="${rowLabel[item.tipo]}">${rowIcon[item.tipo]}</span></td>
       <td>${item.fecha?ff(item.fecha):'—'}</td>
       <td>${item.desc}${item.cat?` <span class="nota-preview">${item.cat}</span>`:''}</td>
       <td style="text-align:right;font-weight:600">${$$(item.monto)}</td>
