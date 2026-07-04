@@ -5264,7 +5264,15 @@ function guardarTarjeta(){
 
 function eliminarTarjeta(id){
   if(!confirm('¿Eliminar esta tarjeta?'))return;
-  S.tarjetas=S.tarjetas.filter(t=>t.id!==id);save();renderTarjetas();
+  const borrarTodo=confirm('¿Querés borrar también todo su historial (gastos, cuotas, cargos y resúmenes)? Cancelar = borrar solo la tarjeta y dejar el historial sin tarjeta asociada.');
+  S.tarjetas=S.tarjetas.filter(t=>t.id!==id);
+  if(borrarTodo){
+    S.gastos=(S.gastos||[]).filter(g=>g.tarjetaId!==id);
+    S.comprasCuotas=(S.comprasCuotas||[]).filter(c=>c.tarjetaId!==id);
+    S.gastosFinTarjeta=(S.gastosFinTarjeta||[]).filter(g=>g.tarjetaId!==id);
+    S.resumenTarjetas=(S.resumenTarjetas||[]).filter(r=>r.tarjetaId!==id);
+  }
+  save();renderTarjetas();renderGastos();refreshDashIfVisible();
   if(userRole==='admin')setTimeout(_syncSharedData,500);
 }
 function editFechasTarjeta(id){
