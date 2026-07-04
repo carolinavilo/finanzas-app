@@ -8295,6 +8295,8 @@ function clearAIAttachments() {
 function closeResumenTarjetaModal(){document.getElementById('modal-resumen-tarjeta').style.display='none';}
 let _resumenTarjetaIdFijo=null;
 function subirResumenTarjeta(tarjetaId){
+  const tExiste=(S.tarjetas||[]).find(t=>t.id===tarjetaId);
+  if(!tExiste){showToast('⚠️ Esa tarjeta ya no existe. Refrescá la página (Cmd+Shift+R) e intentá de nuevo.');return;}
   const apiKey=getApiKey();
   if(!apiKey){alert('Configurá tu API key de Anthropic en Ajustes → Asistente IA para usar esta función.');return;}
   _resumenTarjetaIdFijo=tarjetaId;
