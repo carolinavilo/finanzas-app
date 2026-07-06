@@ -8443,7 +8443,8 @@ TARJETA INFO (del encabezado o pie del resumen):
 - tarjeta_info.fecha_vencimiento: solo el número del día (1-31). Ej: "Vencimiento 10/07/2026" → 10
 - tarjeta_info.saldo_total: el saldo actual total a pagar del resumen (número, sin puntos ni comas de miles, ej "SALDO ACTUAL $27.228,86" → 27228.86)
 - tarjeta_info.pago_minimo: el pago mínimo del resumen (mismo formato numérico)
-${n > 1 ? 'Consolidá TODOS los movimientos de todos los archivos en un único JSON sin duplicados.\n' : ''}IGNORAR: pagos de resumen ya realizados, acreditaciones de sueldo, ajustes, descuentos promocionales.
+${n > 1 ? 'Consolidá TODOS los movimientos de todos los archivos en un único JSON sin duplicados.\n' : ''}IGNORAR: pagos de resumen ya realizados, acreditaciones de sueldo, descuentos promocionales.
+DEVOLUCIONES/CREDITOS (devolucion de impuestos tipo "DEV.IMP", reintegros, creditos que reducen el saldo del resumen): incluilos DENTRO de "cargos" con monto NEGATIVO (numero negativo) y descripcion clara, ej: {"descripcion":"Devolucion de impuestos RG 5617","monto":-9090.27}. Esto es distinto a un ajuste o descuento promocional: si el monto aparece explicitamente restando del saldo total del resumen, incluilo como cargo negativo.
 Respondé ÚNICAMENTE con JSON válido, sin texto adicional, sin markdown:
 ${jsonSchema}`;
 
