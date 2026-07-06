@@ -879,6 +879,7 @@ input[type=checkbox]{width:auto;margin-right:5px}
           <option value="">Todo</option>
           <option value="ingreso">Ingresos</option>
           <option value="gasto">Gastos</option>
+          <option value="inversion">Inversiones</option>
         </select>
         <button id="mov-btn-seleccionar" onclick="toggleModoSeleccionMovimientos()" style="padding:7px 14px;border-radius:10px;border:1px solid var(--border);background:var(--card2);font-size:12px;font-weight:600;cursor:pointer;color:var(--text);transition:.15s;white-space:nowrap">☑ Seleccionar</button>
         <button id="mov-btn-exportar" onclick="toggleExportPanel()" style="padding:7px 14px;border-radius:10px;border:1px solid var(--border);background:var(--card2);font-size:12px;font-weight:600;cursor:pointer;color:var(--text);transition:.15s;white-space:nowrap">⬇ Exportar</button>
@@ -1887,6 +1888,7 @@ input[type=checkbox]{width:auto;margin-right:5px}
       <div class="form-group"><label>Cantidad de unidades</label><input id="iv-cantidad" type="number" step="any" placeholder="Ej: 0.5, 10, 100..." oninput="autoCalcMontoInv()"/></div>
       <div class="form-group"><label>Precio de compra por unidad</label><input id="iv-precio-costo" type="number" step="any" placeholder="Precio que pagaste por c/u" oninput="autoCalcMontoInv()"/></div>
       <div class="form-group"><label>Costo total (ARS)</label><input id="iv-monto" type="number" placeholder="Se calcula solo o ingresalo"/></div>
+      <div class="form-group"><label>Costo de transacción / comisión <span style="font-weight:400;font-size:10px;color:var(--text2)">(opcional)</span></label><input id="iv-comision" type="number" placeholder="0"/></div>
       <div class="form-group"><label>Moneda</label><select id="iv-moneda"><option value="ARS">Pesos (ARS)</option><option value="USD">Dólares (USD)</option></select></div>
       <div class="form-group"><label>TNA % <span style="font-weight:400;font-size:10px;color:var(--text2)">(Plazo Fijo / FCI)</span></label><input id="iv-tasa" type="number" placeholder="75" step="0.1"/></div>
       <div class="form-group"><label>Cartera</label><select id="iv-cartera"></select></div>
@@ -3076,10 +3078,13 @@ function renderMovimientos(){
   const dia=document.getElementById('mov-dia')?.value||'';
   const tipo=document.getElementById('mov-tipo')?.value||'';
   const cuotasCompras=(S.comprasCuotas||[]).filter(c=>c.cuotas&&c.montoCuota).map(c=>({...c,tipo_mov:'cuota',monto:c.montoTotal||(c.montoCuota*c.cuotas),cuotaNum:1,categoria:c.categoria||'Sin categoría'}));
+  // Inversiones que descontaron saldo de una cuenta: se muestran como movimiento para que quede el rastro
+  const inversionesMov=(S.inversiones||[]).filter(i=>i.cuentaId).map(i=>({...i,tipo_mov:'inversion',descripcion:'📊 '+i.descripcion,monto:i.montoInvertido,fecha:i.fechaInicio,categoria:i.tipo||'Inversión'}));
   const movs=[
     ...S.gastos.map(g=>({...g,tipo_mov:'gasto'})),
     ...S.ingresos.map(i=>({...i,tipo_mov:'ingreso'})),
-    ...cuotasCompras
+    ...cuotasCompras,
+    ...inversionesMov
   ]
   .filter(m=>(mes||'')===''||m.fecha?.startsWith(mes))
   .filter(m=>(dia||'')===''||m.fecha?.slice(8,10)===dia)
@@ -3101,11 +3106,11 @@ function renderMovimientos(){
         ${m.tipo_mov==='ingreso'?'+':'−'}${$$(m.monto)}
       </div>
       <div style="font-size:11px;color:var(--text2);grid-column:1;grid-row:2">
-        ${m.tipo_mov==='ingreso'?'📈':(m.tipo==='tarjeta'||m.tipo_mov==='cuota')?'💳':m.tipo==='debito'?'🏦':'💵'} ${ff(m.fecha)} · <span class="badge ${m.tipo_mov==='ingreso'?'b-green':m.tipo_mov==='cuota'?'b-blue':'b-purple'}" style="font-size:10px">${m.tipo_mov==='cuota'?'En '+(m.cuotas||'?')+' cuotas':esc(m.categoria)}</span>${m.subcategoria?` · <span style="font-size:10px;color:var(--text2)">${esc(m.subcategoria)}</span>`:''}${m.tipo==='tarjeta'?` · <span style="font-size:10px;color:var(--text2)">Impacta ${mesPretty(calcFechaImpactoGasto(m).slice(0,7))}</span>`:''}
+        ${m.tipo_mov==='ingreso'?'📈':m.tipo_mov==='inversion'?'📊':(m.tipo==='tarjeta'||m.tipo_mov==='cuota')?'💳':m.tipo==='debito'?'🏦':'💵'} ${ff(m.fecha)} · <span class="badge ${m.tipo_mov==='ingreso'?'b-green':m.tipo_mov==='cuota'?'b-blue':m.tipo_mov==='inversion'?'b-purple':'b-purple'}" style="font-size:10px">${m.tipo_mov==='cuota'?'En '+(m.cuotas||'?')+' cuotas':esc(m.categoria)}</span>${m.subcategoria?` · <span style="font-size:10px;color:var(--text2)">${esc(m.subcategoria)}</span>`:''}${m.tipo==='tarjeta'?` · <span style="font-size:10px;color:var(--text2)">Impacta ${mesPretty(calcFechaImpactoGasto(m).slice(0,7))}</span>`:''}
       </div>
       <div style="grid-column:2;grid-row:2;text-align:right;white-space:nowrap">
-        <button class="btn btn-ghost btn-xs mov-edit-btn" data-id="${esc(m.id)}" data-tipo="${m.tipo_mov}">✏️</button>
-        <button class="btn btn-danger btn-xs mov-del-btn" data-id="${esc(m.id)}" data-tipo="${m.tipo_mov}">✕</button>
+        ${m.tipo_mov==='inversion'?`<span style="font-size:10px;color:var(--text2)">Editar en Inversiones</span>`:`<button class="btn btn-ghost btn-xs mov-edit-btn" data-id="${esc(m.id)}" data-tipo="${m.tipo_mov}">✏️</button>
+        <button class="btn btn-danger btn-xs mov-del-btn" data-id="${esc(m.id)}" data-tipo="${m.tipo_mov}">✕</button>`}
       </div>
     </div>`;
 
@@ -3123,6 +3128,7 @@ function renderMovimientos(){
 
   const ingresos=movs.filter(m=>m.tipo_mov==='ingreso');
   const gastosTodos=movs.filter(m=>m.tipo_mov==='gasto'||m.tipo_mov==='cuota');
+  const inversionesSeccion=movs.filter(m=>m.tipo_mov==='inversion');
   const gastosSeccionHTML=gastosTodos.length?`<div style="margin-bottom:16px">
     <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:2px solid var(--accent4);margin-bottom:4px">
       <span style="font-size:11px;font-weight:700;color:var(--accent4);text-transform:uppercase;letter-spacing:.5px">💵 Gastos</span>
@@ -3132,7 +3138,8 @@ function renderMovimientos(){
   </div>`:'';
   list.innerHTML=
     renderSeccion('Ingresos','📈','var(--accent2)',ingresos)+
-    gastosSeccionHTML;
+    gastosSeccionHTML+
+    renderSeccion('Inversiones (descuentan cuenta)','📊','var(--accent5)',inversionesSeccion);
 }
 let _movSeleccionMode=false;let _movSeleccionados=new Set();
 function toggleModoSeleccionMovimientos(){_movSeleccionMode=!_movSeleccionMode;_movSeleccionados.clear();document.getElementById('mov-seleccion-bar').style.display=_movSeleccionMode?'flex':'none';const btn=document.getElementById('mov-btn-seleccionar');if(btn)btn.textContent=_movSeleccionMode?'✕ Cancelar':'☑ Seleccionar';renderMovimientos();}
@@ -6165,10 +6172,12 @@ function guardarInversion(){
   if(!desc)return alert('Ingresá una descripción');
   if(!monto&&!precioCosto)return alert('Ingresá el costo total o el precio de compra por unidad');
   const editId=document.getElementById('iv-edit-id').value;
-  const montoFinal=monto||(precioCosto*(+document.getElementById('iv-cantidad').value||1));
+  const comision=+document.getElementById('iv-comision').value||0;
+  const montoFinal=(monto||(precioCosto*(+document.getElementById('iv-cantidad').value||1)))+comision;
   const carteraId=document.getElementById('iv-cartera').value||S.carteras[0]?.id||null;
   const cuentaId=document.getElementById('iv-cuenta').value||null;
   const data={tipo:document.getElementById('iv-tipo').value,descripcion:desc,montoInvertido:montoFinal,
+    comision,
     precioCosto,
     tasaAnual:+document.getElementById('iv-tasa').value||0,
     fechaInicio:document.getElementById('iv-inicio').value||today(),
@@ -6202,7 +6211,8 @@ function editInversion(id){
   document.getElementById('modal-inv-title').textContent='Editar Inversión';
   document.getElementById('iv-tipo').value=inv.tipo;
   document.getElementById('iv-desc').value=inv.descripcion;
-  document.getElementById('iv-monto').value=inv.montoInvertido;
+  document.getElementById('iv-monto').value=(+inv.montoInvertido||0)-(+inv.comision||0);
+  document.getElementById('iv-comision').value=inv.comision||'';
   document.getElementById('iv-precio-costo').value=inv.precioCosto||'';
   document.getElementById('iv-tasa').value=inv.tasaAnual||'';
   document.getElementById('iv-inicio').value=inv.fechaInicio||today();
@@ -6324,6 +6334,7 @@ function resetInvModal(){
   document.getElementById('iv-cantidad').value='';
   document.getElementById('iv-precio-costo').value='';
   document.getElementById('iv-monto').value='';
+  document.getElementById('iv-comision').value='';
   document.getElementById('iv-moneda').value='ARS';
   document.getElementById('iv-tasa').value='';
   document.getElementById('iv-notas').value='';
