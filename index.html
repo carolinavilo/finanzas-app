@@ -5524,8 +5524,9 @@ function calcMesImpacto(fecha,tarjetaId){
 }
 function getStatementItems(tarjetaId,mes){
   const items=[];
-  // 1. Gastos directos con tarjeta en ese mes (agrupados por mes de resumen, no de compra)
-  (S.gastos||[]).filter(g=>g.tarjetaId===tarjetaId&&calcMesImpacto(g.fecha,g.tarjetaId)===mes)
+  // 1. Gastos directos con tarjeta en ese mes: se prioriza el mes de resumen real (guardado al importar
+  // desde un PDF, mesImpacto) y solo se estima por dia de cierre si no hay ese dato (carga manual)
+  (S.gastos||[]).filter(g=>g.tarjetaId===tarjetaId&&(g.mesImpacto||calcMesImpacto(g.fecha,g.tarjetaId))===mes)
     .forEach(g=>items.push({tipo:'gasto',desc:g.descripcion,cat:g.categoria,monto:g.monto,fecha:g.fecha,id:g.id}));
   // 2. Cuotas de compras distribuidas
   (S.comprasCuotas||[]).filter(c=>c.tarjetaId===tarjetaId).forEach(c=>{
@@ -8553,19 +8554,20 @@ function renderImportResults(data, forcedTarjetaId, targetContainerEl) {
 
   let html = '<div class="ai-import-panel">';
 
-  // Aviso tarjeta_info
-  if ((forcedTarjetaId||'')===''&&tarjetaInfo?.nombre_tarjeta && (tarjetaInfo.fecha_cierre || tarjetaInfo.fecha_vencimiento)) {
-    const tEncontrada = (S.tarjetas||[]).find(t => {
-      const tn = t.nombre.toUpperCase();
-      const gtn = (tarjetaInfo.nombre_tarjeta||'').toUpperCase();
-      return tn.includes(gtn) || gtn.includes(tn) || tn.split(' ').some(w=>w.length>3&&gtn.includes(w));
-    });
+  // Aviso tarjeta_info: se detecta siempre (con o sin forcedTarjetaId) y se corrige solo al confirmar el import
+  if (tarjetaInfo?.nombre_tarjeta && (tarjetaInfo.fecha_cierre || tarjetaInfo.fecha_vencimiento)) {
+    const tEncontrada = forcedTarjetaId
+      ? (S.tarjetas||[]).find(t => t.id === forcedTarjetaId)
+      : (S.tarjetas||[]).find(t => {
+          const tn = t.nombre.toUpperCase();
+          const gtn = (tarjetaInfo.nombre_tarjeta||'').toUpperCase();
+          return tn.includes(gtn) || gtn.includes(tn) || tn.split(' ').some(w=>w.length>3&&gtn.includes(w));
+        });
     const difiere = tEncontrada && (String(tEncontrada.cierre)!==String(tarjetaInfo.fecha_cierre) || String(tEncontrada.vencimiento)!==String(tarjetaInfo.fecha_vencimiento));
     if (tEncontrada && (difiere || !tEncontrada.cierre)) {
-      html += `<div style="background:var(--card2);border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:12px;border-left:3px solid var(--accent3)">
-        ⚠️ El resumen indica: <strong>${escHtml(tarjetaInfo.nombre_tarjeta)}</strong> · Cierre día <strong>${tarjetaInfo.fecha_cierre}</strong> · Vencimiento día <strong>${tarjetaInfo.fecha_vencimiento}</strong><br>
-        Tu registro tiene: Cierre día ${tEncontrada.cierre||'?'} · Vencimiento día ${tEncontrada.vencimiento||'?'}<br>
-        <button onclick="actualizarDatosTarjetaDesdeResumen('${tEncontrada.id}',${tarjetaInfo.fecha_cierre},${tarjetaInfo.fecha_vencimiento})" style="margin-top:6px;padding:4px 10px;background:var(--accent3);color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">✅ Actualizar datos de la tarjeta</button>
+      html += `<div style="background:var(--card2);border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:12px;border-left:3px solid var(--accent2)">
+        ℹ️ El resumen indica: <strong>${escHtml(tarjetaInfo.nombre_tarjeta)}</strong> · Cierre día <strong>${tarjetaInfo.fecha_cierre}</strong> · Vencimiento día <strong>${tarjetaInfo.fecha_vencimiento}</strong><br>
+        Tu registro tiene: Cierre día ${tEncontrada.cierre||'?'} · Vencimiento día ${tEncontrada.vencimiento||'?'} — se corrige solo al confirmar el import.
       </div>`;
     }
   }
@@ -8739,7 +8741,8 @@ function importarSeleccionados(panelId, btn) {
       const subcat = document.getElementById(`aisubcat-${panelId}-g-${i}`)?.value||'';
       const nota = document.getElementById(`ainota-${panelId}-g-${i}`)?.value?.trim()||'';
       S.gastos.push({ id: uid(), fecha: g.fecha || today(), descripcion: desc,
-        categoria: cat, subcategoria: subcat, monto, tipo, tarjetaId, notas: nota, recurrente: false });
+        categoria: cat, subcategoria: subcat, monto, tipo, tarjetaId, notas: nota, recurrente: false,
+        mesImpacto: tipo==='tarjeta' ? today().slice(0,7) : undefined });
       nGastos++;
     });
 
@@ -8774,6 +8777,20 @@ function importarSeleccionados(panelId, btn) {
     });
     const forcedTarjetaId = data.forcedTarjetaId;
     const tarjetaInfo = data.tarjetaInfo;
+    // Corregir cierre/vencimiento de la tarjeta segun lo que indica el resumen (con o sin forcedTarjetaId)
+    if (tarjetaInfo?.nombre_tarjeta && (tarjetaInfo.fecha_cierre || tarjetaInfo.fecha_vencimiento)) {
+      const tCierre = forcedTarjetaId
+        ? (S.tarjetas||[]).find(t => t.id === forcedTarjetaId)
+        : (S.tarjetas||[]).find(t => {
+            const tn = t.nombre.toUpperCase();
+            const gtn = (tarjetaInfo.nombre_tarjeta||'').toUpperCase();
+            return tn.includes(gtn) || gtn.includes(tn) || tn.split(' ').some(w=>w.length>3&&gtn.includes(w));
+          });
+      if (tCierre) {
+        if (tarjetaInfo.fecha_cierre) tCierre.cierre = String(tarjetaInfo.fecha_cierre);
+        if (tarjetaInfo.fecha_vencimiento) tCierre.vencimiento = String(tarjetaInfo.fecha_vencimiento);
+      }
+    }
     if(forcedTarjetaId&&tarjetaInfo&&(tarjetaInfo.saldo_total||tarjetaInfo.pago_minimo)){
       const mesResumen=today().slice(0,7);
       const idxR=(S.resumenTarjetas||[]).findIndex(r=>r.tarjetaId===forcedTarjetaId&&r.mes===mesResumen);
