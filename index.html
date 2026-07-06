@@ -6717,19 +6717,38 @@ function renderPresupuesto(){
   }
   const gastosMes=S.gastos.filter(g=>g.fecha.startsWith(mes));
   const cats=getCatsGasto();
-  document.getElementById('presup-form').innerHTML=cats.map(c=>`
+  document.getElementById('presup-form').innerHTML=cats.map(c=>{
+    const entry=presup[c];
+    const lim=(entry&&typeof entry==='object')?(entry.limite||''):(entry||'');
+    const est=(entry&&typeof entry==='object')?(entry.estimado||''):'';
+    return`
     <div class="form-group" style="margin-bottom:10px">
       <label>${esc(c)}</label>
-      <input type="number" placeholder="Sin límite" value="${presup[c]||''}"
-        oninput="updatePresupuestoField('${c.replace(/'/g,"\\'")}',+this.value||0)"
-        style="width:100%"/>
-    </div>`).join('');
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div>
+          <div style="font-size:10px;color:var(--text2);margin-bottom:2px">Límite</div>
+          <input type="number" placeholder="Sin límite" value="${lim}"
+            oninput="updatePresupuestoField('${c.replace(/'/g,"\\'")}','limite',+this.value||0)"
+            style="width:100%"/>
+        </div>
+        <div>
+          <div style="font-size:10px;color:var(--text2);margin-bottom:2px">Estimado</div>
+          <input type="number" placeholder="Sin estimar" value="${est}"
+            oninput="updatePresupuestoField('${c.replace(/'/g,"\\'")}','estimado',+this.value||0)"
+            style="width:100%"/>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
   updatePresupEstado(mes);
 }
-function updatePresupuestoField(cat,val){
+function updatePresupuestoField(cat,field,val){
   const mes=_presupMesSel||today().slice(0,7);
   const presup=getPresupuestoForMes(mes);
-  presup[cat]=val;
+  const entryActual=presup[cat];
+  const entry=(entryActual&&typeof entryActual==='object')?{...entryActual}:{limite:+entryActual||0,estimado:0};
+  entry[field]=val;
+  presup[cat]=entry;
   setPresupuestoForMes(mes,presup);
   updatePresupEstado(mes);
 }
@@ -6738,18 +6757,37 @@ function updatePresupEstado(mesParam){
   const mes=mesParam||_presupMesSel||today().slice(0,7);
   const presup=getPresupuestoForMes(mes);
   const gastosMes=S.gastos.filter(g=>g.fecha.startsWith(mes));
-  const cats=getCatsGasto().filter(c=>presup[c]>0);
+  const _limDe=e=>(e&&typeof e==='object')?(e.limite||0):(e||0);
+  const _estDe=e=>(e&&typeof e==='object')?(e.estimado||0):0;
+  const cats=getCatsGasto().filter(c=>_limDe(presup[c])>0||_estDe(presup[c])>0);
   const el=document.getElementById('presup-estado');
-  if(!cats.length){el.innerHTML='<p style="color:var(--text2);font-size:13px">Configurá un límite para al menos una categoría.</p>';return;}
+  if(!cats.length){el.innerHTML='<p style="color:var(--text2);font-size:13px">Configurá un límite o un estimado para al menos una categoría.</p>';return;}
 
-  const totalLim=cats.reduce((a,c)=>a+(presup[c]||0),0);
+  const totalLim=cats.reduce((a,c)=>a+_limDe(presup[c]),0);
+  const totalEst=cats.reduce((a,c)=>a+_estDe(presup[c]),0);
   const totalGast=cats.reduce((a,c)=>a+gastosMes.filter(g=>g.categoria===c).reduce((b,g)=>b+g.monto,0),0);
   const totalPct=totalLim?Math.round(totalGast/totalLim*100):0;
   const totalColor=totalPct>=100?'var(--accent4)':totalPct>=80?'var(--accent3)':'var(--accent2)';
 
   const rows=cats.map(cat=>{
-    const lim=presup[cat]||0;
+    const lim=_limDe(presup[cat]);
+    const est=_estDe(presup[cat]);
     const gastado=gastosMes.filter(g=>g.categoria===cat).reduce((a,g)=>a+g.monto,0);
+    const estLabel=est>0?`<span style="opacity:.7;color:var(--accent5)"> · est. ${$$(est)}</span>`:'';
+    if(!(lim>0)){
+      // Sin límite configurado, solo estimado: se muestra comparación simple sin barra de progreso
+      const sobreEst=est>0&&gastado>est;
+      return`<div class="presup-row">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+          <span style="font-weight:600;font-size:13px">${esc(cat)}</span>
+          <span style="background:rgba(128,128,128,.12);color:var(--text2);font-size:10px;padding:2px 7px;border-radius:10px;font-weight:600">Sin límite</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2)">
+          <span>${$$(gastado)}${estLabel}</span>
+          ${est>0?`<span style="${sobreEst?'color:var(--accent4);font-weight:600':''}">${sobreEst?'+'+$$(gastado-est)+' sobre lo estimado':'Dentro de lo estimado'}</span>`:''}
+        </div>
+      </div>`;
+    }
     const pct=lim?Math.round(gastado/lim*100):0;
     const pctBar=Math.min(100,pct);
     const isOver=pct>=100, isWarn=pct>=80&&pct<100;
@@ -6768,7 +6806,7 @@ function updatePresupEstado(mesParam){
         ${badge}
       </div>
       <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2);margin-bottom:6px">
-        <span>${$$(gastado)} <span style="opacity:.7">/ ${$$(lim)}</span></span>
+        <span>${$$(gastado)} <span style="opacity:.7">/ ${$$(lim)}</span>${estLabel}</span>
         <span>${restoLabel}</span>
       </div>
       <div style="position:relative;height:12px;border-radius:6px;background:rgba(128,128,128,.11)">
@@ -6790,6 +6828,7 @@ function updatePresupEstado(mesParam){
       <div>
         <div style="font-size:11px;color:var(--text2);margin-bottom:2px">Total presupuestado</div>
         <div style="font-size:15px;font-weight:700">${$$(totalGast)} <span style="font-size:12px;font-weight:400;color:var(--text2)">de ${$$(totalLim)}</span></div>
+        ${totalEst>0?`<div style="font-size:11px;color:var(--accent5);margin-top:2px">Estimado total: ${$$(totalEst)}</div>`:''}
       </div>
       <div style="text-align:right">
         <div style="font-size:26px;font-weight:900;color:${totalColor};line-height:1">${totalPct}%</div>
