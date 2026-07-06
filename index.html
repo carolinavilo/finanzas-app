@@ -5587,7 +5587,7 @@ function agregarCompraCuotas(){
   };
   if(editId){Object.assign(S.comprasCuotas.find(c=>c.id===editId),data);}
   else{S.comprasCuotas.push({id:uid(),...data});}
-  save();closeModal('modal-compra-cuotas');renderTarjetas();
+  save();closeModal('modal-compra-cuotas');renderTarjetas();renderCuotas();refreshDashIfVisible();
 }
 
 function editCompraCuotas(id){
@@ -5616,7 +5616,7 @@ function editCompraCuotas(id){
 
 function eliminarCompraCuotas(id){
   if(!confirm('¿Eliminar esta compra en cuotas?'))return;
-  S.comprasCuotas=S.comprasCuotas.filter(c=>c.id!==id);save();renderTarjetas();
+  S.comprasCuotas=S.comprasCuotas.filter(c=>c.id!==id);save();renderTarjetas();renderCuotas();refreshDashIfVisible();
 }
 
 function openGastoFin(tarjetaId,mes){
