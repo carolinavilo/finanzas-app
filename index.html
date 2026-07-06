@@ -467,6 +467,7 @@ input[type=checkbox]{width:auto;margin-right:5px}
 .ai-import-edit-desc:focus{border-color:var(--accent);outline:none}
 .ai-import-monto{font-size:11px;color:var(--accent);font-weight:600}
 .ai-import-cat{font-size:11px;padding:3px 5px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);max-width:110px;flex-shrink:0}
+.ai-import-catgroup{display:flex;flex-direction:column;gap:4px;flex-shrink:0;min-width:110px}
 .ai-import-feedback{font-size:12px;margin-top:6px;text-align:center;min-height:16px}
 .color-row-pick{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
 .color-row-pick label{font-size:11px;color:var(--text2)}
@@ -8624,9 +8625,11 @@ function renderImportResults(data, forcedTarjetaId, targetContainerEl) {
             <select class="ai-import-cat" id="aitarjeta-${panelId}-g-${i}" style="${isCredito&&S.tarjetas.length?'':'display:none'}">${tarjetaOpts(primeraTarjeta)}</select>
           </div>
         </div>
-        <select class="ai-import-cat" id="aicat-${panelId}-g-${i}" onchange="aiUpdateSubcat('${panelId}','g','${i}')">${catOpts(g.categoria_sugerida)}</select>
-        <select class="ai-import-cat" id="aisubcat-${panelId}-g-${i}" style="font-size:10px;display:none"><option value="">Sin subcategoría</option></select>
-        <input type="text" class="ai-import-cat" id="ainota-${panelId}-g-${i}" placeholder="📝 Nota (opcional)" style="font-size:11px;margin-top:4px"/>
+        <div class="ai-import-catgroup">
+          <select class="ai-import-cat" id="aicat-${panelId}-g-${i}" onchange="aiUpdateSubcat('${panelId}','g','${i}')">${catOpts(g.categoria_sugerida)}</select>
+          <select class="ai-import-cat" id="aisubcat-${panelId}-g-${i}" style="font-size:10px;display:none"><option value="">Sin subcategoría</option></select>
+          <input type="text" class="ai-import-cat" id="ainota-${panelId}-g-${i}" placeholder="📝 Nota (opcional)" style="font-size:11px"/>
+        </div>
       </div>`;
     });
     html += '</div>';
@@ -8649,9 +8652,11 @@ function renderImportResults(data, forcedTarjetaId, targetContainerEl) {
             <span style="font-size:11px;color:var(--text2)">cuota ${c.cuota_actual}/${c.total_cuotas} · total ${fmtARS(total)}</span>
           </div>
         </div>
-        <select class="ai-import-cat" id="aicat-${panelId}-c-${i}" onchange="aiUpdateSubcat('${panelId}','c','${i}')">${catOpts(c.categoria_sugerida||'')}</select>
-        <select class="ai-import-cat" id="aisubcat-${panelId}-c-${i}" style="font-size:10px;display:none"><option value="">Sin subcategoría</option></select>
-        <input type="text" class="ai-import-cat" id="ainota-${panelId}-c-${i}" placeholder="📝 Nota (opcional)" style="font-size:11px;margin-top:4px"/>
+        <div class="ai-import-catgroup">
+          <select class="ai-import-cat" id="aicat-${panelId}-c-${i}" onchange="aiUpdateSubcat('${panelId}','c','${i}')">${catOpts(c.categoria_sugerida||'')}</select>
+          <select class="ai-import-cat" id="aisubcat-${panelId}-c-${i}" style="font-size:10px;display:none"><option value="">Sin subcategoría</option></select>
+          <input type="text" class="ai-import-cat" id="ainota-${panelId}-c-${i}" placeholder="📝 Nota (opcional)" style="font-size:11px"/>
+        </div>
       </div>`;
     });
     html += '</div>';
