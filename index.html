@@ -8589,7 +8589,7 @@ function renderImportResults(data, forcedTarjetaId, targetContainerEl) {
         const matches=wordsT.filter(w=>wordsG.some(wg=>wg.includes(w)||w.includes(wg)));
         return matches.length>=Math.min(1,Math.floor(wordsT.length/2));
       });
-      const primeraTarjeta = tMatch?.id || tarjetaMatcheada;
+      const primeraTarjeta = forcedTarjetaId || tMatch?.id || tarjetaMatcheada;
       const dupG = _buscarDuplicado(g.descripcion, g.monto, g.fecha);
       html += `<div class="ai-import-row">
         <input type="checkbox" class="ai-imp-chk" data-section="${panelId}-g" data-idx="${i}" ${dupG?'':'checked'}/>
@@ -8604,7 +8604,7 @@ function renderImportResults(data, forcedTarjetaId, targetContainerEl) {
               <option value="transferencia"${g.medio_pago==='transferencia'?' selected':''}>Transf.</option>
               <option value="credito"${isCredito?' selected':''}>Tarjeta</option>
             </select>
-            <select class="ai-import-cat" id="aitarjeta-${panelId}-g-${i}" style="${isCredito&&S.tarjetas.length?'':'display:none'}" ${forcedTarjetaId?'disabled':''}>${tarjetaOpts(primeraTarjeta)}</select>
+            <select class="ai-import-cat" id="aitarjeta-${panelId}-g-${i}" style="${isCredito&&S.tarjetas.length?'':'display:none'}">${tarjetaOpts(primeraTarjeta)}</select>
           </div>
         </div>
         <select class="ai-import-cat" id="aicat-${panelId}-g-${i}" onchange="aiUpdateSubcat('${panelId}','g','${i}')">${catOpts(g.categoria_sugerida)}</select>
