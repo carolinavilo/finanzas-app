@@ -1257,6 +1257,17 @@ input[type=checkbox]{width:auto;margin-right:5px}
         </div>
       </div>
     </div>
+    </div>
+  <div class="panel" style="margin-top:20px">
+    <div class="panel-title">🗑️ Revisar y borrar movimientos</div>
+    <p style="font-size:12px;color:var(--text2);margin-bottom:12px">Gastos, cuotas y cargos sin tarjeta asociada (huérfanos) o creados en los últimos 14 días — útil para deshacer una importación equivocada.</p>
+    <button class="toggle-btn" onclick="abrirRevisionMovimientos()">🔍 Revisar movimientos</button>
+  </div>
+  </div>
+<div class="modal-overlay" id="modal-revision-mov" style="display:none" onclick="if(event.target===this)closeModal('modal-revision-mov')">
+  <div class="modal" style="max-width:560px;max-height:85vh;overflow-y:auto">
+    <div class="modal-header"><h3>🔍 Revisión de movimientos</h3><button class="modal-close" onclick="closeModal('modal-revision-mov')">×</button></div>
+    <div class="modal-body" id="modal-revision-mov-body"></div>
   </div>
 </div>
 
@@ -5274,6 +5285,66 @@ function eliminarTarjeta(id){
   }
   save();renderTarjetas();renderGastos();refreshDashIfVisible();
   if(userRole==='admin')setTimeout(_syncSharedData,500);
+}
+function abrirRevisionMovimientos(){
+  const hoy=new Date();
+  const esReciente=(fechaStr)=>{if(!fechaStr)return false;const d=new Date(fechaStr);return (hoy-d)/(1000*60*60*24)<=14;};
+  const tarjetaExiste=(id)=>(id===null||id===undefined||id==='')||(S.tarjetas||[]).some(t=>t.id===id);
+  const items=[];
+  (S.gastos||[]).forEach(g=>{
+    const huerfano=g.tipo==='tarjeta'&&(g.tarjetaId===null||g.tarjetaId===undefined||!tarjetaExiste(g.tarjetaId));
+    const reciente=esReciente(g.creadoEn||g.fecha);
+    if(huerfano||reciente)items.push({tipo:'gasto',id:g.id,desc:g.descripcion,monto:g.monto,fecha:g.fecha,huerfano,reciente});
+  });
+  (S.comprasCuotas||[]).forEach(c=>{
+    const huerfano=!tarjetaExiste(c.tarjetaId);
+    const reciente=esReciente(c.creadoEn||c.fecha);
+    if(huerfano||reciente)items.push({tipo:'cuota',id:c.id,desc:c.descripcion,monto:c.montoTotal||(c.montoCuota*c.cuotas),fecha:c.fecha,huerfano,reciente});
+  });
+  (S.gastosFinTarjeta||[]).forEach(x=>{
+    const huerfano=!tarjetaExiste(x.tarjetaId);
+    const reciente=esReciente(x.creadoEn||(x.mes?x.mes+'-01':null));
+    if(huerfano||reciente)items.push({tipo:'cargo',id:x.id,desc:x.descripcion,monto:x.monto,fecha:x.mes,huerfano,reciente});
+  });
+  items.sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+  const body=document.getElementById('modal-revision-mov-body');
+  if(!items.length){
+    body.innerHTML='<p style="font-size:13px;color:var(--text2);padding:10px 0">No hay movimientos huérfanos ni recientes para revisar. 🎉</p>';
+  } else {
+    body.innerHTML=`
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <button class="btn btn-ghost btn-xs" onclick="document.querySelectorAll('.rev-mov-chk').forEach(c=>c.checked=true)">Todo</button>
+        <button class="btn btn-ghost btn-xs" onclick="document.querySelectorAll('.rev-mov-chk').forEach(c=>c.checked=false)">Ninguno</button>
+      </div>
+      ${items.map(it=>`
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">
+        <input type="checkbox" class="rev-mov-chk" data-tipo="${it.tipo}" data-id="${esc(it.id)}"/>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:600">${esc(it.desc||'—')}</div>
+          <div style="font-size:11px;color:var(--text2)">${it.fecha?ff(it.fecha):'—'} ${it.huerfano?'<span style="color:var(--accent4)">🚫 Sin tarjeta</span>':''}${it.reciente?' <span style="color:var(--text2)">🕐 Reciente</span>':''}</div>
+        </div>
+        <div style="font-weight:700;font-size:13px">${$$(it.monto)}</div>
+      </div>`).join('')}
+      <button class="btn btn-danger" style="width:100%;margin-top:12px" onclick="eliminarMovSeleccionados()">🗑️ Eliminar seleccionados</button>
+    `;
+  }
+  document.getElementById('modal-revision-mov').style.display='flex';
+}
+function eliminarMovSeleccionados(){
+  const chks=document.querySelectorAll('.rev-mov-chk:checked');
+  if(!chks.length){showToast('⚠️ No seleccionaste nada');return;}
+  if(!confirm(`¿Eliminar ${chks.length} movimiento(s)? Esta acción no se puede deshacer.`))return;
+  let n=0;
+  chks.forEach(chk=>{
+    const tipo=chk.dataset.tipo,id=chk.dataset.id;
+    if(tipo==='gasto'){S.gastos=(S.gastos||[]).filter(g=>g.id!==id);n++;}
+    else if(tipo==='cuota'){S.comprasCuotas=(S.comprasCuotas||[]).filter(c=>c.id!==id);n++;}
+    else if(tipo==='cargo'){S.gastosFinTarjeta=(S.gastosFinTarjeta||[]).filter(x=>x.id!==id);n++;}
+  });
+  save();renderGastos();renderTarjetas();refreshDashIfVisible();
+  if(userRole==='admin')setTimeout(_syncSharedData,500);
+  showToast(`✅ ${n} movimiento(s) eliminado(s)`);
+  abrirRevisionMovimientos();
 }
 function editFechasTarjeta(id){
   const t=S.tarjetas.find(t=>t.id===id);if(!t)return;
