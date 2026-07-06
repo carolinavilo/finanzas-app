@@ -5688,11 +5688,13 @@ function renderTarjetas(){
   cont.innerHTML=searchBar+tarjetas.map(t=>{
     if(!tarjetaMesSelected[t.id])tarjetaMesSelected[t.id]=mesHoy;
     const mes=tarjetaMesSelected[t.id];
+    const collapsed=!!S.config?.tarjetasCollapsed?.[t.id];
     const mesPrev=addMeses(mes,-1);
     const mesNext=addMeses(mes,1);
     // Items del resumen seleccionado
     const items=getStatementItems(t.id,mes);
     const total=items.reduce((a,i)=>a+i.monto,0);
+    const cargosMesTotal=getCargosDelMes(t.id,mes).reduce((a,c)=>a+c.monto,0);
     // Uso del mes actual para progress bar
     const itemsActual=mes===mesHoy?items:getStatementItems(t.id,mesHoy);
     const usado=itemsActual.reduce((a,i)=>a+i.monto,0);
@@ -5714,9 +5716,12 @@ function renderTarjetas(){
     </tr>`).join(''):`<tr><td colspan="5" style="text-align:center;color:var(--text2);padding:20px;white-space:normal;word-break:break-word">Sin movimientos para este período</td></tr>`;
     return`<div data-tid="${esc(t.id)}"><div class="tarjeta-card" style="border-top-color:${t.color};overflow:hidden">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap">
-        <div style="min-width:0;flex:1">
-          <div style="font-size:16px;font-weight:700">${esc(t.nombre)}</div>
-          <div style="font-size:12px;color:var(--text2);margin-top:2px">Próx. cierre: <strong>${t.proximoCierre?ff(t.proximoCierre):nextFechaDia(t.cierre)}</strong> · Próx. venc: <strong>${t.proximoVencimiento?ff(t.proximoVencimiento):nextFechaDia(t.vencimiento)}</strong></div>
+        <div style="min-width:0;flex:1;cursor:pointer" onclick="toggleTarjetaCollapsed('${esc(t.id)}')">
+          <div style="font-size:16px;font-weight:700;display:flex;align-items:center;gap:6px">
+            <span style="font-size:11px;color:var(--text2);display:inline-block;transition:transform .15s;transform:rotate(${collapsed?'-90deg':'0deg'})">▼</span>
+            ${esc(t.nombre)}
+          </div>
+          <div style="font-size:12px;color:var(--text2);margin-top:2px">Próx. cierre: <strong>${t.proximoCierre?ff(t.proximoCierre):nextFechaDia(t.cierre)}</strong> · Próx. venc: <strong>${t.proximoVencimiento?ff(t.proximoVencimiento):nextFechaDia(t.vencimiento)}</strong>${collapsed?` · <strong style="color:${t.color}">${$$(total+cargosMesTotal)}</strong> (${mesPretty(mes)})`:''}</div>
         </div>
         <div style="display:flex;gap:6px;flex-shrink:0;align-items:center">
           <span class="tarjeta-drag-handle" title="Reordenar">⠿</span>
@@ -5725,6 +5730,7 @@ function renderTarjetas(){
           <button class="btn btn-danger btn-sm" onclick="eliminarTarjeta('${esc(t.id)}')">✕</button>
         </div>
       </div>
+      ${collapsed?'':`
       ${t.limite?`<div style="display:flex;gap:16px;margin-top:12px;flex-wrap:wrap">
         <div><div style="font-size:11px;color:var(--text2)">Límite</div><div style="font-weight:600;font-size:15px">${$$(t.limite)}</div></div>
         <div><div style="font-size:11px;color:var(--text2)">Usado</div><div style="font-weight:600;font-size:15px;color:${t.color}">${$$(usado)}</div></div>
@@ -5820,10 +5826,19 @@ function renderTarjetas(){
         </button>
       </div>`;
     })()}
+    `}
     </div>
     </div>`;
   }).join('');
   _initSort('tarjetas-list','data-tid','tarjetasOrder');
+}
+
+function toggleTarjetaCollapsed(tarjetaId){
+  if(!S.config)S.config={};
+  if(!S.config.tarjetasCollapsed)S.config.tarjetasCollapsed={};
+  S.config.tarjetasCollapsed[tarjetaId]=!S.config.tarjetasCollapsed[tarjetaId];
+  save();
+  renderTarjetas();
 }
 
 function abrirModalAbonarTarjeta(tarjetaId){
