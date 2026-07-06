@@ -8530,9 +8530,15 @@ function renderImportResults(data, forcedTarjetaId, targetContainerEl) {
   _aiImportData[panelId] = data;
 
   const fmtARS = n => '$' + (n||0).toLocaleString('es-AR', {minimumFractionDigits:2, maximumFractionDigits:2});
-  const catOpts = sel => allCats.map(c =>
-    `<option value="${escHtml(c)}"${c===sel?' selected':''}>${escHtml(c)}</option>`
-  ).join('');
+  const _normCat = s => (s||'').toString().trim().normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
+  const catOpts = sel => {
+    const selN = _normCat(sel);
+    const match = allCats.some(c => _normCat(c) === selN);
+    const sinMatchOpt = (!match && selN) ? `<option value="" disabled selected>⚠️ Sin match: "${escHtml(sel)}"</option>` : '';
+    return sinMatchOpt + allCats.map(c =>
+      `<option value="${escHtml(c)}"${_normCat(c)===selN?' selected':''}>${escHtml(c)}</option>`
+    ).join('');
+  };
   const selBtns = sec => `<span class="ai-import-title-btns">
     <button class="btn btn-ghost btn-xs ai-sel-all" data-section="${panelId}-${sec}" data-val="1">Todo</button>
     <button class="btn btn-ghost btn-xs ai-sel-all" data-section="${panelId}-${sec}" data-val="0">Ninguno</button>
@@ -8717,7 +8723,7 @@ function importarSeleccionados(panelId, btn) {
       const g = gastos[i];
       if (!g) return;
       const desc = document.getElementById(`aidesc-${panelId}-g-${i}`)?.value?.trim() || g.descripcion;
-      const cat = document.getElementById(`aicat-${panelId}-g-${i}`)?.value || g.categoria_sugerida || getCatsGasto()[0] || 'Otros';
+      const cat = document.getElementById(`aicat-${panelId}-g-${i}`)?.value || 'Otros';
       const monto = +(document.getElementById(`aimonto-${panelId}-g-${i}`)?.value) || g.monto;
       const medioPago = document.getElementById(`aitipo-${panelId}-g-${i}`)?.value || g.medio_pago;
       const tipoMap = { debito:'debito', transferencia:'debito', credito:'tarjeta', tarjeta:'tarjeta', efectivo:'efectivo' };
@@ -8735,7 +8741,7 @@ function importarSeleccionados(panelId, btn) {
       const c = cuotas[i];
       if (!c) return;
       const desc = document.getElementById(`aidesc-${panelId}-c-${i}`)?.value?.trim() || c.descripcion;
-      const catC = document.getElementById(`aicat-${panelId}-c-${i}`)?.value || c.categoria_sugerida || getCatsGasto()[0] || 'Otros';
+      const catC = document.getElementById(`aicat-${panelId}-c-${i}`)?.value || 'Otros';
       const subcatC = document.getElementById(`aisubcat-${panelId}-c-${i}`)?.value||'';
       const notaC = document.getElementById(`ainota-${panelId}-c-${i}`)?.value?.trim()||'';
       const montoTotal = c.monto_total || (c.monto_cuota * c.total_cuotas);
