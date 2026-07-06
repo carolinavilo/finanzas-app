@@ -869,6 +869,7 @@ input[type=checkbox]{width:auto;margin-right:5px}
   <div class="page-header">
     <div class="page-header-left"><h2>📋 Movimientos</h2><p>Todos tus ingresos y gastos</p></div>
   </div>
+  <div id="mov-cuenta-chip" style="display:none;margin-bottom:10px"></div>
   <div class="panel">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px;flex-wrap:wrap">
       <div style="display:flex;gap:6px;flex-wrap:wrap">
@@ -2977,6 +2978,7 @@ function syncBottomNav(id){
   });
 }
 function nav(id,el){
+  if(id==='movimientos')_movCuentaFiltro=null;
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('section-'+id).classList.add('active');
@@ -3056,7 +3058,28 @@ function exportarMovimientosCSV(){
   showToast('✅ CSV descargado');
 }
 
+let _movCuentaFiltro=null;
+function verMovimientosCuenta(cuentaId){
+  _movCuentaFiltro=cuentaId;
+  navMob('movimientos');
+  renderMovimientos();
+}
+function limpiarFiltroCuentaMov(){
+  _movCuentaFiltro=null;
+  renderMovimientos();
+}
 function renderMovimientos(){
+  const chip=document.getElementById('mov-cuenta-chip');
+  if(chip){
+    if(_movCuentaFiltro){
+      const c=S.cuentas?.find(c=>c.id===_movCuentaFiltro);
+      chip.style.display='';
+      chip.innerHTML=`<span class="badge b-blue" style="font-size:12px;padding:6px 10px;display:inline-flex;align-items:center;gap:6px">
+        🏦 Filtrando por cuenta: ${esc(c?.nombre||'Cuenta eliminada')}
+        <span style="cursor:pointer;font-weight:900" onclick="limpiarFiltroCuentaMov()">✕</span>
+      </span>`;
+    } else { chip.style.display='none'; chip.innerHTML=''; }
+  }
   const mesSelect=document.getElementById('mov-mes');
   if(mesSelect){
     const meses=new Set([
@@ -3089,6 +3112,7 @@ function renderMovimientos(){
   .filter(m=>(mes||'')===''||m.fecha?.startsWith(mes))
   .filter(m=>(dia||'')===''||m.fecha?.slice(8,10)===dia)
   .filter(m=>!tipo||m.tipo_mov===tipo)
+  .filter(m=>!_movCuentaFiltro||m.cuentaId===_movCuentaFiltro)
   .filter(m=>!buscar||m.descripcion?.toLowerCase().includes(buscar)||m.categoria?.toLowerCase().includes(buscar))
   .sort((a,b)=>{const fd=(b.fecha||'').localeCompare(a.fecha||'');if(fd!==0)return fd;return(b.creadoEn||'').localeCompare(a.creadoEn||'');});
   const totalIngresos=movs.filter(m=>m.tipo_mov==='ingreso').reduce((a,m)=>a+(+m.monto||0),0);
@@ -4017,6 +4041,7 @@ function renderCuentas(){
       <div style="font-size:24px;font-weight:900;margin:10px 0;color:${saldo<0?'var(--accent4)':'var(--text)'}">${saldoFmt}</div>
       ${c.notas?`<div style="font-size:11px;color:var(--text2);margin-bottom:8px">${esc(c.notas)}</div>`:''}
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+        <button class="btn btn-ghost btn-xs" onclick="verMovimientosCuenta('${c.id}')">📋 Movimientos</button>
         <button class="btn btn-ghost btn-xs" onclick="abrirConciliacion('${c.id}')">⚖️ Conciliar</button>
         <button class="btn btn-ghost btn-xs" onclick="editCuenta('${c.id}')">✏️ Editar</button>
         <button class="btn btn-danger btn-xs" onclick="eliminarCuenta('${c.id}')">✕</button>
