@@ -8755,11 +8755,21 @@ function importarSeleccionados(panelId, btn) {
       const subcatC = document.getElementById(`aisubcat-${panelId}-c-${i}`)?.value||'';
       const notaC = document.getElementById(`ainota-${panelId}-c-${i}`)?.value?.trim()||'';
       const montoTotal = c.monto_total || (c.monto_cuota * c.total_cuotas);
+      // fechaPrimerPago se calcula desde el mes de resumen real (que se sabe con certeza al importar)
+      // y el numero de cuota actual, en vez de la fecha de compra impresa en el PDF (poco confiable
+      // cerca del limite del ciclo de cierre, que ademas varia de mes a mes)
+      const cuotaActualN = Math.max(1, c.cuota_actual || 1);
+      const mesResumenCuota = today().slice(0,7);
+      const mesPrimeraCuota = addMeses(mesResumenCuota, -(cuotaActualN-1));
+      const diaCompraC = c.fecha ? +c.fecha.slice(8,10) : 1;
+      const [yPC,mPC] = mesPrimeraCuota.split('-').map(Number);
+      const maxDiaPC = new Date(yPC,mPC,0).getDate();
+      const fechaPrimerPagoCalc = mesPrimeraCuota+'-'+String(Math.min(diaCompraC,maxDiaPC)).padStart(2,'0');
       S.comprasCuotas.push({ id: uid(), tarjetaId: data.tarjetaMatcheada || null, fecha: c.fecha || today(),
         descripcion: desc, categoria: catC, subcategoria: subcatC,
         montoTotal, cuotas: c.total_cuotas, montoCuota: c.monto_cuota,
-        cuotasPagadas: Math.max(0, (c.cuota_actual || 1) - 1),
-        fechaPrimerPago: c.fecha || today(), notas: notaC });
+        cuotasPagadas: Math.max(0, cuotaActualN - 1),
+        fechaPrimerPago: fechaPrimerPagoCalc, notas: notaC });
       nCuotas++;
 });
     let nCargos=0;
