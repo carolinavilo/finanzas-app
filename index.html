@@ -1079,34 +1079,37 @@ input[type=checkbox]{width:auto;margin-right:5px}
     <div class="page-header-left"><h2>📈 Inversiones</h2><p>Tu portfolio y rendimientos</p></div>
     <button class="btn btn-primary" onclick="nuevaInversion()">+ Nueva inversión</button>
   </div>
-  <div id="carteras-tabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px"></div>
-  <div class="three-col" id="inv-stats"></div>
-  <div class="two-col" style="margin-bottom:14px">
-    <div class="panel">
-      <div class="panel-title">💱 Dólar hoy <span class="sub" id="dolar-update-time"></span></div>
-      <div id="inv-dolar"><p style="color:var(--text2);font-size:12px">Presioná "Actualizar" para cargar cotizaciones.</p></div>
-    </div>
-    <div class="panel">
-      <div class="panel-title">📡 Cotizaciones del portfolio <span id="inv-cot-count" style="font-weight:400;font-size:11px;color:var(--text2)"></span>
-        <button id="btn-refresh-prices" class="btn btn-ghost btn-sm" onclick="refreshAllPrices()">🔄 Actualizar</button>
+  <div id="inv-landing"></div>
+  <div id="inv-detail" style="display:none">
+    <div id="carteras-tabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px"></div>
+    <div class="three-col" id="inv-stats"></div>
+    <div class="two-col" style="margin-bottom:14px">
+      <div class="panel">
+        <div class="panel-title">💱 Dólar hoy <span class="sub" id="dolar-update-time"></span></div>
+        <div id="inv-dolar"><p style="color:var(--text2);font-size:12px">Presioná "Actualizar" para cargar cotizaciones.</p></div>
       </div>
-      <div id="inv-cotizaciones"><p style="color:var(--text2);font-size:12px">Agregá un ticker a tus inversiones y presioná Actualizar.</p></div>
-    </div>
-  </div>
-  <div id="banner-cedear" style="display:none;margin-bottom:14px;padding:12px 16px;background:rgba(var(--accent1-rgb,99,102,241),.08);border:1px solid rgba(99,102,241,.25);border-radius:10px;font-size:12px;color:var(--text)">
-    <div style="display:flex;align-items:flex-start;gap:10px">
-      <span style="font-size:16px">ℹ️</span>
-      <div style="flex:1">
-        <strong>Para valores correctos en CEDEARs:</strong> verificá el ratio de conversión de cada ticker en
-        <a href="https://www.byma.com.ar/cedears/" target="_blank" style="color:var(--accent1)">byma.com.ar/cedears</a>
-        y ajustalo con el botón <strong>✏️ Corregir ratio</strong> de cada card. El ratio indica cuántos CEDEARs equivalen a 1 acción en NYSE.
-        <span style="display:block;margin-top:4px;color:var(--text2)">Ejemplo: XLK tiene ratio 2 → 1 CEDEAR XLK = 0.5 acciones de XLK.</span>
+      <div class="panel">
+        <div class="panel-title">📡 Cotizaciones del portfolio <span id="inv-cot-count" style="font-weight:400;font-size:11px;color:var(--text2)"></span>
+          <button id="btn-refresh-prices" class="btn btn-ghost btn-sm" onclick="refreshAllPrices()">🔄 Actualizar</button>
+        </div>
+        <div id="inv-cotizaciones"><p style="color:var(--text2);font-size:12px">Agregá un ticker a tus inversiones y presioná Actualizar.</p></div>
       </div>
-      <button onclick="localStorage.setItem('banner_cedear_dismissed','1');document.getElementById('banner-cedear').style.display='none'"
-        style="background:none;border:none;cursor:pointer;color:var(--text2);font-size:16px;padding:0;line-height:1">✕</button>
     </div>
+    <div id="banner-cedear" style="display:none;margin-bottom:14px;padding:12px 16px;background:rgba(var(--accent1-rgb,99,102,241),.08);border:1px solid rgba(99,102,241,.25);border-radius:10px;font-size:12px;color:var(--text)">
+      <div style="display:flex;align-items:flex-start;gap:10px">
+        <span style="font-size:16px">ℹ️</span>
+        <div style="flex:1">
+          <strong>Para valores correctos en CEDEARs:</strong> verificá el ratio de conversión de cada ticker en
+          <a href="https://www.byma.com.ar/cedears/" target="_blank" style="color:var(--accent1)">byma.com.ar/cedears</a>
+          y ajustalo con el botón <strong>✏️ Corregir ratio</strong> de cada card. El ratio indica cuántos CEDEARs equivalen a 1 acción en NYSE.
+          <span style="display:block;margin-top:4px;color:var(--text2)">Ejemplo: XLK tiene ratio 2 → 1 CEDEAR XLK = 0.5 acciones de XLK.</span>
+        </div>
+        <button onclick="localStorage.setItem('banner_cedear_dismissed','1');document.getElementById('banner-cedear').style.display='none'"
+          style="background:none;border:none;cursor:pointer;color:var(--text2);font-size:16px;padding:0;line-height:1">✕</button>
+      </div>
+    </div>
+    <div id="inversiones-list"></div>
   </div>
-  <div id="inversiones-list"></div>
 </div>
 
 <!-- PRESUPUESTO -->
@@ -2979,6 +2982,7 @@ function syncBottomNav(id){
 }
 function nav(id,el){
   if(id==='movimientos')_movCuentaFiltro=null;
+  if(id==='inversiones')_invLanding=true;
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('section-'+id).classList.add('active');
@@ -2989,6 +2993,7 @@ function nav(id,el){
   if(window.lucide)lucide.createIcons();
 }
 function navMob(id){
+  if(id==='inversiones')_invLanding=true;
   const sidebarEl=document.querySelector(`.nav-item[onclick*="'${id}'"]`);
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
@@ -3849,6 +3854,81 @@ function eliminarInstrumento(objId,instId){
 // ====== CARTERAS ======
 let objImgData=null;
 let _carteraActual=null; // null = Todas
+let _invLanding=true; // true = mostrar selector de carteras antes del detalle
+
+function calcCarteraStats(carteraId){
+  const toARS=(monto,moneda)=>(moneda==='USD'&&dolarRates.blue?.venta)?monto*dolarRates.blue.venta:monto;
+  const invFiltradas=carteraId?S.inversiones.filter(i=>i.carteraId===carteraId):S.inversiones;
+  const groups={};
+  const singles=[];
+  invFiltradas.forEach(inv=>{
+    if(inv.ticker){
+      const key=inv.ticker.trim().toUpperCase();
+      if(!groups[key])groups[key]={ticker:key,entries:[]};
+      groups[key].entries.push(inv);
+    } else { singles.push(inv); }
+  });
+  let totalInv=0, valorActual=0;
+  Object.values(groups).forEach(g=>{
+    const totalUnid=g.entries.reduce((a,e)=>a+(+e.cantidad||0),0);
+    const totalInvARS=g.entries.reduce((a,e)=>a+toARS(+e.montoInvertido||0,e.moneda),0);
+    const ppm=totalUnid?totalInvARS/totalUnid:0;
+    const vendidas=(S.ventas||[]).filter(v=>v.ticker?.trim().toUpperCase()===g.ticker).reduce((a,v)=>a+(+v.cantidad||0),0);
+    const tenencia=totalUnid-vendidas;
+    const costoBasis=ppm*tenencia;
+    totalInv+=costoBasis;
+    const precio=liveprices[g.ticker]?.priceARS||getPrecioManual(g.ticker)||null;
+    valorActual+=(precio&&precio>0)?precio*tenencia:costoBasis;
+  });
+  singles.forEach(inv=>{
+    const monto=toARS(+inv.montoInvertido||0,inv.moneda);
+    totalInv+=monto;
+    valorActual+=monto+calcRend(inv);
+  });
+  return{totalInv,valorActual,rend:valorActual-totalInv,nPositions:Object.keys(groups).length+singles.length};
+}
+
+function mostrarCarteraDetalle(id){
+  _invLanding=false;
+  _carteraActual=id;
+  renderInversiones();
+}
+
+function volverACarteras(){
+  _invLanding=true;
+  renderInversiones();
+}
+
+function renderInversionesLanding(){
+  const cont=document.getElementById('inv-landing');
+  if(!cont)return;
+  const carteras=S.carteras||[];
+  const card=(id,nombre,icono,color)=>{
+    const st=calcCarteraStats(id);
+    const rendColor=st.rend>=0?'var(--accent2)':'var(--accent4)';
+    const pct=st.totalInv?((st.rend/st.totalInv)*100).toFixed(1):null;
+    return `<div class="panel" style="cursor:pointer" onclick="mostrarCarteraDetalle(${id===null?'null':`'${id}'`})">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <div style="width:36px;height:36px;border-radius:50%;background:${esc(color)};display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0">${icono}</div>
+        <div style="font-weight:700;font-size:15px">${esc(nombre)}</div>
+      </div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:2px">Valor actual</div>
+      <div style="font-size:22px;font-weight:900;margin-bottom:8px">${$$(st.valorActual)}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:12px;color:${rendColor}">${st.rend>=0?'+':''}${$$(st.rend)}${pct!==null?` (${st.rend>=0?'+':''}${pct}%)`:''}</span>
+        <span style="font-size:11px;color:var(--text2)">${st.nPositions} posición${st.nPositions!==1?'es':''}</span>
+      </div>
+    </div>`;
+  };
+  let html=carteras.length
+    ? carteras.map(c=>card(c.id,c.nombre,'💼',c.color||'var(--accent)')).join('')+card(null,'Todas','📊','var(--card2)')
+    : card(null,'Todas mis inversiones','📊','var(--accent)');
+  html+=`<div class="panel" style="display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;border:1px dashed var(--border);min-height:110px" onclick="openNuevaCartera()">
+    <div style="font-size:22px;margin-bottom:6px">➕</div>
+    <div style="font-size:13px;color:var(--text2)">Nueva cartera</div>
+  </div>`;
+  cont.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:14px">${html}</div>`;
+}
 
 function populateCarteraSels(){
   // Selector en modal-inversion
@@ -3871,10 +3951,10 @@ function populateCarteraSels(){
 function renderCarterasTabs(){
   const tabs=document.getElementById('carteras-tabs');if(!tabs)return;
   const carteras=S.carteras||[];
-  if(!carteras.length){tabs.style.display='none';return;}
   tabs.style.display='flex';
   tabs.innerHTML=
-    `<button class="btn btn-${_carteraActual===null?'primary':'ghost'} btn-sm" onclick="setCarteraActual(null)">Todas</button>`+
+    `<button class="btn btn-ghost btn-sm" onclick="volverACarteras()">← Carteras</button>`+
+    (carteras.length?`<button class="btn btn-${_carteraActual===null?'primary':'ghost'} btn-sm" onclick="setCarteraActual(null)">Todas</button>`:'')+
     carteras.map(c=>`<button class="btn btn-${_carteraActual===c.id?'primary':'ghost'} btn-sm"
       style="${_carteraActual===c.id?`background:${esc(c.color||'var(--accent)')};border-color:${esc(c.color||'var(--accent)')};`:''}"
       onclick="setCarteraActual('${c.id}')">${esc(c.nombre)}</button>`).join('')+
@@ -3909,6 +3989,7 @@ function guardarCartera(){
     const nueva={id:uid(),...data};
     S.carteras.push(nueva);
     _carteraActual=nueva.id;
+    _invLanding=false;
   }
   save();closeModal('modal-cartera');renderCarterasTabs();populateCarteraSels();renderInversiones();
   showToast('✅ Cartera guardada');
@@ -6368,6 +6449,16 @@ function resetInvModal(){
 function nuevaInversion(){resetInvModal();populateCarteraSels();openModal('modal-inversion');}
 
 function renderInversiones(){
+  const landingEl=document.getElementById('inv-landing');
+  const detailEl=document.getElementById('inv-detail');
+  if(_invLanding){
+    renderInversionesLanding();
+    if(landingEl)landingEl.style.display='';
+    if(detailEl)detailEl.style.display='none';
+    return;
+  }
+  if(landingEl)landingEl.style.display='none';
+  if(detailEl)detailEl.style.display='';
   renderCarterasTabs();
   populateCarteraSels();
   resetInvModal();
