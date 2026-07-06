@@ -7789,7 +7789,7 @@ function renderCotizacionesPanel(){
   const el=document.getElementById('inv-cotizaciones');if(!el)return;
   const toARS=(m,mon)=>(mon==='USD'&&dolarRates.blue?.venta)?m*dolarRates.blue.venta:m;
   const tickers={};
-  S.inversiones.filter(i=>i.ticker&&i.ticker!=='USD').forEach(inv=>{
+  (_carteraActual?S.inversiones.filter(i=>i.carteraId===_carteraActual):S.inversiones).filter(i=>i.ticker&&i.ticker!=='USD').forEach(inv=>{
     const key=inv.ticker.trim().toUpperCase();
     if(!tickers[key])tickers[key]={ticker:key,desc:inv.descripcion,entries:[]};
     tickers[key].entries.push(inv);
