@@ -5515,10 +5515,17 @@ function getCargosDelMes(tarjetaId,mes){
   return t.cargos.filter(c=>c.mes===mes);
 }
 
+function calcMesImpacto(fecha,tarjetaId){
+  const t=(S.tarjetas||[]).find(x=>x.id===tarjetaId);
+  const mesCompra=fecha.slice(0,7);
+  if(!t||!t.cierre)return mesCompra; // sin tarjeta o sin día de cierre configurado: fallback a mes de compra
+  const dia=+fecha.slice(8,10);
+  return dia>+t.cierre?addMeses(mesCompra,1):mesCompra;
+}
 function getStatementItems(tarjetaId,mes){
   const items=[];
-  // 1. Gastos directos con tarjeta en ese mes
-  (S.gastos||[]).filter(g=>g.tarjetaId===tarjetaId&&g.fecha.startsWith(mes))
+  // 1. Gastos directos con tarjeta en ese mes (agrupados por mes de resumen, no de compra)
+  (S.gastos||[]).filter(g=>g.tarjetaId===tarjetaId&&calcMesImpacto(g.fecha,g.tarjetaId)===mes)
     .forEach(g=>items.push({tipo:'gasto',desc:g.descripcion,cat:g.categoria,monto:g.monto,fecha:g.fecha,id:g.id}));
   // 2. Cuotas de compras distribuidas
   (S.comprasCuotas||[]).filter(c=>c.tarjetaId===tarjetaId).forEach(c=>{
