@@ -82,7 +82,7 @@ nav{flex:1;padding:10px 10px;overflow-y:auto}
 .sidebar-bottom{padding:16px 18px;border-top:1px solid var(--border);font-size:11px;color:var(--text2)}
 .sidebar-bottom>p{margin-bottom:8px}
 .sidebar-actions{display:flex;gap:5px;flex-wrap:wrap}
-#main{margin-left:230px;flex:1;min-width:0;padding:30px;min-height:100vh}
+#main{margin-left:230px;flex:1;padding:30px;min-height:100vh}
 .section{display:none}.section.active{display:block}
 .page-header{margin-bottom:26px;display:flex;justify-content:space-between;align-items:flex-start}
 .page-header-left h2{font-size:22px;font-weight:700;letter-spacing:-.3px}
@@ -188,17 +188,13 @@ input[type=checkbox]{width:auto;margin-right:5px}
 /* ── MES ACCORDION ── */
 .mes-card{background:var(--card);border:1px solid var(--border);border-radius:14px;margin-bottom:10px;overflow:hidden;box-shadow:var(--shadow)}
 .cuota-mes-hint{font-size:11px;color:var(--text2);margin-bottom:6px}
-.cuota-mes-carrusel{position:relative;display:flex;gap:10px;overflow-x:auto;padding-bottom:8px;scroll-behavior:smooth;scrollbar-width:thin}.cuota-mes-carrusel{max-width:100%}
+.cuota-mes-carrusel{display:flex;gap:10px;overflow-x:auto;padding-bottom:8px;scroll-behavior:smooth;scrollbar-width:thin}
 .cuota-mes-carrusel::-webkit-scrollbar{height:6px}
 .cuota-mes-carrusel::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
 .cuota-mes-carrusel::-webkit-scrollbar-thumb:hover{background:var(--accent)}
-.cuota-mes-nav{position:relative}
-.cuota-mes-carrusel-pad{padding:0 38px}
-.cuota-mes-arrow{position:absolute;top:50%;transform:translateY(-50%);z-index:5;width:32px;height:32px;border-radius:50%;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s;box-shadow:0 2px 6px rgba(0,0,0,.15)}
+.cuota-mes-nav{display:flex;align-items:center;gap:8px}
+.cuota-mes-arrow{flex-shrink:0;width:32px;height:32px;border-radius:50%;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s}
 .cuota-mes-arrow:hover{border-color:var(--accent);color:var(--accent)}
-.cuota-mes-arrow.left{left:0}
-.cuota-mes-arrow.right{right:0}
-.cuota-mes-hoy-btn{font-size:11px;font-weight:700;color:var(--accent);background:none;border:none;cursor:pointer;padding:0;margin-left:8px;text-decoration:underline}
 .cuota-mes-chip{flex:0 0 160px;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:10px 12px;cursor:pointer;transition:.15s}
 .cuota-mes-chip:hover{border-color:var(--accent)}
 .cuota-mes-chip.sel{border:2px solid var(--accent);padding:9px 11px}
@@ -308,7 +304,7 @@ input[type=checkbox]{width:auto;margin-right:5px}
 .cat-chip button{background:none;border:none;cursor:pointer;color:var(--text2);font-size:13px;line-height:1;padding:0}
 .cat-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);min-height:44px}
 .cat-row:last-child{border-bottom:none}
-.cat-row-dot{width:14px;height:14px;border-radius:50%;flex-shrink:0;border:none;padding:0;cursor:pointer;-webkit-appearance:none;appearance:none;background:none}.cat-row-dot::-webkit-color-swatch-wrapper{padding:0;border-radius:50%}.cat-row-dot::-webkit-color-swatch{border:none;border-radius:50%}
+.cat-row-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex-shrink:0;opacity:.7}
 .cat-row-name{flex:1;font-size:13px;font-weight:500;color:var(--text)}
 .cat-row-actions{display:flex;gap:6px;flex-shrink:0}
 
@@ -500,16 +496,14 @@ input[type=checkbox]{width:auto;margin-right:5px}
     <div class="login-logo">💰</div>
     <div class="login-title">FinanzasApp</div>
     <div class="login-sub">Ingresá con tu cuenta</div>
-    <form onsubmit="return false">
     <div class="login-field">
       <label>Email</label>
-      <input type="email" id="login-email" autocomplete="username" placeholder="tu@email.com" onkeydown="if(event.key==='Enter')document.getElementById('login-pass').focus()"/>
+      <input type="email" id="login-email" placeholder="tu@email.com" onkeydown="if(event.key==='Enter')document.getElementById('login-pass').focus()"/>
     </div>
     <div class="login-field">
       <label>Contraseña</label>
       <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"/>
     </div>
-    </form>
     <button class="login-btn" id="login-btn" onclick="doLogin()">Entrar</button>
     <div class="login-error" id="login-error"></div>
     <p style="text-align:center;margin-top:12px">
@@ -522,7 +516,6 @@ input[type=checkbox]{width:auto;margin-right:5px}
     <div class="login-logo">🔐</div>
     <div class="login-title">Crear contraseña</div>
     <div class="login-sub">Elegí tu contraseña para ingresar a la app</div>
-    <form onsubmit="return false">
     <div class="login-field">
       <label>Nueva contraseña</label>
       <input type="password" id="new-pass" placeholder="Mínimo 6 caracteres" autocomplete="new-password" onkeydown="if(event.key==='Enter')document.getElementById('new-pass2').focus()"/>
@@ -531,7 +524,6 @@ input[type=checkbox]{width:auto;margin-right:5px}
       <label>Repetir contraseña</label>
       <input type="password" id="new-pass2" placeholder="Repetí la contraseña" autocomplete="new-password" onkeydown="if(event.key==='Enter')doSetPassword()"/>
     </div>
-    </form>
     <button class="login-btn" id="set-pass-btn" onclick="doSetPassword()">Guardar contraseña</button>
     <div class="login-error" id="set-pass-error"></div>
   </div>
@@ -920,7 +912,7 @@ input[type=checkbox]{width:auto;margin-right:5px}
         <div class="form-group" style="min-width:0"><label id="g-monto-label">Monto (ARS)</label>
           <div style="display:flex;gap:6px">
             <input type="number" id="g-monto" inputmode="decimal" placeholder="0" style="font-size:16px;width:100%;height:48px;box-sizing:border-box" oninput="updateGastoCuotasPreview()"/>
-            <select id="g-moneda" onchange="onGastoMonedaChange()" style="height:48px;border-radius:8px;border:1px solid var(--border);background:var(--card2);font-size:13px;font-weight:700;padding:0 6px;flex-shrink:0;width:56px">
+            <select id="g-moneda" onchange="onGastoMonedaChange()" style="height:48px;border-radius:8px;border:1px solid var(--border);background:var(--card2);font-size:13px;font-weight:700;padding:0 6px;flex-shrink:0">
               <option value="ARS">$</option>
               <option value="USD">U$S</option>
             </select>
@@ -1257,17 +1249,6 @@ input[type=checkbox]{width:auto;margin-right:5px}
         </div>
       </div>
     </div>
-    </div>
-  <div class="panel" style="margin-top:20px">
-    <div class="panel-title">🗑️ Revisar y borrar movimientos</div>
-    <p style="font-size:12px;color:var(--text2);margin-bottom:12px">Gastos, cuotas y cargos sin tarjeta asociada (huérfanos) o creados en los últimos 14 días — útil para deshacer una importación equivocada.</p>
-    <button class="toggle-btn" onclick="abrirRevisionMovimientos()">🔍 Revisar movimientos</button>
-  </div>
-  </div>
-<div class="modal-overlay" id="modal-revision-mov" style="display:none" onclick="if(event.target===this)closeModal('modal-revision-mov')">
-  <div class="modal" style="max-width:560px;max-height:85vh;overflow-y:auto">
-    <div class="modal-header"><h3>🔍 Revisión de movimientos</h3><button class="modal-close" onclick="closeModal('modal-revision-mov')">×</button></div>
-    <div class="modal-body" id="modal-revision-mov-body"></div>
   </div>
 </div>
 
@@ -1431,7 +1412,6 @@ input[type=checkbox]{width:auto;margin-right:5px}
   <div id="ai-attachment-label"></div>
   <div id="ai-input-row">
     <input type="file" id="ai-file-input" accept=".pdf,image/*" multiple style="display:none" onchange="handleAIFileSelect(event)"/>
-    <input type="file" id="resumen-tarjeta-file-input" accept=".pdf,image/*" multiple style="display:none" onchange="handleResumenTarjetaFileSelect(event)"/>
     <button id="ai-attach-btn" title="Adjuntar resúmenes bancarios (PDF o imágenes)" onclick="document.getElementById('ai-file-input').click()">📎</button>
     <input id="ai-input" placeholder="Preguntá algo..." onkeydown="if(event.key==='Enter')sendAIMsg()"/>
     <button class="btn btn-primary" style="padding:8px 14px;border-radius:20px" onclick="sendAIMsg()">↑</button>
@@ -1439,18 +1419,11 @@ input[type=checkbox]{width:auto;margin-right:5px}
 </div>
 
 <!-- MODAL TARJETA -->
-<div class="modal-overlay" id="modal-resumen-tarjeta" style="display:none" onclick="if(event.target===this)closeResumenTarjetaModal()">
-  <div class="modal" style="max-width:520px;max-height:85vh;overflow-y:auto">
-    <div class="modal-header"><h3>📄 Revisión de resumen</h3><button class="modal-close" onclick="closeResumenTarjetaModal()">×</button></div>
-    <div class="modal-body" id="modal-resumen-tarjeta-body"></div>
-  </div>
-</div>
 <!-- MODAL CAMBIAR CONTRASEÑA -->
 <div class="modal-overlay" id="modal-cambiar-pass" style="display:none" onclick="if(event.target===this)closeModalCambiarPass()">
   <div class="modal" style="max-width:360px">
     <div class="modal-header"><h3>🔑 Cambiar contraseña</h3><button class="modal-close" onclick="closeModalCambiarPass()">×</button></div>
     <div class="modal-body">
-      <form onsubmit="return false">
       <div class="form-group">
         <label>Nueva contraseña</label>
         <input type="password" id="cp-nueva" placeholder="Mínimo 6 caracteres" autocomplete="new-password" onkeydown="if(event.key==='Enter')document.getElementById('cp-repetir').focus()"/>
@@ -1460,7 +1433,6 @@ input[type=checkbox]{width:auto;margin-right:5px}
         <input type="password" id="cp-repetir" placeholder="Repetí la contraseña" autocomplete="new-password" onkeydown="if(event.key==='Enter')doChangePasword()"/>
       </div>
       <p id="cp-error" style="color:var(--accent4);font-size:13px;margin-top:4px"></p>
-      </form>
     </div>
     <div class="modal-footer">
       <button class="btn btn-neutral" onclick="closeModalCambiarPass()">Cancelar</button>
@@ -1803,7 +1775,7 @@ input[type=checkbox]{width:auto;margin-right:5px}
     <div class="modal-header"><h3 id="modal-cc-title">Nueva compra en cuotas</h3><button class="modal-close" onclick="closeModal('modal-compra-cuotas')">×</button></div>
     <div class="modal-body">
       <input type="hidden" id="cc-edit-id"/>
-      <div class="form-group"><label>Tarjeta</label><select id="cc-tarjeta-id"><option value="">Sin tarjeta</option></select></div>
+      <input type="hidden" id="cc-tarjeta-id"/>
       <div class="form-grid-2">
         <div class="form-group"><label>Fecha de compra</label><input type="date" id="cc-fecha"/></div>
         <div class="form-group" style="grid-column:1/-1"><label>Descripción</label><input id="cc-desc" placeholder="TV Samsung, Notebook, etc."/></div>
@@ -1946,7 +1918,7 @@ input[type=checkbox]{width:auto;margin-right:5px}
       <div class="form-group"><label id="eg-monto-label">Monto (ARS)</label>
         <div style="display:flex;gap:6px">
           <input type="number" id="eg-monto" style="flex:1"/>
-          <select id="eg-moneda" onchange="onEgMonedaChange()" style="border-radius:8px;border:1px solid var(--border);background:var(--card2);font-size:13px;font-weight:700;padding:0 6px;flex-shrink:0;width:56px">
+          <select id="eg-moneda" onchange="onEgMonedaChange()" style="border-radius:8px;border:1px solid var(--border);background:var(--card2);font-size:13px;font-weight:700;padding:0 6px;flex-shrink:0">
             <option value="ARS">$</option>
             <option value="USD">U$S</option>
           </select>
@@ -2549,9 +2521,6 @@ const CAT_COLORS={
   'Supermercado':'#a78bfa','Otros':'#94a3b8','Sueldo':'#4ade80','Freelance':'#34d399',
   'Alquiler':'#60a5fa','Inversiones':'#f59e0b','Regalo':'#e879f9'
 };
-const CAT_PALETTE=["#6c63ff","#4ade80","#f59e0b","#f87171","#e879f9","#60a5fa","#34d399","#fb923c","#a78bfa","#38bdf8","#facc15","#fb7185","#2dd4bf","#c084fc","#84cc16","#f472b6"];function colorForCat(name){let h=0;for(let i=0;i<name.length;i++){h=(h*31+name.charCodeAt(i))>>>0;}return CAT_PALETTE[h%CAT_PALETTE.length];}
-function getCatColorHex(name){return (S.catColores&&S.catColores[name])||CAT_COLORS[name]||colorForCat(name);}
-function setCatColor(name,hex){if(!S.catColores)S.catColores={};S.catColores[name]=hex;save();refreshDashIfVisible();}
 
 function _defaultS(){
   return{gastos:[],ingresos:[],tarjetas:[],cuotas:[],inversiones:[],presupuesto:{},
@@ -2565,7 +2534,6 @@ function _applyGuards(p){
   if(!p.catsIngreso||!p.catsIngreso.length)p.catsIngreso=[...DEFAULT_CATS_INGRESO];
   if(!p.config)p.config={tema:'light',colorTheme:'verde'};
   if(!p.config.colorTheme)p.config.colorTheme='verde';
-  if(!p.catColores)p.catColores={};
   if(!p.comprasCuotas)p.comprasCuotas=[];
   if(!p.cuentas)p.cuentas=[];
   if(!p.transferencias)p.transferencias=[];
@@ -2615,7 +2583,6 @@ async function load(){
         const json=JSON.stringify(S);
         localStorage.setItem('fz_v3',json);localStorage.setItem('fz_v3_backup',json);
         if(S.config?.anthropicKey)localStorage.setItem('anthropic_api_key',S.config.anthropicKey);
-        if(document.getElementById('section-cuotas')?.classList.contains('active')&&typeof renderCuotas==='function')renderCuotas();
         return;
       }
     }catch(e){console.warn('[sync] Error cargando desde Supabase:', e.message);}
@@ -3072,19 +3039,29 @@ function renderMovimientos(){
   const mes=document.getElementById('mov-mes')?.value||'';
   const dia=document.getElementById('mov-dia')?.value||'';
   const tipo=document.getElementById('mov-tipo')?.value||'';
-  const cuotasCompras=(S.comprasCuotas||[]).filter(c=>c.cuotas&&c.montoCuota).map(c=>({...c,tipo_mov:'cuota',monto:c.montoTotal||(c.montoCuota*c.cuotas),cuotaNum:1,categoria:c.categoria||'Sin categoría'}));
+  const cuotasExpandidas=[];
+  (S.comprasCuotas||[]).forEach(c=>{
+    const totalCuotas=c.cuotas||0;
+    const montoCuota=c.montoCuota||0;
+    if(!totalCuotas||!montoCuota)return;
+    for(let i=0;i<totalCuotas;i++){
+      const fechaPago=c.fechaPrimerPago?addMesesAFecha(c.fechaPrimerPago,i):null;
+      if(!fechaPago)continue;
+      cuotasExpandidas.push({...c,tipo_mov:'cuota',monto:montoCuota,fecha:fechaPago,cuotaNum:i+1,categoria:c.categoria||'Sin categoría'});
+    }
+  });
   const movs=[
     ...S.gastos.map(g=>({...g,tipo_mov:'gasto'})),
     ...S.ingresos.map(i=>({...i,tipo_mov:'ingreso'})),
-    ...cuotasCompras
+    ...cuotasExpandidas
   ]
-  .filter(m=>(mes||'')===''||m.fecha?.startsWith(mes))
-  .filter(m=>(dia||'')===''||m.fecha?.slice(8,10)===dia)
+  .filter(m=>!mes||(m.tipo_mov==='gasto'?calcFechaImpactoGasto(m)?.startsWith(mes):m.fecha?.startsWith(mes)))
+  .filter(m=>!dia||(m.tipo_mov==='gasto'?calcFechaImpactoGasto(m)?.slice(8,10):m.fecha?.slice(8,10))===dia)
   .filter(m=>!tipo||m.tipo_mov===tipo)
   .filter(m=>!buscar||m.descripcion?.toLowerCase().includes(buscar)||m.categoria?.toLowerCase().includes(buscar))
-  .sort((a,b)=>{const fd=(b.fecha||'').localeCompare(a.fecha||'');if(fd!==0)return fd;return(b.creadoEn||'').localeCompare(a.creadoEn||'');});
+  .sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
   const totalIngresos=movs.filter(m=>m.tipo_mov==='ingreso').reduce((a,m)=>a+(+m.monto||0),0);
-  const totalGastos=movs.filter(m=>m.tipo_mov==='gasto'&&m.tipo!=='tarjeta').reduce((a,m)=>a+(+m.monto||0),0);
+  const totalGastos=movs.filter(m=>m.tipo_mov!=='ingreso').reduce((a,m)=>a+(+m.monto||0),0);
   const label=document.getElementById('mov-total-label');
   if(label)label.innerHTML=`${movs.length} movimientos · <span style="color:var(--accent2)">+${$$(totalIngresos)}</span> · <span style="color:var(--accent4)">−${$$(totalGastos)}</span>`;
   const list=document.getElementById('mov-list');
@@ -3098,7 +3075,7 @@ function renderMovimientos(){
         ${m.tipo_mov==='ingreso'?'+':'−'}${$$(m.monto)}
       </div>
       <div style="font-size:11px;color:var(--text2);grid-column:1;grid-row:2">
-        ${m.tipo_mov==='ingreso'?'📈':(m.tipo==='tarjeta'||m.tipo_mov==='cuota')?'💳':m.tipo==='debito'?'🏦':'💵'} ${ff(m.fecha)} · <span class="badge ${m.tipo_mov==='ingreso'?'b-green':m.tipo_mov==='cuota'?'b-blue':'b-purple'}" style="font-size:10px">${m.tipo_mov==='cuota'?'En '+(m.cuotas||'?')+' cuotas':esc(m.categoria)}</span>${m.subcategoria?` · <span style="font-size:10px;color:var(--text2)">${esc(m.subcategoria)}</span>`:''}${m.tipo==='tarjeta'?` · <span style="font-size:10px;color:var(--text2)">Impacta ${mesPretty(calcFechaImpactoGasto(m).slice(0,7))}</span>`:''}
+        ${ff(m.fecha)} · <span class="badge ${m.tipo_mov==='ingreso'?'b-green':m.tipo_mov==='cuota'?'b-blue':'b-purple'}" style="font-size:10px">${m.tipo_mov==='cuota'?'💳 Cuotas':esc(m.categoria)}</span>${m.subcategoria?` · <span style="font-size:10px;color:var(--text2)">${esc(m.subcategoria)}</span>`:''}
       </div>
       <div style="grid-column:2;grid-row:2;text-align:right;white-space:nowrap">
         <button class="btn btn-ghost btn-xs mov-edit-btn" data-id="${esc(m.id)}" data-tipo="${m.tipo_mov}">✏️</button>
@@ -3119,17 +3096,64 @@ function renderMovimientos(){
   };
 
   const ingresos=movs.filter(m=>m.tipo_mov==='ingreso');
-  const gastosTodos=movs.filter(m=>m.tipo_mov==='gasto'||m.tipo_mov==='cuota');
-  const gastosSeccionHTML=gastosTodos.length?`<div style="margin-bottom:16px">
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:2px solid var(--accent4);margin-bottom:4px">
-      <span style="font-size:11px;font-weight:700;color:var(--accent4);text-transform:uppercase;letter-spacing:.5px">💵 Gastos</span>
-      <span style="font-size:11px;font-weight:700;color:var(--accent4)">${gastosTodos.length} · ${$$(totalGastos)}</span>
+  const gastosDiarios=movs.filter(m=>m.tipo_mov==='gasto'&&m.tipo!=='tarjeta');
+  const gastosTarjeta=movs.filter(m=>m.tipo_mov==='gasto'&&m.tipo==='tarjeta');
+  const cuotas=movs.filter(m=>m.tipo_mov==='cuota');
+
+  // Agrupar tarjeta & cuotas por tarjetaId
+  const tarjetaItems=[...gastosTarjeta,...cuotas].sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+  const byTarjeta={};
+  tarjetaItems.forEach(m=>{
+    const tid=m.tarjetaId||'__sin__';
+    if(!byTarjeta[tid])byTarjeta[tid]=[];
+    byTarjeta[tid].push(m);
+  });
+  const tarjetaCardsHTML=Object.entries(byTarjeta).map(([tid,items])=>{
+    const tar=tid==='__sin__'?null:S.tarjetas.find(t=>t.id===tid);
+    const nombre=tar?tar.nombre:'Sin tarjeta';
+    const total=items.reduce((a,m)=>a+(+m.monto||0),0);
+    const filasHTML=items.map(m=>`
+      <div style="padding:10px 16px;border-bottom:0.5px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:8px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.descripcion)}</div>
+          <div style="font-size:11px;color:var(--text2);margin-top:2px">${ff(m.fecha)} · <span class="badge ${m.tipo_mov==='cuota'?'b-blue':'b-purple'}" style="font-size:10px">${m.tipo_mov==='cuota'?'💳 Cuota '+m.cuotaNum+'/'+(m.cuotas||'?'):esc(m.categoria)}</span>${m.subcategoria?` · <span style="font-size:10px;color:var(--text2)">${esc(m.subcategoria)}</span>`:''}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:4px;flex-shrink:0">
+          <span style="font-size:13px;font-weight:600">−${$$(m.monto)}</span>
+          <button class="btn btn-ghost btn-xs mov-edit-btn" data-id="${esc(m.id)}" data-tipo="${m.tipo_mov}">✏️</button>
+          <button class="btn btn-danger btn-xs mov-del-btn" data-id="${esc(m.id)}" data-tipo="${m.tipo_mov}">✕</button>
+        </div>
+      </div>`).join('');
+    return `<div style="background:var(--card);border:1px solid var(--border);border-radius:12px;margin-bottom:10px;overflow:hidden">
+      <div style="padding:12px 16px;border-bottom:0.5px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="width:34px;height:34px;border-radius:10px;background:rgba(129,140,248,.12);display:flex;align-items:center;justify-content:center;font-size:18px">💳</div>
+          <div>
+            <div style="font-size:14px;font-weight:700">${esc(nombre)}</div>
+            <div style="font-size:11px;color:var(--text2)">${tar?`Cierre ${tar.cierre} · Venc. ${tar.vencimiento}`:''}</div>
+          </div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:14px;font-weight:700">−${$$(total)}</div>
+          <div style="font-size:11px;color:var(--text2)">${items.length} movimiento${items.length!==1?'s':''}</div>
+        </div>
+      </div>
+      ${filasHTML}
+    </div>`;
+  }).join('');
+
+  const tarjetaSeccionHTML=tarjetaItems.length?`<div style="margin-bottom:16px">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:2px solid #818cf8;margin-bottom:8px">
+      <span style="font-size:11px;font-weight:700;color:#6366f1;text-transform:uppercase;letter-spacing:.5px">💳 Tarjeta & cuotas</span>
+      <span style="font-size:11px;font-weight:700;color:#6366f1">${tarjetaItems.length} · ${$$(tarjetaItems.reduce((a,m)=>a+(+m.monto||0),0))}</span>
     </div>
-    ${gastosTodos.map(renderFila).join('')}
+    ${tarjetaCardsHTML}
   </div>`:'';
+
   list.innerHTML=
     renderSeccion('Ingresos','📈','var(--accent2)',ingresos)+
-    gastosSeccionHTML;
+    renderSeccion('Gastos diarios','💵','var(--accent4)',gastosDiarios)+
+    tarjetaSeccionHTML;
 }
 let _movSeleccionMode=false;let _movSeleccionados=new Set();
 function toggleModoSeleccionMovimientos(){_movSeleccionMode=!_movSeleccionMode;_movSeleccionados.clear();document.getElementById('mov-seleccion-bar').style.display=_movSeleccionMode?'flex':'none';const btn=document.getElementById('mov-btn-seleccionar');if(btn)btn.textContent=_movSeleccionMode?'✕ Cancelar':'☑ Seleccionar';renderMovimientos();}
@@ -4500,7 +4524,7 @@ function renderCategorias(){
       const safe=c.replace(/'/g,"\\'").replace(/</g,'&lt;').replace(/>/g,'&gt;');
       const nsubs=getSubcats(c).length;
       return `<div class="cat-row" data-subcat-cat="${c.replace(/"/g,'&quot;')}">
-        <input type="color" class="cat-row-dot" value="${getCatColorHex(c)}" onchange="setCatColor('${safe}',this.value)" title="Elegir color"/>
+        <div class="cat-row-dot"></div>
         <div class="cat-row-name" id="catname-${tipo}-${i}">${c}${SYSTEM_CATS.includes(c)?'<span style="background:var(--card2);color:var(--text2);font-size:10px;padding:2px 6px;border-radius:6px;font-weight:600;margin-left:6px">Sistema</span>':''}</div>
         <div class="cat-row-actions" id="catact-${tipo}-${i}">
           <button class="btn btn-xs btn-ghost" onclick="toggleSubcatPanel('${safe}')" title="Subcategorías" style="padding:6px 10px;font-size:12px">⊕ Subcats${nsubs?` (${nsubs})`:''}  </button>
@@ -4539,10 +4563,10 @@ function populateCatSelects(){
 }
 
 function populateTarjetaSels(){
-  ['g-tarjeta','c-tarjeta','eg-tarjeta','cc-tarjeta-id'].forEach(id=>{
+  ['g-tarjeta','c-tarjeta','eg-tarjeta'].forEach(id=>{
     const el=document.getElementById(id);if(!el)return;
     const cur=el.value;
-    const pre=(id==='c-tarjeta'||id==='cc-tarjeta-id'||id==='eg-tarjeta')?'<option value="">Sin tarjeta</option>':'';
+    const pre=id==='c-tarjeta'?'<option value="">Sin tarjeta</option>':'';
     const tarjetas=(_sharedData?.tarjetas?.length?_sharedData.tarjetas:null)||S.tarjetas||[];
     el.innerHTML=pre+tarjetas.map(t=>`<option value="${t.id}">${t.nombre}</option>`).join('');
     if([...el.options].some(o=>o.value===cur))el.value=cur;
@@ -4882,11 +4906,7 @@ function editGasto(id){
   onEgMonedaChange();
   document.getElementById('eg-tipo').value=g.tipo;
   document.getElementById('eg-tarjeta-group').style.display=g.tipo==='tarjeta'?'flex':'none';
-  const _egTarSel=document.getElementById('eg-tarjeta');
-  if(g.tarjetaId&&![..._egTarSel.options].some(o=>o.value===g.tarjetaId)){
-    const _opt=document.createElement('option');_opt.value=g.tarjetaId;_opt.textContent='⚠️ Tarjeta eliminada';_egTarSel.appendChild(_opt);
-  }
-  _egTarSel.value=g.tarjetaId||'';
+  document.getElementById('eg-tarjeta').value=g.tarjetaId||'';
   document.getElementById('eg-notas').value=g.notas||'';
   document.getElementById('eg-recurrente').checked=!!g.recurrente;
   const egCat=document.getElementById('eg-cat');
@@ -4927,7 +4947,7 @@ function guardarEditGasto(){
     g.monto=monto;
   }
   g.tipo=document.getElementById('eg-tipo').value;
-  g.tarjetaId=g.tipo==='tarjeta'?(document.getElementById('eg-tarjeta').value||null):null;
+  g.tarjetaId=g.tipo==='tarjeta'?document.getElementById('eg-tarjeta').value:null;
   g.notas=document.getElementById('eg-notas').value.trim();
   g.recurrente=document.getElementById('eg-recurrente').checked;
   save();
@@ -5279,76 +5299,8 @@ function guardarTarjeta(){
 
 function eliminarTarjeta(id){
   if(!confirm('¿Eliminar esta tarjeta?'))return;
-  const borrarTodo=confirm('¿Querés borrar también todo su historial (gastos, cuotas, cargos y resúmenes)? Cancelar = borrar solo la tarjeta y dejar el historial sin tarjeta asociada.');
-  S.tarjetas=S.tarjetas.filter(t=>t.id!==id);
-  if(borrarTodo){
-    S.gastos=(S.gastos||[]).filter(g=>g.tarjetaId!==id);
-    S.comprasCuotas=(S.comprasCuotas||[]).filter(c=>c.tarjetaId!==id);
-    S.gastosFinTarjeta=(S.gastosFinTarjeta||[]).filter(g=>g.tarjetaId!==id);
-    S.resumenTarjetas=(S.resumenTarjetas||[]).filter(r=>r.tarjetaId!==id);
-  }
-  save();renderTarjetas();renderGastos();refreshDashIfVisible();
+  S.tarjetas=S.tarjetas.filter(t=>t.id!==id);save();renderTarjetas();
   if(userRole==='admin')setTimeout(_syncSharedData,500);
-}
-function abrirRevisionMovimientos(){
-  const hoy=new Date();
-  const esReciente=(fechaStr)=>{if(!fechaStr)return false;const d=new Date(fechaStr);return (hoy-d)/(1000*60*60*24)<=14;};
-  const tarjetaExiste=(id)=>(id===null||id===undefined||id==='')||(S.tarjetas||[]).some(t=>t.id===id);
-  const items=[];
-  (S.gastos||[]).forEach(g=>{
-    const huerfano=g.tipo==='tarjeta'&&(g.tarjetaId===null||g.tarjetaId===undefined||!tarjetaExiste(g.tarjetaId));
-    const reciente=esReciente(g.creadoEn||g.fecha);
-    if(huerfano||reciente)items.push({tipo:'gasto',id:g.id,desc:g.descripcion,monto:g.monto,fecha:g.fecha,huerfano,reciente});
-  });
-  (S.comprasCuotas||[]).forEach(c=>{
-    const huerfano=!tarjetaExiste(c.tarjetaId);
-    const reciente=esReciente(c.creadoEn||c.fecha);
-    if(huerfano||reciente)items.push({tipo:'cuota',id:c.id,desc:c.descripcion,monto:c.montoTotal||(c.montoCuota*c.cuotas),fecha:c.fecha,huerfano,reciente});
-  });
-  (S.gastosFinTarjeta||[]).forEach(x=>{
-    const huerfano=!tarjetaExiste(x.tarjetaId);
-    const reciente=esReciente(x.creadoEn||(x.mes?x.mes+'-01':null));
-    if(huerfano||reciente)items.push({tipo:'cargo',id:x.id,desc:x.descripcion,monto:x.monto,fecha:x.mes,huerfano,reciente});
-  });
-  items.sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
-  const body=document.getElementById('modal-revision-mov-body');
-  if(!items.length){
-    body.innerHTML='<p style="font-size:13px;color:var(--text2);padding:10px 0">No hay movimientos huérfanos ni recientes para revisar. 🎉</p>';
-  } else {
-    body.innerHTML=`
-      <div style="display:flex;gap:8px;margin-bottom:10px">
-        <button class="btn btn-ghost btn-xs" onclick="document.querySelectorAll('.rev-mov-chk').forEach(c=>c.checked=true)">Todo</button>
-        <button class="btn btn-ghost btn-xs" onclick="document.querySelectorAll('.rev-mov-chk').forEach(c=>c.checked=false)">Ninguno</button>
-      </div>
-      ${items.map(it=>`
-      <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">
-        <input type="checkbox" class="rev-mov-chk" data-tipo="${it.tipo}" data-id="${esc(it.id)}"/>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:13px;font-weight:600">${esc(it.desc||'—')}</div>
-          <div style="font-size:11px;color:var(--text2)">${it.fecha?ff(it.fecha):'—'} ${it.huerfano?'<span style="color:var(--accent4)">🚫 Sin tarjeta</span>':''}${it.reciente?' <span style="color:var(--text2)">🕐 Reciente</span>':''}</div>
-        </div>
-        <div style="font-weight:700;font-size:13px">${$$(it.monto)}</div>
-      </div>`).join('')}
-      <button class="btn btn-danger" style="width:100%;margin-top:12px" onclick="eliminarMovSeleccionados()">🗑️ Eliminar seleccionados</button>
-    `;
-  }
-  document.getElementById('modal-revision-mov').style.display='flex';
-}
-function eliminarMovSeleccionados(){
-  const chks=document.querySelectorAll('.rev-mov-chk:checked');
-  if(!chks.length){showToast('⚠️ No seleccionaste nada');return;}
-  if(!confirm(`¿Eliminar ${chks.length} movimiento(s)? Esta acción no se puede deshacer.`))return;
-  let n=0;
-  chks.forEach(chk=>{
-    const tipo=chk.dataset.tipo,id=chk.dataset.id;
-    if(tipo==='gasto'){S.gastos=(S.gastos||[]).filter(g=>g.id!==id);n++;}
-    else if(tipo==='cuota'){S.comprasCuotas=(S.comprasCuotas||[]).filter(c=>c.id!==id);n++;}
-    else if(tipo==='cargo'){S.gastosFinTarjeta=(S.gastosFinTarjeta||[]).filter(x=>x.id!==id);n++;}
-  });
-  save();renderGastos();renderTarjetas();refreshDashIfVisible();
-  if(userRole==='admin')setTimeout(_syncSharedData,500);
-  showToast(`✅ ${n} movimiento(s) eliminado(s)`);
-  abrirRevisionMovimientos();
 }
 function editFechasTarjeta(id){
   const t=S.tarjetas.find(t=>t.id===id);if(!t)return;
@@ -5551,8 +5503,7 @@ function calcMontoCuota(){
 }
 
 function openCompraCuotas(tarjetaId){
-  populateTarjetaSels();
-  document.getElementById('cc-tarjeta-id').value=tarjetaId||'';
+  document.getElementById('cc-tarjeta-id').value=tarjetaId;
   document.getElementById('cc-edit-id').value='';
   document.getElementById('modal-cc-title').textContent='Nueva compra en cuotas';
   document.getElementById('cc-fecha').value=today();
@@ -5570,7 +5521,7 @@ function openCompraCuotas(tarjetaId){
 }
 
 function agregarCompraCuotas(){
-  const tarjetaId=document.getElementById('cc-tarjeta-id').value||null;
+  const tarjetaId=document.getElementById('cc-tarjeta-id').value;
   const desc=document.getElementById('cc-desc').value.trim();
   const monto=+document.getElementById('cc-monto').value;
   const cuotas=+document.getElementById('cc-cuotas').value;
@@ -5592,12 +5543,7 @@ function agregarCompraCuotas(){
 
 function editCompraCuotas(id){
   const c=S.comprasCuotas.find(c=>c.id===id);if(!c)return;
-  populateTarjetaSels();
-  const _ccTarSel=document.getElementById('cc-tarjeta-id');
-  if(c.tarjetaId&&![..._ccTarSel.options].some(o=>o.value===c.tarjetaId)){
-    const _opt=document.createElement('option');_opt.value=c.tarjetaId;_opt.textContent='⚠️ Tarjeta eliminada';_ccTarSel.appendChild(_opt);
-  }
-  _ccTarSel.value=c.tarjetaId||'';
+  document.getElementById('cc-tarjeta-id').value=c.tarjetaId;
   document.getElementById('cc-edit-id').value=id;
   document.getElementById('modal-cc-title').textContent='Editar compra en cuotas';
   document.getElementById('cc-fecha').value=c.fecha;
@@ -5691,7 +5637,7 @@ function renderTarjetas(){
     const rowIcon={gasto:'🛒',cuota:'📦',fin:'🏦'};
     const rowLabel={gasto:'Gasto',cuota:'Cuota',fin:'Gasto Fin.'};
     const rows=items.length?items.map(item=>`<tr>
-      <td><span class="badge ${rowBadge[item.tipo]}" title="${rowLabel[item.tipo]}">${rowIcon[item.tipo]}</span></td>
+      <td><span class="badge ${rowBadge[item.tipo]}">${rowIcon[item.tipo]} ${rowLabel[item.tipo]}</span></td>
       <td>${item.fecha?ff(item.fecha):'—'}</td>
       <td>${item.desc}${item.cat?` <span class="nota-preview">${item.cat}</span>`:''}</td>
       <td style="text-align:right;font-weight:600">${$$(item.monto)}</td>
@@ -5803,9 +5749,6 @@ function renderTarjetas(){
         `:`<div style="font-size:12px;color:var(--text2);margin-bottom:10px">Sin resumen registrado este mes</div>`}
         <button class="btn btn-primary btn-sm" style="width:100%" onclick="abrirModalAbonarTarjeta('${esc(t.id)}')">
           💳 ${_montoRes>0?'Abonar / actualizar resumen':'Registrar resumen del mes'}
-        </button>
-        <button class="btn btn-neutral btn-sm" style="width:100%;margin-top:6px" onclick="subirResumenTarjeta('${esc(t.id)}')">
-          📤 Subir resumen
         </button>
       </div>`;
     })()}
@@ -5986,13 +5929,11 @@ function renderCuotas(){
       <div class="cuota-mes-chip-total">${$$(totMes)}</div>
     </div>`;
   }).join('');
-  html+=`<div class="cuota-mes-hint">← meses anteriores &nbsp;·&nbsp; meses futuros →${byMes[mesHoy]?`<button class="cuota-mes-hoy-btn" onclick="seleccionarMesCuotas('${mesHoy}')" type="button">Ir a hoy</button>`:''}</div>
+  html+=`<div class="cuota-mes-hint">← meses anteriores &nbsp;·&nbsp; meses futuros →</div>
   <div class="cuota-mes-nav">
-    <button class="cuota-mes-arrow left" onclick="scrollCuotasCarrusel(-1)" title="Ver mes anterior" type="button">‹</button>
-    <div class="cuota-mes-carrusel-pad">
-      <div class="cuota-mes-carrusel" id="cuota-mes-carrusel">${chipsHTML}</div>
-    </div>
-    <button class="cuota-mes-arrow right" onclick="scrollCuotasCarrusel(1)" title="Ver mes siguiente" type="button">›</button>
+    <button class="cuota-mes-arrow" onclick="scrollCuotasCarrusel(-1)" title="Ver mes anterior" type="button">‹</button>
+    <div class="cuota-mes-carrusel" id="cuota-mes-carrusel" style="flex:1">${chipsHTML}</div>
+    <button class="cuota-mes-arrow" onclick="scrollCuotasCarrusel(1)" title="Ver mes siguiente" type="button">›</button>
   </div>`;
 
   // ── Detalle del mes seleccionado ──
@@ -6935,7 +6876,7 @@ function renderDashboard(){
 
   // CHART categorías
   const byCat={};gMes.forEach(g=>{byCat[g.categoria]=(byCat[g.categoria]||0)+g.monto;});
-  const cats=Object.keys(byCat),vals=cats.map(c=>byCat[c]),cols=cats.map(c=>getCatColorHex(c));
+  const cats=Object.keys(byCat),vals=cats.map(c=>byCat[c]),cols=cats.map(c=>CAT_COLORS[c]||'#94a3b8');
   if(chCat)chCat.destroy();
   if(cats.length){
     chCat=new Chart(document.getElementById('chartCat'),{
@@ -7003,13 +6944,12 @@ function renderDashboard(){
   document.getElementById('dash-comparativa').innerHTML=compHTML||'<p style="color:var(--text2);font-size:13px">Cargá gastos de este y el mes pasado para ver la comparativa.</p>';
 
   // CUOTAS PRÓXIMAS
-  const proxCuotasExp=[];(S.comprasCuotas||[]).forEach(c=>{const mc=c.montoCuota||c.montoPorCuota||0;const tc=c.cuotas||c.totalCuotas||0;if(!tc||!mc)return;for(let i=0;i<tc;i++){let fp;if(c.fechaPrimerPago){fp=addMesesAFecha(c.fechaPrimerPago,i);}else if(c.primerMes){fp=addMeses(c.primerMes,i)+"-01";}else continue;const dh=diasHasta(fp);if(dh>=0&&dh<=30)proxCuotasExp.push({descripcion:c.descripcion,montoCuota:mc,proximoVencimiento:fp,cuotaNum:i+1,totalCuotas:tc});}});
-  const proxCuotas=proxCuotasExp.sort((a,b)=>a.proximoVencimiento.localeCompare(b.proximoVencimiento));
+  const proxCuotas=cuotasAct.filter(c=>diasHasta(c.proximoVencimiento)<=30).sort((a,b)=>a.proximoVencimiento.localeCompare(b.proximoVencimiento));
   document.getElementById('cuotas-prox-count').textContent=`${proxCuotas.length} en 30 días`;
   document.getElementById('dash-cuotas').innerHTML=proxCuotas.length?proxCuotas.slice(0,5).map(c=>{
     const dias=diasHasta(c.proximoVencimiento);
     return`<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(128,128,128,.07)">
-      <div><div style="font-size:13px;font-weight:500">${c.descripcion}</div><div style="font-size:11px;color:var(--text2)">Cuota ${c.cuotaNum}/${c.totalCuotas}</div></div>
+      <div><div style="font-size:13px;font-weight:500">${c.descripcion}</div><div style="font-size:11px;color:var(--text2)">${ff(c.proximoVencimiento)} (${dias}d)</div></div>
       <div style="font-weight:700;color:${dias<=7?'var(--accent4)':'var(--accent3)'}">${$$(c.montoCuota)}</div>
     </div>`;
   }).join(''):'<div class="empty" style="padding:16px"><p>Sin cuotas próximas.</p></div>';
@@ -7018,7 +6958,7 @@ function renderDashboard(){
   const movs=[
     ...S.gastos.map(g=>({...g,tipo_mov:'gasto'})),
     ...S.ingresos.map(i=>({...i,tipo_mov:'ingreso'}))
-  ].sort((a,b)=>{const fd=(b.fecha||'').localeCompare(a.fecha||'');if(fd!==0)return fd;return(b.creadoEn||'').localeCompare(a.creadoEn||'');}).slice(0,7);
+  ].sort((a,b)=>b.fecha.localeCompare(a.fecha)).slice(0,7);
   document.getElementById('dash-ultimos').innerHTML=movs.length?movs.map(m=>{
     const _tl={banco:'Débito',caja_ahorro:'Débito',billetera:'Billetera Virtual',efectivo:'Efectivo',inversion:'Inversión'};
     const _cl=id=>{const c=(S.cuentas||[]).find(c=>c.id===id);if(!c)return null;const tl=_tl[c.tipo]||'';const nb=c.nombre||'';const full=(tl&&!nb.toLowerCase().includes(tl.toLowerCase()))?`${tl} ${nb}`:nb;return`${c.icono||'🏦'} ${full}`;};
@@ -8381,40 +8321,7 @@ function clearAIAttachments() {
   renderAttachmentChips();
 }
 
-function closeResumenTarjetaModal(){document.getElementById('modal-resumen-tarjeta').style.display='none';}
-let _resumenTarjetaIdFijo=null;
-function subirResumenTarjeta(tarjetaId){
-  const tExiste=(S.tarjetas||[]).find(t=>t.id===tarjetaId);
-  if(!tExiste){showToast('⚠️ Esa tarjeta ya no existe. Refrescá la página (Cmd+Shift+R) e intentá de nuevo.');return;}
-  const apiKey=getApiKey();
-  if(!apiKey){alert('Configurá tu API key de Anthropic en Ajustes → Asistente IA para usar esta función.');return;}
-  _resumenTarjetaIdFijo=tarjetaId;
-  document.getElementById('resumen-tarjeta-file-input').click();
-}
-function handleResumenTarjetaFileSelect(e){
-  const files=Array.from(e.target.files);
-  e.target.value='';
-  if(!files.length)return;
-  const tarjetaId=_resumenTarjetaIdFijo;
-  const body=document.getElementById('modal-resumen-tarjeta-body');
-  const modal=document.getElementById('modal-resumen-tarjeta');
-  body.innerHTML='<div style="padding:24px;text-align:center;color:var(--text2)">⏳ Analizando '+(files.length>1?files.length+' archivos':'resumen')+'...</div>';
-  modal.style.display='flex';
-  let pending=files.length;const atts=[];
-  files.forEach(file=>{
-    const reader=new FileReader();
-    reader.onload=(ev)=>{
-      const dataUrl=ev.target.result;
-      atts.push({base64:dataUrl.slice(dataUrl.indexOf(',')+1),mediaType:file.type,fileName:file.name});
-      if(--pending===0){
-        analizarResumenBancario(atts,{remove:()=>{}},tarjetaId,body);
-      }
-    };
-    reader.readAsDataURL(file);
-  });
-}
-async function analizarResumenBancario(attachments, loadingEl, forcedTarjetaId, targetContainerEl) {
-  const showErr=(msg)=>{if(targetContainerEl){targetContainerEl.innerHTML='<div style="padding:20px;color:var(--accent4)">'+msg+'</div>';}else{appendAIMsg('bot',msg);}};
+async function analizarResumenBancario(attachments, loadingEl) {
   const apiKey = getApiKey();
   const n = attachments.length;
 
@@ -8426,23 +8333,25 @@ async function analizarResumenBancario(attachments, loadingEl, forcedTarjetaId, 
   });
 
   const tarjetasDisp = S.tarjetas.length ? `Las tarjetas disponibles son: ${S.tarjetas.map(t=>t.nombre).join(', ')}. Asigná en tarjeta_nombre el nombre MÁS SIMILAR de esa lista para cada gasto de crédito.` : '';
-  const jsonSchema = `{"gastos":[{"fecha":"YYYY-MM-DD","descripcion":"nombre limpio del comercio","monto":0,"categoria_sugerida":"Otros","medio_pago":"credito","tarjeta_nombre":""}],"cuotas":[{"fecha":"YYYY-MM-DD","descripcion":"nombre limpio del comercio","monto_cuota":0,"monto_total":0,"cuota_actual":1,"total_cuotas":12,"categoria_sugerida":"Otros"}],"cargos":[{"descripcion":"nombre del cargo","monto":0}],"tarjeta_info":{"nombre_tarjeta":"","fecha_cierre":0,"fecha_vencimiento":0,"saldo_total":0,"pago_minimo":0}}`;
+  const jsonSchema = `{"gastos":[{"fecha":"YYYY-MM-DD","descripcion":"nombre limpio del comercio","monto":0,"categoria_sugerida":"Otros","medio_pago":"credito","tarjeta_nombre":""}],"cuotas":[{"fecha":"YYYY-MM-DD","descripcion":"nombre limpio del comercio","monto_cuota":0,"monto_total":0,"cuota_actual":1,"total_cuotas":12,"categoria_sugerida":"Otros"}],"tarjeta_info":{"nombre_tarjeta":"","fecha_cierre":0,"fecha_vencimiento":0}}`;
+
   const basePrompt = `Analizá ${n > 1 ? `estos ${n} resúmenes bancarios/fotos de tickets` : 'este resumen bancario o de tarjeta de crédito'} con máximo detalle.
 ${tarjetasDisp}
 Para cada movimiento identificá:
+
 GASTOS (compras en 1 pago, débitos, transferencias salientes):
 - fecha (YYYY-MM-DD), descripcion (nombre limpio del comercio, sin códigos internos), monto (número positivo en ARS), categoria_sugerida (Comida/Transporte/Entretenimiento/Salud/Ropa/Hogar/Servicios/Supermercado/Seguros/Otros), medio_pago (debito/credito/transferencia), tarjeta_nombre (nombre de la tarjeta si es crédito). Los seguros de vida, robo, automotor, médico y similares que aparezcan en el resumen deben clasificarse como categoria_sugerida: Seguros
+
 CUOTAS (compras en N cuotas, identificadas por texto como '2/12', 'CTA 3/6', 'CUOTA'):
 - fecha (YYYY-MM-DD), descripcion (nombre limpio del comercio), monto_cuota (monto de esta cuota en ARS), monto_total (monto_cuota × total_cuotas), cuota_actual, total_cuotas, categoria_sugerida
-CARGOS (impuesto de sellos, intereses de financiación, IVA sobre intereses, cargos administrativos, seguro de tarjeta o similares que apliquen al resumen completo, no a una compra puntual):
-- descripcion (nombre limpio del cargo), monto (número positivo en ARS)
+
 TARJETA INFO (del encabezado o pie del resumen):
 - tarjeta_info.nombre_tarjeta: nombre completo de la tarjeta
 - tarjeta_info.fecha_cierre: solo el número del día (1-31). Ej: "Cierre 28/06/2026" → 28
 - tarjeta_info.fecha_vencimiento: solo el número del día (1-31). Ej: "Vencimiento 10/07/2026" → 10
-- tarjeta_info.saldo_total: el saldo actual total a pagar del resumen (número, sin puntos ni comas de miles, ej "SALDO ACTUAL $27.228,86" → 27228.86)
-- tarjeta_info.pago_minimo: el pago mínimo del resumen (mismo formato numérico)
-${n > 1 ? 'Consolidá TODOS los movimientos de todos los archivos en un único JSON sin duplicados.\n' : ''}IGNORAR: pagos de resumen ya realizados, acreditaciones de sueldo, ajustes, descuentos promocionales.
+
+${n > 1 ? 'Consolidá TODOS los movimientos de todos los archivos en un único JSON sin duplicados.\n' : ''}IGNORAR: pagos de resumen, acreditaciones de sueldo, ajustes, intereses, descuentos promocionales.
+
 Respondé ÚNICAMENTE con JSON válido, sin texto adicional, sin markdown:
 ${jsonSchema}`;
 
@@ -8466,23 +8375,23 @@ ${jsonSchema}`;
     loadingEl.remove();
     if (!response.ok) {
       const err = await response.json();
-      showErr('❌ Error al analizar: ' + (err?.error?.message || response.status));
+      appendAIMsg('bot', '❌ Error al analizar: ' + (err?.error?.message || response.status));
       return;
     }
     const data = await response.json();
     const rawText = data.content[0].text.trim();
     const jsonMatch = rawText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
-      showErr('⚠️ No pude leer la respuesta. Probá con una imagen más nítida o un PDF con texto seleccionable.');
+      appendAIMsg('bot', '⚠️ No pude leer la respuesta. Probá con una imagen más nítida o un PDF con texto seleccionable.');
       return;
     }
     let parsed;
     try { parsed = JSON.parse(jsonMatch[0]); }
-    catch(e) { showErr('⚠️ Error al parsear la respuesta de la IA: ' + e.message); return; }
-    renderImportResults(parsed, forcedTarjetaId, targetContainerEl);
+    catch(e) { appendAIMsg('bot', '⚠️ Error al parsear la respuesta de la IA: ' + e.message); return; }
+    renderImportResults(parsed);
   } catch(e) {
     loadingEl.remove();
-    showErr('❌ Error de red: ' + e.message);
+    appendAIMsg('bot', '❌ Error de red: ' + e.message);
   }
 }
 
@@ -8509,7 +8418,7 @@ function _buscarDuplicado(desc,monto,fecha){
     const montoC=c.montoTotal||(c.montoCuota*c.cuotas)||0;
     const montoCercano=Math.abs(montoC-(+monto||0))/(+monto||1)<0.05;
     const diasDif=Math.abs((fechaD-new Date(c.fecha))/(1000*60*60*24));
-    return sim>0.7&&montoCercano&&diasDif<=400;
+    return sim>0.7&&montoCercano&&diasDif<=45;
   });
   if(cuotaDup)return{tipo:'cuota',item:cuotaDup};
   return null;
@@ -8521,8 +8430,8 @@ function actualizarDatosTarjetaDesdeResumen(tarjetaId,cierre,vencimiento){
   save();showToast(`✅ Tarjeta actualizada: cierre día ${cierre} · vencimiento día ${vencimiento}`);renderTarjetas();
   if(userRole==='admin')setTimeout(_syncSharedData,500);
 }
-function renderImportResults(data, forcedTarjetaId, targetContainerEl) {
-  const { gastos = [], cuotas = [], cargos = [], tarjeta_info: tarjetaInfo = null } = data;
+function renderImportResults(data) {
+  const { gastos = [], cuotas = [], tarjeta_info: tarjetaInfo = null } = data;
   const allCats = getCatsGasto();
   const panelId = 'imp' + Date.now();
   _aiImportData[panelId] = data;
@@ -8539,7 +8448,7 @@ function renderImportResults(data, forcedTarjetaId, targetContainerEl) {
   let html = '<div class="ai-import-panel">';
 
   // Aviso tarjeta_info
-  if ((forcedTarjetaId||'')===''&&tarjetaInfo?.nombre_tarjeta && (tarjetaInfo.fecha_cierre || tarjetaInfo.fecha_vencimiento)) {
+  if (tarjetaInfo?.nombre_tarjeta && (tarjetaInfo.fecha_cierre || tarjetaInfo.fecha_vencimiento)) {
     const tEncontrada = (S.tarjetas||[]).find(t => {
       const tn = t.nombre.toUpperCase();
       const gtn = (tarjetaInfo.nombre_tarjeta||'').toUpperCase();
@@ -8563,24 +8472,13 @@ function renderImportResults(data, forcedTarjetaId, targetContainerEl) {
     const tn=t.nombre.toUpperCase();const gtn=(tarjetaInfo.nombre_tarjeta||'').toUpperCase();
     return tn.includes(gtn)||gtn.includes(tn)||tn.split(/\s+/).some(w=>w.length>=3&&gtn.includes(w));
   }) : null;
-  const tarjetaMatcheada = forcedTarjetaId || tarjetaInfoMatch?.id || S.tarjetas[0]?.id || '';
-  _aiImportData[panelId].tarjetaMatcheada = tarjetaMatcheada;
-  if(forcedTarjetaId&&tarjetaInfo&&(tarjetaInfo.saldo_total||tarjetaInfo.pago_minimo)){
-    const mesResumen=today().slice(0,7);
-    const idxR=(S.resumenTarjetas||[]).findIndex(r=>r.tarjetaId===forcedTarjetaId&&r.mes===mesResumen);
-    const montoResumenNuevo=+tarjetaInfo.saldo_total||0;
-    if(montoResumenNuevo>0){
-      if(idxR>=0){S.resumenTarjetas[idxR].montoResumen=montoResumenNuevo;}
-      else{S.resumenTarjetas.push({id:uid(),tarjetaId:forcedTarjetaId,mes:mesResumen,montoResumen:montoResumenNuevo,montoAbonado:0,fechaAbono:null,medioAbono:null,cuentaId:null,pagado:false});}
-      save();
-    }
-  }
+  const tarjetaMatcheada = tarjetaInfoMatch?.id || S.tarjetas[0]?.id || '';
 
   if (gastos.length) {
     html += `<div class="ai-import-section">
       <div class="ai-import-title">💳 Gastos (${gastos.length})${selBtns('g')}</div>`;
     gastos.forEach((g, i) => {
-      const isCredito = Boolean(forcedTarjetaId) || g.medio_pago === 'credito' || g.medio_pago === 'tarjeta' || (Boolean(tarjetaMatcheada) && ['efectivo','debito','transferencia'].includes(g.medio_pago)===false);
+      const isCredito = g.medio_pago === 'credito' || g.medio_pago === 'tarjeta';
       const tMatch = (S.tarjetas||[]).find(t=>{
         const tn=t.nombre.toUpperCase().replace(/[^A-Z0-9\s]/g,'');
         const gtn=(g.tarjeta_nombre||'').toUpperCase().replace(/[^A-Z0-9\s]/g,'');
@@ -8598,13 +8496,13 @@ function renderImportResults(data, forcedTarjetaId, targetContainerEl) {
           ${dupG?`<div style="display:flex;align-items:center;gap:6px;margin-top:4px;padding:4px 8px;background:rgba(248,113,113,.1);border-radius:6px;border-left:3px solid var(--accent4)"><span style="font-size:10px;color:var(--accent4);font-weight:700">⚠️ Posible duplicado</span><span style="font-size:10px;color:var(--text2)">Ya existe: "${esc(dupG.item.descripcion)}" · ${$$(dupG.item.monto||dupG.item.montoCuota)} · ${ff(dupG.item.fecha)}</span></div>`:''}
           <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:4px">
             <input type="number" id="aimonto-${panelId}-g-${i}" value="${g.monto}" style="width:84px;padding:3px 6px;font-size:11px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--accent);font-weight:600"/>
-            <select class="ai-import-cat" id="aitipo-${panelId}-g-${i}" onchange="aiToggleTarjeta(this,'${panelId}','${i}')" ${forcedTarjetaId?'disabled':''}>
+            <select class="ai-import-cat" id="aitipo-${panelId}-g-${i}" onchange="aiToggleTarjeta(this,'${panelId}','${i}')">
               <option value="efectivo"${g.medio_pago==='efectivo'?' selected':''}>Efectivo</option>
               <option value="debito"${g.medio_pago==='debito'?' selected':''}>Débito</option>
               <option value="transferencia"${g.medio_pago==='transferencia'?' selected':''}>Transf.</option>
               <option value="credito"${isCredito?' selected':''}>Tarjeta</option>
             </select>
-            <select class="ai-import-cat" id="aitarjeta-${panelId}-g-${i}" style="${isCredito&&S.tarjetas.length?'':'display:none'}" ${forcedTarjetaId?'disabled':''}>${tarjetaOpts(primeraTarjeta)}</select>
+            <select class="ai-import-cat" id="aitarjeta-${panelId}-g-${i}" style="${isCredito&&S.tarjetas.length?'':'display:none'}">${tarjetaOpts(primeraTarjeta)}</select>
           </div>
         </div>
         <select class="ai-import-cat" id="aicat-${panelId}-g-${i}" onchange="aiUpdateSubcat('${panelId}','g','${i}')">${catOpts(g.categoria_sugerida)}</select>
@@ -8640,23 +8538,7 @@ function renderImportResults(data, forcedTarjetaId, targetContainerEl) {
     html += '</div>';
   }
 
-  if (cargos.length) {
-    html += `<div class="ai-import-section">
-      <div class="ai-import-title">🧾 Cargos e impuestos (${cargos.length})${selBtns('x')}</div>`;
-    cargos.forEach((x, i) => {
-      html += `<div class="ai-import-row">
-        <input type="checkbox" class="ai-imp-chk" data-section="${panelId}-x" data-idx="${i}" checked/>
-        <div class="ai-import-info">
-          <input type="text" class="ai-import-edit-desc" id="aidesc-${panelId}-x-${i}" value="${escHtml(x.descripcion)}"/>
-          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:4px">
-            <input type="number" id="aimonto-${panelId}-x-${i}" value="${x.monto}" style="width:84px;padding:3px 6px;font-size:11px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--accent);font-weight:600"/>
-          </div>
-        </div>
-      </div>`;
-    });
-    html += '</div>';
-  }
-  if (!gastos.length && !cuotas.length && !cargos.length) {
+  if (!gastos.length && !cuotas.length) {
     html += '<p style="font-size:13px;color:var(--text2);padding:4px 0">No se detectaron movimientos en el documento.</p>';
   } else {
     const nDups=gastos.filter(g=>_buscarDuplicado(g.descripcion,g.monto,g.fecha)).length+
@@ -8667,11 +8549,12 @@ function renderImportResults(data, forcedTarjetaId, targetContainerEl) {
   }
   html += '</div>';
 
+  const div = document.getElementById('ai-messages');
   const msg = document.createElement('div');
-  msg.className = forcedTarjetaId ? 'ai-import-wrap' : 'ai-msg bot ai-import-wrap';
+  msg.className = 'ai-msg bot ai-import-wrap';
   msg.innerHTML = html;
-  if(targetContainerEl){targetContainerEl.innerHTML='';targetContainerEl.appendChild(msg);document.getElementById('modal-resumen-tarjeta').style.display='flex';}
-  else{const div=document.getElementById('ai-messages');div.appendChild(msg);div.scrollTop=div.scrollHeight;}
+  div.appendChild(msg);
+  div.scrollTop = div.scrollHeight;
 }
 
 function aiToggleTarjeta(sel, panelId, idx) {
@@ -8703,7 +8586,7 @@ function importarSeleccionados(panelId, btn) {
     return;
   }
 
-  const { gastos = [], cuotas = [], cargos = [] } = data;
+  const { gastos = [], cuotas = [] } = data;
   let nGastos = 0, nCuotas = 0;
 
   try {
@@ -8737,30 +8620,18 @@ function importarSeleccionados(panelId, btn) {
       const subcatC = document.getElementById(`aisubcat-${panelId}-c-${i}`)?.value||'';
       const notaC = document.getElementById(`ainota-${panelId}-c-${i}`)?.value?.trim()||'';
       const montoTotal = c.monto_total || (c.monto_cuota * c.total_cuotas);
-      S.comprasCuotas.push({ id: uid(), tarjetaId: data.tarjetaMatcheada || null, fecha: c.fecha || today(),
+      S.comprasCuotas.push({ id: uid(), tarjetaId: null, fecha: c.fecha || today(),
         descripcion: desc, categoria: catC, subcategoria: subcatC,
         montoTotal, cuotas: c.total_cuotas, montoCuota: c.monto_cuota,
         cuotasPagadas: Math.max(0, (c.cuota_actual || 1) - 1),
         fechaPrimerPago: c.fecha || today(), notas: notaC });
       nCuotas++;
-});
-    let nCargos=0;
-    panel.querySelectorAll(`.ai-imp-chk[data-section="${panelId}-x"]:checked`).forEach(chk => {
-      const i = chk.dataset.idx;
-      const x = cargos[i];
-      if (!x) return;
-      const descX = document.getElementById(`aidesc-${panelId}-x-${i}`)?.value?.trim() || x.descripcion;
-      const montoX = +(document.getElementById(`aimonto-${panelId}-x-${i}`)?.value) || x.monto;
-      if(!montoX)return;
-      const tarjetaIdX = data.tarjetaMatcheada || S.tarjetas[0]?.id || null;
-      if(!tarjetaIdX)return;
-      S.gastosFinTarjeta.push({ id: uid(), tarjetaId: tarjetaIdX, mes: today().slice(0,7), descripcion: descX, monto: montoX });
-      nCargos++;
     });
+
     save();
     renderGastos(); renderTarjetas(); refreshDashIfVisible();
-    const msg = `✅ Se importaron ${nGastos} gasto${nGastos!==1?'s':''}, ${nCuotas} cuota${nCuotas!==1?'s':''} y ${nCargos} cargo${nCargos!==1?'s':''}`;
 
+    const msg = `✅ Se importaron ${nGastos} gasto${nGastos!==1?'s':''} y ${nCuotas} cuota${nCuotas!==1?'s':''}`;
     btn.textContent = msg;
     btn.disabled = true;
     btn.style.background = 'var(--accent2)';

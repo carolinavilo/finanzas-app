@@ -1803,7 +1803,7 @@ input[type=checkbox]{width:auto;margin-right:5px}
     <div class="modal-header"><h3 id="modal-cc-title">Nueva compra en cuotas</h3><button class="modal-close" onclick="closeModal('modal-compra-cuotas')">×</button></div>
     <div class="modal-body">
       <input type="hidden" id="cc-edit-id"/>
-      <div class="form-group"><label>Tarjeta</label><select id="cc-tarjeta-id"><option value="">Sin tarjeta</option></select></div>
+      <input type="hidden" id="cc-tarjeta-id"/>
       <div class="form-grid-2">
         <div class="form-group"><label>Fecha de compra</label><input type="date" id="cc-fecha"/></div>
         <div class="form-group" style="grid-column:1/-1"><label>Descripción</label><input id="cc-desc" placeholder="TV Samsung, Notebook, etc."/></div>
@@ -4539,10 +4539,10 @@ function populateCatSelects(){
 }
 
 function populateTarjetaSels(){
-  ['g-tarjeta','c-tarjeta','eg-tarjeta','cc-tarjeta-id'].forEach(id=>{
+  ['g-tarjeta','c-tarjeta','eg-tarjeta'].forEach(id=>{
     const el=document.getElementById(id);if(!el)return;
     const cur=el.value;
-    const pre=(id==='c-tarjeta'||id==='cc-tarjeta-id'||id==='eg-tarjeta')?'<option value="">Sin tarjeta</option>':'';
+    const pre=id==='c-tarjeta'?'<option value="">Sin tarjeta</option>':'';
     const tarjetas=(_sharedData?.tarjetas?.length?_sharedData.tarjetas:null)||S.tarjetas||[];
     el.innerHTML=pre+tarjetas.map(t=>`<option value="${t.id}">${t.nombre}</option>`).join('');
     if([...el.options].some(o=>o.value===cur))el.value=cur;
@@ -4882,11 +4882,7 @@ function editGasto(id){
   onEgMonedaChange();
   document.getElementById('eg-tipo').value=g.tipo;
   document.getElementById('eg-tarjeta-group').style.display=g.tipo==='tarjeta'?'flex':'none';
-  const _egTarSel=document.getElementById('eg-tarjeta');
-  if(g.tarjetaId&&![..._egTarSel.options].some(o=>o.value===g.tarjetaId)){
-    const _opt=document.createElement('option');_opt.value=g.tarjetaId;_opt.textContent='⚠️ Tarjeta eliminada';_egTarSel.appendChild(_opt);
-  }
-  _egTarSel.value=g.tarjetaId||'';
+  document.getElementById('eg-tarjeta').value=g.tarjetaId||'';
   document.getElementById('eg-notas').value=g.notas||'';
   document.getElementById('eg-recurrente').checked=!!g.recurrente;
   const egCat=document.getElementById('eg-cat');
@@ -4927,7 +4923,7 @@ function guardarEditGasto(){
     g.monto=monto;
   }
   g.tipo=document.getElementById('eg-tipo').value;
-  g.tarjetaId=g.tipo==='tarjeta'?(document.getElementById('eg-tarjeta').value||null):null;
+  g.tarjetaId=g.tipo==='tarjeta'?document.getElementById('eg-tarjeta').value:null;
   g.notas=document.getElementById('eg-notas').value.trim();
   g.recurrente=document.getElementById('eg-recurrente').checked;
   save();
@@ -5551,8 +5547,7 @@ function calcMontoCuota(){
 }
 
 function openCompraCuotas(tarjetaId){
-  populateTarjetaSels();
-  document.getElementById('cc-tarjeta-id').value=tarjetaId||'';
+  document.getElementById('cc-tarjeta-id').value=tarjetaId;
   document.getElementById('cc-edit-id').value='';
   document.getElementById('modal-cc-title').textContent='Nueva compra en cuotas';
   document.getElementById('cc-fecha').value=today();
@@ -5570,7 +5565,7 @@ function openCompraCuotas(tarjetaId){
 }
 
 function agregarCompraCuotas(){
-  const tarjetaId=document.getElementById('cc-tarjeta-id').value||null;
+  const tarjetaId=document.getElementById('cc-tarjeta-id').value;
   const desc=document.getElementById('cc-desc').value.trim();
   const monto=+document.getElementById('cc-monto').value;
   const cuotas=+document.getElementById('cc-cuotas').value;
@@ -5592,12 +5587,7 @@ function agregarCompraCuotas(){
 
 function editCompraCuotas(id){
   const c=S.comprasCuotas.find(c=>c.id===id);if(!c)return;
-  populateTarjetaSels();
-  const _ccTarSel=document.getElementById('cc-tarjeta-id');
-  if(c.tarjetaId&&![..._ccTarSel.options].some(o=>o.value===c.tarjetaId)){
-    const _opt=document.createElement('option');_opt.value=c.tarjetaId;_opt.textContent='⚠️ Tarjeta eliminada';_ccTarSel.appendChild(_opt);
-  }
-  _ccTarSel.value=c.tarjetaId||'';
+  document.getElementById('cc-tarjeta-id').value=c.tarjetaId;
   document.getElementById('cc-edit-id').value=id;
   document.getElementById('modal-cc-title').textContent='Editar compra en cuotas';
   document.getElementById('cc-fecha').value=c.fecha;
