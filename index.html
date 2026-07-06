@@ -8436,6 +8436,7 @@ CUOTAS (compras en N cuotas, identificadas por texto como '2/12', 'CTA 3/6', 'CU
 - fecha (YYYY-MM-DD), descripcion (nombre limpio del comercio), monto_cuota (monto de esta cuota en ARS), monto_total (monto_cuota × total_cuotas), cuota_actual, total_cuotas, categoria_sugerida
 CARGOS (impuesto de sellos, intereses de financiación, IVA sobre intereses, cargos administrativos, seguro de tarjeta o similares que apliquen al resumen completo, no a una compra puntual):
 - descripcion (nombre limpio del cargo), monto (número positivo en ARS)
+- ATENCIÓN con los PUNITORIOS (ej. "PUNIT. PAG.MIN.ANTERIOR"): en esa línea suele aparecer primero un monto de REFERENCIA (el pago mínimo impago sobre el que se calculó el punitorio) y después, en la misma línea o columna de la derecha, el monto REAL cobrado por punitorio, que es mucho menor. Usá siempre el monto REAL cobrado, nunca el monto de referencia. Ejemplo: "PUNIT. PAG.MIN.ANTERIOR $ 86.188,66  448,08" → el cargo real es 448.08, NO 86188.66.
 TARJETA INFO (del encabezado o pie del resumen):
 - tarjeta_info.nombre_tarjeta: nombre completo de la tarjeta
 - tarjeta_info.fecha_cierre: solo el número del día (1-31). Ej: "Cierre 28/06/2026" → 28
