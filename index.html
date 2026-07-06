@@ -5543,7 +5543,9 @@ function getStatementItems(tarjetaId,mes){
       }
       if(mesPago===mes){
         const pagada=i<(c.cuotasPagadas||0);
-        items.push({tipo:'cuota',desc:`${c.descripcion} (${i+1}/${c.cuotas})`,cat:c.categoria,monto:c.montoCuota,fecha:fechaPago,id:c.id,pagada});
+        // No mostrar cuotas ya pagadas en meses pasados: si ya estaba pagada al momento de cargarla
+        // (ej. resumen que llega con "23/24"), no tiene sentido reconstruir el historial viejo
+        if(!pagada) items.push({tipo:'cuota',desc:`${c.descripcion} (${i+1}/${c.cuotas})`,cat:c.categoria,monto:c.montoCuota,fecha:fechaPago,id:c.id,pagada});
       }
     }
   });
