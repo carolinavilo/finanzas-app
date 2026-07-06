@@ -1890,6 +1890,7 @@ input[type=checkbox]{width:auto;margin-right:5px}
       <div class="form-group"><label>Moneda</label><select id="iv-moneda"><option value="ARS">Pesos (ARS)</option><option value="USD">Dólares (USD)</option></select></div>
       <div class="form-group"><label>TNA % <span style="font-weight:400;font-size:10px;color:var(--text2)">(Plazo Fijo / FCI)</span></label><input id="iv-tasa" type="number" placeholder="75" step="0.1"/></div>
       <div class="form-group"><label>Cartera</label><select id="iv-cartera"></select></div>
+      <div class="form-group"><label>Cuenta de origen <span style="font-weight:400;font-size:10px;color:var(--text2)">(opcional, descuenta el saldo)</span></label><select id="iv-cuenta"><option value="">-- Sin asignar --</option></select></div>
       <div class="form-group" style="grid-column:1/-1"><label>Notas</label><input id="iv-notas" placeholder="Opcional"/></div>
     </div>
     <div style="background:rgba(108,99,255,.07);border:1px solid rgba(108,99,255,.2);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--text2);margin-bottom:2px">
@@ -3827,6 +3828,12 @@ function populateCarteraSels(){
     ivSel.innerHTML=carts.map(c=>`<option value="${c.id}">${esc(c.nombre)}</option>`).join('');
     if(prev&&carts.find(c=>c.id===prev))ivSel.value=prev;
     else if(_carteraActual&&carts.find(c=>c.id===_carteraActual))ivSel.value=_carteraActual;
+  }
+  const ivCuentaSel=document.getElementById('iv-cuenta');
+  if(ivCuentaSel){
+    const prevC=ivCuentaSel.value;
+    ivCuentaSel.innerHTML='<option value="">-- Sin asignar --</option>'+(S.cuentas||[]).filter(c=>c.activa!==false).map(c=>`<option value="${esc(c.id)}">${c.icono||'🏦'} ${esc(c.nombre)}</option>`).join('');
+    if(prevC)ivCuentaSel.value=prevC;
   }
 }
 
@@ -6160,6 +6167,7 @@ function guardarInversion(){
   const editId=document.getElementById('iv-edit-id').value;
   const montoFinal=monto||(precioCosto*(+document.getElementById('iv-cantidad').value||1));
   const carteraId=document.getElementById('iv-cartera').value||S.carteras[0]?.id||null;
+  const cuentaId=document.getElementById('iv-cuenta').value||null;
   const data={tipo:document.getElementById('iv-tipo').value,descripcion:desc,montoInvertido:montoFinal,
     precioCosto,
     tasaAnual:+document.getElementById('iv-tasa').value||0,
@@ -6169,10 +6177,22 @@ function guardarInversion(){
     notas:document.getElementById('iv-notas').value.trim(),
     ticker:(document.getElementById('iv-ticker').value||'').trim().toUpperCase()||null,
     cantidad:+document.getElementById('iv-cantidad').value||0,
-    carteraId};
+    carteraId,cuentaId};
+  // Revertir el descuento anterior (si estaba vinculada a una cuenta) antes de aplicar el nuevo
+  if(editId){
+    const invAnterior=S.inversiones.find(i=>i.id===editId);
+    if(invAnterior?.cuentaId){
+      const cOld=S.cuentas.find(c=>c.id===invAnterior.cuentaId);
+      if(cOld)cOld.saldo=(+cOld.saldo||0)+(+invAnterior.montoInvertido||0);
+    }
+  }
+  if(cuentaId){
+    const cNew=S.cuentas.find(c=>c.id===cuentaId);
+    if(cNew)cNew.saldo=(+cNew.saldo||0)-montoFinal;
+  }
   if(editId){Object.assign(S.inversiones.find(i=>i.id===editId),data);}
   else{S.inversiones.push({id:uid(),...data});}
-  save();closeModal('modal-inversion');renderInversiones();
+  save();closeModal('modal-inversion');renderInversiones();refreshDashIfVisible();
 }
 
 function editInversion(id){
@@ -6193,12 +6213,18 @@ function editInversion(id){
   document.getElementById('iv-cantidad').value=inv.cantidad||'';
   populateCarteraSels();
   if(inv.carteraId)document.getElementById('iv-cartera').value=inv.carteraId;
+  document.getElementById('iv-cuenta').value=inv.cuentaId||'';
   openModal('modal-inversion');
 }
 
 function eliminarInversion(id){
   if(!confirm('¿Eliminar?'))return;
-  S.inversiones=S.inversiones.filter(i=>i.id!==id);save();renderInversiones();
+  const inv=S.inversiones.find(i=>i.id===id);
+  if(inv?.cuentaId){
+    const c=S.cuentas.find(c=>c.id===inv.cuentaId);
+    if(c)c.saldo=(+c.saldo||0)+(+inv.montoInvertido||0);
+  }
+  S.inversiones=S.inversiones.filter(i=>i.id!==id);save();renderInversiones();refreshDashIfVisible();
 }
 
 // ====== VENTAS ======
@@ -6301,6 +6327,7 @@ function resetInvModal(){
   document.getElementById('iv-moneda').value='ARS';
   document.getElementById('iv-tasa').value='';
   document.getElementById('iv-notas').value='';
+  const ivCuentaReset=document.getElementById('iv-cuenta');if(ivCuentaReset)ivCuentaReset.value='';
 }
 function nuevaInversion(){resetInvModal();populateCarteraSels();openModal('modal-inversion');}
 
