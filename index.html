@@ -8758,6 +8758,17 @@ function importarSeleccionados(panelId, btn) {
       S.gastosFinTarjeta.push({ id: uid(), tarjetaId: tarjetaIdX, mes: today().slice(0,7), descripcion: descX, monto: montoX });
       nCargos++;
     });
+    const forcedTarjetaId = data.forcedTarjetaId;
+    const tarjetaInfo = data.tarjetaInfo;
+    if(forcedTarjetaId&&tarjetaInfo&&(tarjetaInfo.saldo_total||tarjetaInfo.pago_minimo)){
+      const mesResumen=today().slice(0,7);
+      const idxR=(S.resumenTarjetas||[]).findIndex(r=>r.tarjetaId===forcedTarjetaId&&r.mes===mesResumen);
+      const montoResumenNuevo=+tarjetaInfo.saldo_total||0;
+      if(montoResumenNuevo>0){
+        if(idxR>=0){S.resumenTarjetas[idxR].montoResumen=montoResumenNuevo;}
+        else{S.resumenTarjetas.push({id:uid(),tarjetaId:forcedTarjetaId,mes:mesResumen,montoResumen:montoResumenNuevo,montoAbonado:0,fechaAbono:null,medioAbono:null,cuentaId:null,pagado:false});}
+      }
+    }
     save();
     renderGastos(); renderTarjetas(); refreshDashIfVisible();
     const msg = `✅ Se importaron ${nGastos} gasto${nGastos!==1?'s':''}, ${nCuotas} cuota${nCuotas!==1?'s':''} y ${nCargos} cargo${nCargos!==1?'s':''}`;
