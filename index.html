@@ -799,9 +799,10 @@ input[type=checkbox]{width:auto;margin-right:5px}
       <input type="hidden" id="rec-edit-id">
       <div class="form-group"><label>Nombre</label><input type="text" id="rec-nombre" placeholder="Ej: Netflix, Gym..."></div>
       <div style="display:grid;grid-template-columns:1fr auto;gap:10px">
-        <div class="form-group"><label>Categoría</label><select id="rec-cat"></select></div>
+        <div class="form-group"><label>Categoría</label><select id="rec-cat" onchange="onRecCatChange()"></select></div>
         <div class="form-group"><label>Ícono</label><input type="text" id="rec-icono" value="🔁" maxlength="4" style="width:56px;text-align:center;font-size:20px"></div>
       </div>
+      <div class="form-group" id="rec-subcat-wrap" style="display:none"><label>Subcategoría</label><select id="rec-subcat"><option value="">-- Sin subcategoría --</option></select></div>
       <div class="form-group"><label>Monto estimado ($)</label><input type="number" id="rec-monto" placeholder="0" inputmode="decimal"></div>
     </div>
     <div class="modal-footer">
@@ -3236,6 +3237,9 @@ function renderRecurrentes(){
     </div>`}).join('');}
   document.getElementById('rec-list').innerHTML=html||'<div class="panel"><div class="empty"><p>Sin recurrentes para este mes.</p></div></div>';
 }
+function onRecCatChange(){
+  _fillSubcatSel('rec-subcat','rec-subcat-wrap',document.getElementById('rec-cat').value,'');
+}
 function abrirModalNuevoRecurrente(){
   document.getElementById('rec-edit-id').value='';
   document.getElementById('modal-rec-titulo').textContent='Nuevo recurrente';
@@ -3250,6 +3254,7 @@ function abrirModalNuevoRecurrente(){
       ['Comida','Transporte','Servicios','Hogar','Salud','Educación','Entretenimiento','Auto','Otros'];
     cats.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;catSel.appendChild(o);});
   }
+  onRecCatChange();
   openModal('modal-nuevo-recurrente');
 }
 function editarRecurrente(id){
@@ -3268,13 +3273,14 @@ function editarRecurrente(id){
     cats.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;catSel.appendChild(o);});
     catSel.value=r.categoria||'';
   }
+  _fillSubcatSel('rec-subcat','rec-subcat-wrap',r.categoria||'',r.subcategoria||'');
   openModal('modal-nuevo-recurrente');
 }
 function guardarRecurrente(){
   const nombre=document.getElementById('rec-nombre').value.trim();
   if(!nombre)return alert('Ingresá un nombre');
   const editId=document.getElementById('rec-edit-id').value;
-  const data={nombre,categoria:document.getElementById('rec-cat').value,icono:document.getElementById('rec-icono').value||'🔁',montoEstimado:+document.getElementById('rec-monto').value||0,activo:true};
+  const data={nombre,categoria:document.getElementById('rec-cat').value,subcategoria:document.getElementById('rec-subcat')?.value||'',icono:document.getElementById('rec-icono').value||'🔁',montoEstimado:+document.getElementById('rec-monto').value||0,activo:true};
   if(editId){Object.assign((S.recurrentes||[]).find(r=>r.id===editId),data);}
   else{if(!S.recurrentes)S.recurrentes=[];S.recurrentes.push({id:uid(),...data});}
   save();closeModal('modal-nuevo-recurrente');renderRecurrentes();showToast('✅ Recurrente guardado');
@@ -3346,14 +3352,14 @@ function guardarPagoRecurrente(){
     const cuotas=medioPago==='tarjeta'?parseInt(document.getElementById('pagar-rec-cuotas')?.value||'1'):1;
     if(medioPago==='tarjeta'&&cuotas>1){
       // Crear compra en cuotas
-      const compra={id:uid(),tarjetaId,fecha,descripcion:rec.nombre,categoria:rec.categoria||'Otros',subcategoria:'',
+      const compra={id:uid(),tarjetaId,fecha,descripcion:rec.nombre,categoria:rec.categoria||'Otros',subcategoria:rec.subcategoria||'',
         montoTotal:montoReal,cuotas,montoCuota:Math.round(montoReal/cuotas),
         cuotasPagadas:0,fechaPrimerPago:fecha,notas:'Gasto recurrente',recurrenteId:recId};
       if(!S.comprasCuotas)S.comprasCuotas=[];
       S.comprasCuotas=S.comprasCuotas.filter(c=>c.recurrenteId!==recId||!c.fecha?.startsWith(mes));
       S.comprasCuotas.push(compra);
     } else {
-      const nuevoGasto={id:uid(),descripcion:rec.nombre,monto:montoReal,categoria:rec.categoria||'Otros',icono:rec.icono||'📋',fecha,tipo:medioPago==='tarjeta'?'tarjeta':medioPago==='debito'?'debito':'efectivo',tarjetaId:medioPago==='tarjeta'?tarjetaId:null,cuentaId:cuentaId||null,recurrenteId:recId,notas:'Gasto recurrente',creadoEn:new Date().toISOString()};
+      const nuevoGasto={id:uid(),descripcion:rec.nombre,monto:montoReal,categoria:rec.categoria||'Otros',subcategoria:rec.subcategoria||'',icono:rec.icono||'📋',fecha,tipo:medioPago==='tarjeta'?'tarjeta':medioPago==='debito'?'debito':'efectivo',tarjetaId:medioPago==='tarjeta'?tarjetaId:null,cuentaId:cuentaId||null,recurrenteId:recId,notas:'Gasto recurrente',creadoEn:new Date().toISOString()};
       S.gastos.push(nuevoGasto);
     }
   }
