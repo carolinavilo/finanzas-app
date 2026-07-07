@@ -1942,6 +1942,19 @@ input[type=checkbox]{width:auto;margin-right:5px}
   </div>
 </div>
 
+<!-- MODAL CONFIRMAR ELIMINACIÓN -->
+<div class="modal-overlay" id="modal-confirmar" onclick="if(event.target===this)cerrarConfirmar()">
+  <div class="modal" style="max-width:320px;text-align:center">
+    <div style="font-size:32px;margin-bottom:8px">🗑️</div>
+    <h3 id="confirmar-titulo" style="margin:0 0 8px;font-size:16px">¿Eliminar?</h3>
+    <p id="confirmar-desc" style="color:var(--text2);font-size:13px;margin:0 0 20px;line-height:1.4"></p>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-ghost" style="flex:1;padding:13px" onclick="cerrarConfirmar()">Cancelar</button>
+      <button class="btn" id="confirmar-btn-ok" style="flex:1;padding:13px;background:var(--accent4);color:#fff;border:none" onclick="_confirmarOk()">Eliminar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL EDITAR GASTO -->
 <div class="modal-overlay" id="modal-edit-gasto">
   <div class="modal">
@@ -2932,6 +2945,16 @@ function removeAppIcon(){
 // ====== MODALS ======
 function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
+
+let _confirmarCb=null;
+function confirmar(titulo,desc,cb){
+  _confirmarCb=cb;
+  document.getElementById('confirmar-titulo').textContent=titulo;
+  document.getElementById('confirmar-desc').textContent=desc||'Esta acción no se puede deshacer.';
+  openModal('modal-confirmar');
+}
+function _confirmarOk(){cerrarConfirmar();if(_confirmarCb){const fn=_confirmarCb;_confirmarCb=null;fn();}}
+function cerrarConfirmar(){_confirmarCb=null;closeModal('modal-confirmar');}
 document.querySelectorAll('.modal-overlay').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');}));
 
 // ====== SHEETS ======
@@ -8201,29 +8224,30 @@ document.addEventListener('click', e => {
   const delGasto = e.target.closest('.btn-eliminar-gasto');
   if (delGasto) {
     const id = delGasto.dataset.id; if (!id) return;
-    if (!confirm('¿Eliminar este gasto?')) return;
     const g = S.gastos.find(g => String(g.id) === String(id));
-    if (g?.cuentaId && g?.tipo !== 'tarjeta') {
-      const cuenta = S.cuentas?.find(c => c.id === g.cuentaId);
-      if (cuenta) cuenta.saldo = (+cuenta.saldo||0) + (+g.monto||0);
-    }
-    if (userRole === 'usuario') {
-      syncGastoDelete(id);
-    } else {
-      S.gastos = S.gastos.filter(g => String(g.id) !== String(id));
-      save();
-    }
-    if (userRole === 'admin') {
-      if (g?.registrado_por && !ADMIN_EMAILS.includes(g.registrado_por)) {
-        sb.from('gastos_sync').delete().eq('id', id).then(({error}) => {
-          if (error) console.warn('[deleteGastoSync]', error.message);
-        });
+    confirmar('¿Eliminar este gasto?', `"${g?.descripcion||''}" · ${$$(g?.monto||0)}`, () => {
+      if (g?.cuentaId && g?.tipo !== 'tarjeta') {
+        const cuenta = S.cuentas?.find(c => c.id === g.cuentaId);
+        if (cuenta) cuenta.saldo = (+cuenta.saldo||0) + (+g.monto||0);
       }
-    }
-    renderGastos();
-    refreshDashIfVisible();
-    if (document.getElementById('section-movimientos')?.classList.contains('active')) renderMovimientos();
-    showToast('✅ Gasto eliminado');
+      if (userRole === 'usuario') {
+        syncGastoDelete(id);
+      } else {
+        S.gastos = S.gastos.filter(g => String(g.id) !== String(id));
+        save();
+      }
+      if (userRole === 'admin') {
+        if (g?.registrado_por && !ADMIN_EMAILS.includes(g.registrado_por)) {
+          sb.from('gastos_sync').delete().eq('id', id).then(({error}) => {
+            if (error) console.warn('[deleteGastoSync]', error.message);
+          });
+        }
+      }
+      renderGastos();
+      refreshDashIfVisible();
+      if (document.getElementById('section-movimientos')?.classList.contains('active')) renderMovimientos();
+      showToast('✅ Gasto eliminado');
+    });
     return;
   }
 
@@ -8231,9 +8255,11 @@ document.addEventListener('click', e => {
   const delCuota = e.target.closest('.btn-eliminar-cuota');
   if (delCuota) {
     const id = delCuota.dataset.id; if (!id) return;
-    if (!confirm('¿Eliminar esta compra en cuotas?')) return;
-    S.comprasCuotas = S.comprasCuotas.filter(c => String(c.id) !== String(id));
-    save(); renderCuotas(); renderTarjetas(); showToast('Cuota eliminada');
+    const c = S.comprasCuotas?.find(c => String(c.id) === String(id));
+    confirmar('¿Eliminar esta compra en cuotas?', `"${c?.descripcion||''}" · ${$$(c?.montoTotal||0)}`, () => {
+      S.comprasCuotas = S.comprasCuotas.filter(c => String(c.id) !== String(id));
+      save(); renderCuotas(); renderTarjetas(); showToast('Cuota eliminada');
+    });
     return;
   }
 
@@ -8285,16 +8311,22 @@ document.addEventListener('click', e => {
     const id = movDel.dataset.id;
     const tipo = movDel.dataset.tipo;
     if (tipo === 'ingreso') {
-      if (!confirm('¿Eliminar este ingreso?')) return;
-      eliminarIngreso(id);
+      const ing = S.ingresos?.find(i => String(i.id) === String(id));
+      confirmar('¿Eliminar este ingreso?', `"${ing?.descripcion||''}" · ${$$(ing?.monto||0)}`, () => {
+        eliminarIngreso(id);
+      });
     } else if (tipo === 'cuota') {
-      if (!confirm('¿Eliminar esta compra en cuotas?')) return;
-      S.comprasCuotas = S.comprasCuotas.filter(c => c.id !== id);
-      save(); renderMovimientos(); showToast('Eliminado');
+      const c = S.comprasCuotas?.find(c => String(c.id) === String(id));
+      confirmar('¿Eliminar esta compra en cuotas?', `"${c?.descripcion||''}" · ${$$(c?.montoTotal||0)}`, () => {
+        S.comprasCuotas = S.comprasCuotas.filter(c => c.id !== id);
+        save(); renderMovimientos(); showToast('Eliminado');
+      });
     } else {
-      if (!confirm('¿Eliminar este gasto?')) return;
-      eliminarGasto(id);
-      renderMovimientos();
+      const g = S.gastos?.find(g => String(g.id) === String(id));
+      confirmar('¿Eliminar este gasto?', `"${g?.descripcion||''}" · ${$$(g?.monto||0)}`, () => {
+        eliminarGasto(id);
+        renderMovimientos();
+      });
     }
     return;
   }
