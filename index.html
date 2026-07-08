@@ -8723,7 +8723,7 @@ ${jsonSchema}`;
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
-        max_tokens: 4096,
+        max_tokens: 8192,
         messages: [{ role: 'user', content }]
       })
     });
@@ -8742,7 +8742,23 @@ ${jsonSchema}`;
     }
     let parsed;
     try { parsed = JSON.parse(jsonMatch[0]); }
-    catch(e) { showErr('⚠️ Error al parsear la respuesta de la IA: ' + e.message); return; }
+    catch(e) {
+      // JSON truncado — intentar reparar cerrando estructuras abiertas
+      try {
+        let txt = jsonMatch[0];
+        // Remover el último elemento incompleto (el que no tiene "}" de cierre)
+        txt = txt.replace(/,\s*\{[^}]*$/, '');
+        // Contar llaves/corchetes abiertos y cerrarlos
+        let opens = 0; let arrens = 0;
+        for (const ch of txt) { if(ch==='{')opens++; else if(ch==='}')opens--; else if(ch==='[')arrens++; else if(ch===']')arrens--; }
+        while(arrens > 0){ txt += ']'; arrens--; }
+        while(opens > 0){ txt += '}'; opens--; }
+        parsed = JSON.parse(txt);
+        showToast('⚠️ Resumen muy largo, se importaron los primeros movimientos. Dividí el PDF en partes para importar el resto.');
+      } catch(e2) {
+        showErr('⚠️ Error al parsear la respuesta de la IA: ' + e.message); return;
+      }
+    }
     renderImportResults(parsed, forcedTarjetaId, targetContainerEl);
   } catch(e) {
     loadingEl.remove();
