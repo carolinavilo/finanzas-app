@@ -8688,16 +8688,17 @@ async function analizarResumenBancario(attachments, loadingEl, forcedTarjetaId, 
   });
 
   const tarjetasDisp = S.tarjetas.length ? `Las tarjetas disponibles son: ${S.tarjetas.map(t=>t.nombre).join(', ')}. Asigná en tarjeta_nombre el nombre MÁS SIMILAR de esa lista para cada gasto de crédito.` : '';
-  const jsonSchema = `{"gastos":[{"fecha":"YYYY-MM-DD","descripcion":"nombre limpio del comercio","monto":0,"categoria_sugerida":"Otros","medio_pago":"credito","tarjeta_nombre":""}],"cuotas":[{"fecha":"YYYY-MM-DD","descripcion":"nombre limpio del comercio","monto_cuota":0,"monto_total":0,"cuota_actual":1,"total_cuotas":12,"categoria_sugerida":"Otros"}],"cargos":[{"descripcion":"nombre del cargo","monto":0}],"tarjeta_info":{"nombre_tarjeta":"","fecha_cierre":0,"fecha_vencimiento":0,"saldo_total":0,"pago_minimo":0}}`;
+  const jsonSchema = `{"gastos":[{"fecha":"YYYY-MM-DD","descripcion":"nombre limpio del comercio","monto":0,"moneda":"ARS","categoria_sugerida":"Otros","medio_pago":"credito","tarjeta_nombre":""}],"cuotas":[{"fecha":"YYYY-MM-DD","descripcion":"nombre limpio del comercio","monto_cuota":0,"monto_total":0,"cuota_actual":1,"total_cuotas":12,"moneda":"ARS","categoria_sugerida":"Otros"}],"cargos":[{"descripcion":"nombre del cargo","monto":0,"moneda":"ARS"}],"tarjeta_info":{"nombre_tarjeta":"","fecha_cierre":0,"fecha_vencimiento":0,"saldo_total":0,"pago_minimo":0}}`;
   const basePrompt = `Analizá ${n > 1 ? `estos ${n} resúmenes bancarios/fotos de tickets` : 'este resumen bancario o de tarjeta de crédito'} con máximo detalle.
 ${tarjetasDisp}
 Para cada movimiento identificá:
 GASTOS (compras en 1 pago, débitos, transferencias salientes):
-- fecha (YYYY-MM-DD), descripcion (nombre limpio del comercio, sin códigos internos), monto (número positivo en ARS), categoria_sugerida (Comida/Transporte/Entretenimiento/Salud/Ropa/Hogar/Servicios/Supermercado/Seguros/Otros), medio_pago (debito/credito/transferencia), tarjeta_nombre (nombre de la tarjeta si es crédito). Los seguros de vida, robo, automotor, médico y similares que aparezcan en el resumen deben clasificarse como categoria_sugerida: Seguros
+- fecha (YYYY-MM-DD), descripcion (nombre limpio del comercio, sin códigos internos), monto (número positivo, en la moneda en que figura el consumo), moneda ("ARS" o "USD"), categoria_sugerida (Comida/Transporte/Entretenimiento/Salud/Ropa/Hogar/Servicios/Supermercado/Seguros/Otros), medio_pago (debito/credito/transferencia), tarjeta_nombre (nombre de la tarjeta si es crédito). Los seguros de vida, robo, automotor, médico y similares que aparezcan en el resumen deben clasificarse como categoria_sugerida: Seguros
 CUOTAS (compras en N cuotas, identificadas por texto como '2/12', 'CTA 3/6', 'CUOTA'):
-- fecha (YYYY-MM-DD), descripcion (nombre limpio del comercio), monto_cuota (monto de esta cuota en ARS), monto_total (monto_cuota × total_cuotas), cuota_actual, total_cuotas, categoria_sugerida
+- fecha (YYYY-MM-DD), descripcion (nombre limpio del comercio), monto_cuota (monto de esta cuota, en la moneda en que figura), monto_total (monto_cuota × total_cuotas), cuota_actual, total_cuotas, moneda ("ARS" o "USD"), categoria_sugerida
+CONSUMOS EN DÓLARES: muchos resúmenes tienen una sección separada de consumos en dólares (encabezados tipo "CONSUMOS EN U$S", "SALDO EN DOLARES", columna "U$S"/"USD", o montos precedidos por U$S). Para esos movimientos usá moneda:"USD" con el monto ORIGINAL en dólares, SIN convertirlo a pesos. Todo el resto lleva moneda:"ARS". No dupliques: si un mismo consumo aparece tanto en la sección de pesos como en la de dólares, incluilo una sola vez en su moneda original.
 CARGOS (impuesto de sellos, intereses de financiación, IVA sobre intereses, cargos administrativos, seguro de tarjeta o similares que apliquen al resumen completo, no a una compra puntual):
-- descripcion (nombre limpio del cargo), monto (número positivo en ARS)
+- descripcion (nombre limpio del cargo), monto (número positivo, en la moneda en que figura), moneda ("ARS", o "USD" si el cargo aparece en la sección de dólares)
 - ATENCIÓN con los PUNITORIOS (ej. "PUNIT. PAG.MIN.ANTERIOR"): en esa línea suele aparecer primero un monto de REFERENCIA (el pago mínimo impago sobre el que se calculó el punitorio) y después, en la misma línea o columna de la derecha, el monto REAL cobrado por punitorio, que es mucho menor. Usá siempre el monto REAL cobrado, nunca el monto de referencia. Ejemplo: "PUNIT. PAG.MIN.ANTERIOR $ 86.188,66  448,08" → el cargo real es 448.08, NO 86188.66.
 TARJETA INFO (del encabezado o pie del resumen):
 - tarjeta_info.nombre_tarjeta: nombre completo de la tarjeta
@@ -8808,6 +8809,8 @@ function renderImportResults(data, forcedTarjetaId, targetContainerEl) {
   _aiImportData[panelId] = data;
 
   const fmtARS = n => '$' + (n||0).toLocaleString('es-AR', {minimumFractionDigits:2, maximumFractionDigits:2});
+  const fmtMon = (n, mon) => (mon==='USD'?'U$S ':'$') + (n||0).toLocaleString('es-AR', {minimumFractionDigits:2, maximumFractionDigits:2});
+  const monedaOpts = sel => `<option value="ARS"${sel==='USD'?'':' selected'}>$</option><option value="USD"${sel==='USD'?' selected':''}>U$S</option>`;
   const _normCat = s => (s||'').toString().trim().normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
   const catOpts = sel => {
     const selN = _normCat(sel);
@@ -8885,6 +8888,7 @@ function renderImportResults(data, forcedTarjetaId, targetContainerEl) {
           ${dupG?`<div style="display:flex;align-items:center;gap:6px;margin-top:4px;padding:4px 8px;background:rgba(248,113,113,.1);border-radius:6px;border-left:3px solid var(--accent4)"><span style="font-size:10px;color:var(--accent4);font-weight:700">⚠️ Posible duplicado</span><span style="font-size:10px;color:var(--text2)">Ya existe: "${esc(dupG.item.descripcion)}" · ${$$(dupG.item.monto||dupG.item.montoCuota)} · ${ff(dupG.item.fecha)}</span></div>`:''}
           <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:4px">
             <input type="number" id="aimonto-${panelId}-g-${i}" value="${g.monto}" style="width:84px;padding:3px 6px;font-size:11px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--accent);font-weight:600"/>
+            <select class="ai-import-cat ai-imp-moneda" id="aimoneda-${panelId}-g-${i}" title="Moneda del consumo">${monedaOpts(g.moneda)}</select>
             <select class="ai-import-cat" id="aitipo-${panelId}-g-${i}" onchange="aiToggleTarjeta(this,'${panelId}','${i}')" ${forcedTarjetaId?'disabled':''}>
               <option value="efectivo"${g.medio_pago==='efectivo'?' selected':''}>Efectivo</option>
               <option value="debito"${g.medio_pago==='debito'?' selected':''}>Débito</option>
@@ -8917,8 +8921,9 @@ function renderImportResults(data, forcedTarjetaId, targetContainerEl) {
           <input type="text" class="ai-import-edit-desc" id="aidesc-${panelId}-c-${i}" value="${escHtml(c.descripcion)}"/>
           ${dupC?`<div style="display:flex;align-items:center;gap:6px;margin-top:4px;padding:4px 8px;background:rgba(248,113,113,.1);border-radius:6px;border-left:3px solid var(--accent4)"><span style="font-size:10px;color:var(--accent4);font-weight:700">⚠️ Posible duplicado</span><span style="font-size:10px;color:var(--text2)">Ya existe: "${esc(dupC.item.descripcion)}" · ${$$(dupC.item.montoTotal||dupC.item.monto||dupC.item.montoCuota)}</span></div>`:''}
           <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-            <span class="ai-import-monto">${fmtARS(c.monto_cuota)}/cuota</span>
-            <span style="font-size:11px;color:var(--text2)">cuota ${c.cuota_actual}/${c.total_cuotas} · total ${fmtARS(total)}</span>
+            <span class="ai-import-monto">${fmtMon(c.monto_cuota, c.moneda)}/cuota</span>
+            <span style="font-size:11px;color:var(--text2)">cuota ${c.cuota_actual}/${c.total_cuotas} · total ${fmtMon(total, c.moneda)}</span>
+            <select class="ai-import-cat ai-imp-moneda" id="aimoneda-${panelId}-c-${i}" title="Moneda de la cuota">${monedaOpts(c.moneda)}</select>
           </div>
         </div>
         <div class="ai-import-catgroup">
@@ -8941,6 +8946,7 @@ function renderImportResults(data, forcedTarjetaId, targetContainerEl) {
           <input type="text" class="ai-import-edit-desc" id="aidesc-${panelId}-x-${i}" value="${escHtml(x.descripcion)}"/>
           <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:4px">
             <input type="number" id="aimonto-${panelId}-x-${i}" value="${x.monto}" style="width:84px;padding:3px 6px;font-size:11px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--accent);font-weight:600"/>
+            <select class="ai-import-cat ai-imp-moneda" id="aimoneda-${panelId}-x-${i}" title="Moneda del cargo">${monedaOpts(x.moneda)}</select>
           </div>
         </div>
       </div>`;
@@ -8978,7 +8984,7 @@ function aiUpdateSubcat(panelId, tipo, i) {
   subSel.style.display = subs.length ? '' : 'none';
 }
 
-function importarSeleccionados(panelId, btn) {
+async function importarSeleccionados(panelId, btn) {
   console.log('[importar] panelId:', panelId);
   const fbEl = document.getElementById('ai-fb-' + panelId);
   const showFb = (msg, err) => {
@@ -9001,6 +9007,17 @@ function importarSeleccionados(panelId, btn) {
     // Leer checkboxes directamente desde el DOM usando data attributes
     const panel = btn.closest('.ai-import-panel');
 
+    // Si hay consumos en USD y no tenemos cotización, intentar traerla antes de importar
+    const hayUSD = [...panel.querySelectorAll('.ai-imp-moneda')].some(s => s.value === 'USD');
+    if (hayUSD && !dolarRates.oficial?.venta) {
+      showFb('⏳ Obteniendo cotización del dólar...');
+      await fetchDolar();
+    }
+    const cotOficialImp = dolarRates.oficial?.venta || 0;
+    if (hayUSD && !cotOficialImp) {
+      showFb('⚠️ No se pudo obtener la cotización del dólar. Los montos en USD se importarán sin convertir a pesos.', true);
+    }
+
     panel.querySelectorAll(`.ai-imp-chk[data-section="${panelId}-g"]:checked`).forEach(chk => {
       const i = chk.dataset.idx;
       const g = gastos[i];
@@ -9014,8 +9031,12 @@ function importarSeleccionados(panelId, btn) {
       const tarjetaId = tipo === 'tarjeta' ? (document.getElementById(`aitarjeta-${panelId}-g-${i}`)?.value || S.tarjetas[0]?.id || null) : null;
       const subcat = document.getElementById(`aisubcat-${panelId}-g-${i}`)?.value||'';
       const nota = document.getElementById(`ainota-${panelId}-g-${i}`)?.value?.trim()||'';
+      const monedaG = document.getElementById(`aimoneda-${panelId}-g-${i}`)?.value || g.moneda || 'ARS';
+      const esUSD = monedaG === 'USD';
+      const montoARS = esUSD ? (cotOficialImp ? monto * cotOficialImp : monto) : monto;
       S.gastos.push({ id: uid(), fecha: g.fecha || today(), descripcion: desc,
-        categoria: cat, subcategoria: subcat, monto, tipo, tarjetaId, notas: nota, recurrente: false,
+        categoria: cat, subcategoria: subcat, monto: montoARS, tipo, tarjetaId, notas: nota, recurrente: false,
+        moneda: monedaG, montoUSD: esUSD ? monto : null, cotizacionUsada: esUSD && cotOficialImp ? cotOficialImp : null,
         mesImpacto: tipo==='tarjeta' ? today().slice(0,7) : undefined });
       nGastos++;
     });
@@ -9027,8 +9048,15 @@ function importarSeleccionados(panelId, btn) {
       const desc = document.getElementById(`aidesc-${panelId}-c-${i}`)?.value?.trim() || c.descripcion;
       const catC = document.getElementById(`aicat-${panelId}-c-${i}`)?.value || 'Otros';
       const subcatC = document.getElementById(`aisubcat-${panelId}-c-${i}`)?.value||'';
-      const notaC = document.getElementById(`ainota-${panelId}-c-${i}`)?.value?.trim()||'';
-      const montoTotal = c.monto_total || (c.monto_cuota * c.total_cuotas);
+      let notaC = document.getElementById(`ainota-${panelId}-c-${i}`)?.value?.trim()||'';
+      let montoCuotaC = +c.monto_cuota || 0;
+      let montoTotal = c.monto_total || (c.monto_cuota * c.total_cuotas);
+      const monedaC = document.getElementById(`aimoneda-${panelId}-c-${i}`)?.value || c.moneda || 'ARS';
+      if (monedaC === 'USD') {
+        // Las cuotas se guardan en ARS: convertir con el oficial y dejar el original en la nota
+        if (cotOficialImp) { montoCuotaC = montoCuotaC * cotOficialImp; montoTotal = montoTotal * cotOficialImp; }
+        notaC = (notaC ? notaC + ' · ' : '') + `U$S ${(+c.monto_cuota||0)}/cuota` + (cotOficialImp ? ` (cotización $${cotOficialImp})` : ' (sin cotización, monto sin convertir)');
+      }
       // fechaPrimerPago se calcula desde el mes de resumen real (que se sabe con certeza al importar)
       // y el numero de cuota actual, en vez de la fecha de compra impresa en el PDF (poco confiable
       // cerca del limite del ciclo de cierre, que ademas varia de mes a mes)
@@ -9041,7 +9069,7 @@ function importarSeleccionados(panelId, btn) {
       const fechaPrimerPagoCalc = mesPrimeraCuota+'-'+String(Math.min(diaCompraC,maxDiaPC)).padStart(2,'0');
       S.comprasCuotas.push({ id: uid(), tarjetaId: data.tarjetaMatcheada || null, fecha: c.fecha || today(),
         descripcion: desc, categoria: catC, subcategoria: subcatC,
-        montoTotal, cuotas: c.total_cuotas, montoCuota: c.monto_cuota,
+        montoTotal, cuotas: c.total_cuotas, montoCuota: montoCuotaC,
         cuotasPagadas: Math.max(0, cuotaActualN - 1),
         fechaPrimerPago: fechaPrimerPagoCalc, notas: notaC });
       nCuotas++;
@@ -9051,9 +9079,14 @@ function importarSeleccionados(panelId, btn) {
       const i = chk.dataset.idx;
       const x = cargos[i];
       if (!x) return;
-      const descX = document.getElementById(`aidesc-${panelId}-x-${i}`)?.value?.trim() || x.descripcion;
-      const montoX = +(document.getElementById(`aimonto-${panelId}-x-${i}`)?.value) || x.monto;
+      let descX = document.getElementById(`aidesc-${panelId}-x-${i}`)?.value?.trim() || x.descripcion;
+      let montoX = +(document.getElementById(`aimonto-${panelId}-x-${i}`)?.value) || x.monto;
       if(!montoX)return;
+      const monedaX = document.getElementById(`aimoneda-${panelId}-x-${i}`)?.value || x.moneda || 'ARS';
+      if (monedaX === 'USD' && cotOficialImp) {
+        descX += ` (U$S ${montoX} · cotización $${cotOficialImp})`;
+        montoX = montoX * cotOficialImp;
+      }
       const tarjetaIdX = data.tarjetaMatcheada || S.tarjetas[0]?.id || null;
       if(!tarjetaIdX)return;
       S.gastosFinTarjeta.push({ id: uid(), tarjetaId: tarjetaIdX, mes: today().slice(0,7), descripcion: descX, monto: montoX });
