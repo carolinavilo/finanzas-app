@@ -5025,7 +5025,7 @@ function editGasto(id){
   document.getElementById('eg-desc').value=g.descripcion;
   const egMon=document.getElementById('eg-moneda');
   if(egMon)egMon.value=g.moneda||'ARS';
-  document.getElementById('eg-monto').value=g.moneda==='USD'?(g.montoUSD||0):g.monto;
+  document.getElementById('eg-monto').value=g.moneda==='USD'?(g.montoUSD||g.monto||0):g.monto;
   onEgMonedaChange();
   document.getElementById('eg-tipo').value=g.tipo;
   document.getElementById('eg-tarjeta-group').style.display=g.tipo==='tarjeta'?'flex':'none';
@@ -5225,8 +5225,8 @@ function renderGastos(){
         <td style="text-align:right;white-space:nowrap;vertical-align:middle">
           <div style="display:flex;align-items:center;justify-content:flex-end;gap:4px">
             <div style="text-align:right">
-              <span style="font-weight:700;font-size:13px">${$$(g.monto)}</span>
-              ${g.moneda==='USD'?`<div style="font-size:10px;color:var(--text2)">U$S ${(+g.montoUSD||0).toLocaleString('es-AR',{minimumFractionDigits:2})}</div>`:''}
+              <span style="font-weight:700;font-size:13px">${g.moneda==='USD'&&!g.montoUSD?`U$S ${(+g.monto).toLocaleString('es-AR',{minimumFractionDigits:2})}`:$$(g.monto)}</span>
+              ${g.moneda==='USD'&&g.montoUSD?`<div style="font-size:10px;color:var(--text2)">U$S ${(+g.montoUSD).toLocaleString('es-AR',{minimumFractionDigits:2})}</div>`:''}
             </div>
             <button class="btn-editar-gasto" data-id="${esc(g.id)}" style="background:none;border:none;font-size:16px;cursor:pointer;padding:4px;min-width:28px;min-height:28px">✏️</button>
             <button class="btn-eliminar-gasto" data-id="${esc(g.id)}" style="background:none;border:none;font-size:16px;cursor:pointer;padding:4px;min-width:28px;min-height:28px">🗑️</button>
@@ -5306,7 +5306,7 @@ function renderGastos(){
       mobHtml:`<div class="mob-row">
         <div class="mob-row-desc">${esc(g.descripcion)}${impactaBadge}${g.registrado_por&&!ADMIN_EMAILS.includes(g.registrado_por)?`<span style="background:var(--accent-light);color:var(--accent);border-radius:6px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:4px">👤 ${(g.registrado_por_nombre||g.registrado_por.split('@')[0])}</span>`:''}</div>
         <div class="mob-row-monto">
-          <span>${$$(g.monto)}${g.moneda==='USD'?`<br><span style="font-size:10px;color:var(--text2)">U$S ${(+g.montoUSD||0).toLocaleString('es-AR',{minimumFractionDigits:2})}</span>`:''}</span>
+          <span>${g.moneda==='USD'?(g.montoUSD?`${$$(g.monto)}<br><span style="font-size:10px;color:var(--text2)">U$S ${(+g.montoUSD).toLocaleString('es-AR',{minimumFractionDigits:2})}</span>`:`U$S ${(+g.monto).toLocaleString('es-AR',{minimumFractionDigits:2})}`):$$(g.monto)}</span>
           <button class="btn-editar-gasto" data-id="${esc(g.id)}">✏️</button>
           <button class="btn-eliminar-gasto" data-id="${esc(g.id)}">🗑️</button>
         </div>
@@ -9007,17 +9007,6 @@ async function importarSeleccionados(panelId, btn) {
     // Leer checkboxes directamente desde el DOM usando data attributes
     const panel = btn.closest('.ai-import-panel');
 
-    // Si hay consumos en USD y no tenemos cotización, intentar traerla antes de importar
-    const hayUSD = [...panel.querySelectorAll('.ai-imp-moneda')].some(s => s.value === 'USD');
-    if (hayUSD && !dolarRates.oficial?.venta) {
-      showFb('⏳ Obteniendo cotización del dólar...');
-      await fetchDolar();
-    }
-    const cotOficialImp = dolarRates.oficial?.venta || 0;
-    if (hayUSD && !cotOficialImp) {
-      showFb('⚠️ No se pudo obtener la cotización del dólar. Los montos en USD se importarán sin convertir a pesos.', true);
-    }
-
     panel.querySelectorAll(`.ai-imp-chk[data-section="${panelId}-g"]:checked`).forEach(chk => {
       const i = chk.dataset.idx;
       const g = gastos[i];
@@ -9032,11 +9021,9 @@ async function importarSeleccionados(panelId, btn) {
       const subcat = document.getElementById(`aisubcat-${panelId}-g-${i}`)?.value||'';
       const nota = document.getElementById(`ainota-${panelId}-g-${i}`)?.value?.trim()||'';
       const monedaG = document.getElementById(`aimoneda-${panelId}-g-${i}`)?.value || g.moneda || 'ARS';
-      const esUSD = monedaG === 'USD';
-      const montoARS = esUSD ? (cotOficialImp ? monto * cotOficialImp : monto) : monto;
       S.gastos.push({ id: uid(), fecha: g.fecha || today(), descripcion: desc,
-        categoria: cat, subcategoria: subcat, monto: montoARS, tipo, tarjetaId, notas: nota, recurrente: false,
-        moneda: monedaG, montoUSD: esUSD ? monto : null, cotizacionUsada: esUSD && cotOficialImp ? cotOficialImp : null,
+        categoria: cat, subcategoria: subcat, monto, tipo, tarjetaId, notas: nota, recurrente: false,
+        moneda: monedaG,
         mesImpacto: tipo==='tarjeta' ? today().slice(0,7) : undefined });
       nGastos++;
     });
@@ -9052,11 +9039,6 @@ async function importarSeleccionados(panelId, btn) {
       let montoCuotaC = +c.monto_cuota || 0;
       let montoTotal = c.monto_total || (c.monto_cuota * c.total_cuotas);
       const monedaC = document.getElementById(`aimoneda-${panelId}-c-${i}`)?.value || c.moneda || 'ARS';
-      if (monedaC === 'USD') {
-        // Las cuotas se guardan en ARS: convertir con el oficial y dejar el original en la nota
-        if (cotOficialImp) { montoCuotaC = montoCuotaC * cotOficialImp; montoTotal = montoTotal * cotOficialImp; }
-        notaC = (notaC ? notaC + ' · ' : '') + `U$S ${(+c.monto_cuota||0)}/cuota` + (cotOficialImp ? ` (cotización $${cotOficialImp})` : ' (sin cotización, monto sin convertir)');
-      }
       // fechaPrimerPago se calcula desde el mes de resumen real (que se sabe con certeza al importar)
       // y el numero de cuota actual, en vez de la fecha de compra impresa en el PDF (poco confiable
       // cerca del limite del ciclo de cierre, que ademas varia de mes a mes)
@@ -9071,7 +9053,7 @@ async function importarSeleccionados(panelId, btn) {
         descripcion: desc, categoria: catC, subcategoria: subcatC,
         montoTotal, cuotas: c.total_cuotas, montoCuota: montoCuotaC,
         cuotasPagadas: Math.max(0, cuotaActualN - 1),
-        fechaPrimerPago: fechaPrimerPagoCalc, notas: notaC });
+        fechaPrimerPago: fechaPrimerPagoCalc, notas: notaC, moneda: monedaC });
       nCuotas++;
 });
     let nCargos=0;
@@ -9083,13 +9065,9 @@ async function importarSeleccionados(panelId, btn) {
       let montoX = +(document.getElementById(`aimonto-${panelId}-x-${i}`)?.value) || x.monto;
       if(!montoX)return;
       const monedaX = document.getElementById(`aimoneda-${panelId}-x-${i}`)?.value || x.moneda || 'ARS';
-      if (monedaX === 'USD' && cotOficialImp) {
-        descX += ` (U$S ${montoX} · cotización $${cotOficialImp})`;
-        montoX = montoX * cotOficialImp;
-      }
       const tarjetaIdX = data.tarjetaMatcheada || S.tarjetas[0]?.id || null;
       if(!tarjetaIdX)return;
-      S.gastosFinTarjeta.push({ id: uid(), tarjetaId: tarjetaIdX, mes: today().slice(0,7), descripcion: descX, monto: montoX });
+      S.gastosFinTarjeta.push({ id: uid(), tarjetaId: tarjetaIdX, mes: today().slice(0,7), descripcion: descX, monto: montoX, moneda: monedaX });
       nCargos++;
     });
     const forcedTarjetaId = data.forcedTarjetaId;
